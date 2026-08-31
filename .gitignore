@@ -1,0 +1,29 @@
+# Nuxt dev/build
+.nuxt/
+.output/
+.nitro/
+.cache/
+dist/
+
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Otros
+*.tsbuildinfo
+coverage/
