@@ -1,8 +1,7 @@
 export type EstadoVencimiento = 'vencido' | 'porVencer' | 'vigente'
 
 /** A partir de cuántos días antes del vencimiento se considera "por vencer" */
-export const DIAS_POR_VENCER = 30
-
+export const DIAS_POR_VENCER = 365
 /**
  * Parsea fechas de vencimiento en formato DD/MM/YYYY o MM/YYYY (mes sin día,
  * se toma el último día de ese mes). Devuelve null si el formato no es válido.

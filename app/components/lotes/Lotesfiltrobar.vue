@@ -36,6 +36,7 @@ defineProps<{
       <Button size="sm" :variant="vencimientoFilter === 'todos' ? 'default' : 'ghost'" @click="vencimientoFilter = 'todos'">Todos</Button>
       <Button size="sm" :variant="vencimientoFilter === 'porVencer' ? 'default' : 'ghost'" @click="vencimientoFilter = 'porVencer'">Por vencer</Button>
       <Button size="sm" :variant="vencimientoFilter === 'vencidos' ? 'default' : 'ghost'" @click="vencimientoFilter = 'vencidos'">Vencidos</Button>
+      <Button size="sm" :variant="vencimientoFilter === 'vigente' ? 'default' : 'ghost'" @click="vencimientoFilter = 'vigente'">Vigentes</Button>
     </div>
 
   </div>

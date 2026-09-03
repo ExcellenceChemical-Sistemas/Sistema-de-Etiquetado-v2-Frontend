@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/vue-query'
-import axios from 'axios'
 import { useApi } from './useApi'
 
 export interface GenerarEtiquetaPayload {
@@ -12,42 +11,49 @@ export interface GenerarEtiquetaPayload {
   proforma: string
 }
 
-const ENDPOINT_GENERAR = '/etiquetas/generar'
+interface EstadoTrabajo {
+  id: number
+  estado: 'PENDIENTE' | 'IMPRESO' | 'ERROR'
+  mensajeError: string | null
+}
 
-// El backend (EtiquetasController @Post('generar')) imprime de forma SÍNCRONA
-// antes de responder: la request queda colgada hasta que termina el trabajo
-// de impresión física. Por eso el .vue debe mostrar loading mientras dura
-// esta mutation (puede tardar varios segundos).
+const ENDPOINT_GENERAR = '/etiquetas/generar'
+const POLL_INTERVAL_MS = 1500
+const POLL_TIMEOUT_MS = 30000 // si el agente no responde en 30s, se corta
+
+function esperar(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// El backend ahora responde apenas crea el trabajo (estado PENDIENTE); la
+// impresión física la hace el Agente de Impresión Local de forma asíncrona.
+// Por eso hay que consultar GET /etiquetas/trabajos/:id hasta que el agente
+// reporte IMPRESO o ERROR.
+async function esperarResultado(trabajoId: number, api: ReturnType<typeof useApi>) {
+  const limite = Date.now() + POLL_TIMEOUT_MS
+
+  while (Date.now() < limite) {
+    const { data } = await api.get<EstadoTrabajo>(`/etiquetas/trabajos/${trabajoId}`)
+
+    if (data.estado === 'IMPRESO') return
+    if (data.estado === 'ERROR') {
+      throw new Error(data.mensajeError || 'La impresión falló en el agente local')
+    }
+
+    await esperar(POLL_INTERVAL_MS)
+  }
+
+  throw new Error(
+    'La etiqueta se generó pero no se confirmó la impresión a tiempo. Verifica que el agente local esté corriendo.',
+  )
+}
+
 export function useGenerarEtiqueta() {
   const api = useApi()
   return useMutation({
     mutationFn: async (dto: GenerarEtiquetaPayload) => {
-      try {
-        // Ya no se muestra thumbnail en el frontend, pero igual hay que pedir
-        // 'arraybuffer' porque la respuesta es binaria (image/png); si se
-        // deja el responseType por defecto, Axios intenta parsear el PNG
-        // como JSON y explota.
-        await api.post<ArrayBuffer>(ENDPOINT_GENERAR, dto, {
-          responseType: 'arraybuffer',
-        })
-      } catch (error) {
-        // ⚠️ Con responseType: 'arraybuffer', el body de un error HTTP
-        // (ej. el 502 que tira ImpresionService cuando la impresora falla)
-        // también llega como ArrayBuffer, NO como JSON parseado. Si no se
-        // decodifica a mano acá, el toast de error queda genérico/vacío.
-        if (axios.isAxiosError(error) && error.response?.data instanceof ArrayBuffer) {
-          let mensaje = 'No se pudo generar la etiqueta'
-          try {
-            const texto = new TextDecoder().decode(error.response.data)
-            const parsed = JSON.parse(texto)
-            if (parsed?.message) mensaje = parsed.message
-          } catch {
-            // el body no era JSON parseable, se usa el mensaje genérico
-          }
-          throw new Error(mensaje)
-        }
-        throw error
-      }
+      const { data } = await api.post<{ trabajoId: number }>(ENDPOINT_GENERAR, dto)
+      await esperarResultado(data.trabajoId, api)
     },
   })
 }

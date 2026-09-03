@@ -38,6 +38,7 @@ onMounted(cargarUsuarioActual);
 const permisoFabricantes = usePermiso("FABRICANTES");
 const permisoProductos = usePermiso("PRODUCTOS");
 const permisoLotes = usePermiso("LOTES");
+const permisoEtiquetas = usePermiso("ETIQUETAS");
 
 const items = computed(() => {
   const base = [
@@ -64,7 +65,7 @@ const items = computed(() => {
       title: "Generar Etiqueta",
       url: "/generar-etiqueta",
       icon: Printer,
-      visible: permisoLotes.puedeCrear,
+      visible: permisoEtiquetas.puedeCrear,
     },
 
     {

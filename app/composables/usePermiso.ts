@@ -1,13 +1,6 @@
 import { computed, reactive } from 'vue'
 import { useUsuarioActual } from './useUsuarioActual'
-
-export type Recurso =
-  | 'LOTES'
-  | 'PRODUCTOS'
-  | 'FABRICANTES'
-  | 'PLANTILLAS'
-  | 'COA'
-  | 'USUARIOS'
+import type { Recurso } from '~/utils/permisos'
 
 export function usePermiso(recurso: Recurso) {
   const { usuarioActual, esAdmin } = useUsuarioActual()

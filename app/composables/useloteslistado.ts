@@ -2,7 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import type { Lote } from '~/types/lote'
 import { estadoVencimiento } from '~/utils/fechavencimiento'
 
-export type VencimientoFilter = 'todos' | 'vencidos' | 'porVencer'
+export type VencimientoFilter = 'todos' | 'vencidos' | 'porVencer' | 'vigente'
 
 const PAGE_SIZE = 10
 
@@ -33,8 +33,8 @@ export function useLotesListado(lotes: Ref<Lote[] | undefined>) {
         const estado = estadoVencimiento(l.fechaVencimiento)
         if (vencimientoFilter.value === 'vencidos' && estado !== 'vencido') return false
         if (vencimientoFilter.value === 'porVencer' && estado !== 'porVencer') return false
+        if (vencimientoFilter.value === 'vigente' && estado !== 'vigente') return false
       }
-
       if (desde || hasta) {
         if (!l.fechaVencimientoOrden) return false
         const fv = new Date(l.fechaVencimientoOrden)
