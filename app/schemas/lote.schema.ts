@@ -29,16 +29,19 @@ function esFechaFutura(fecha: string): boolean {
 
 export const loteSchema = z
   .object({
-    numeroLote: z.string().min(1, 'El número de lote es obligatorio').max(100),
+    numeroLote: z
+      .string({ required_error: 'El número de lote es obligatorio' })
+      .min(1, 'El número de lote es obligatorio')
+      .max(100),
     fechaFabricacion: z
-      .string()
+      .string({ required_error: 'La fecha de fabricación es obligatoria' })
       .min(1, 'La fecha de fabricación es obligatoria')
       .regex(FECHA_REGEX, 'Formato: MM/AAAA o DD/MM/AAAA')
       .refine((f) => !esFechaFutura(f), {
         message: 'La fecha de fabricación no puede ser futura',
       }),
     fechaVencimiento: z
-      .string()
+      .string({ required_error: 'La fecha de vencimiento es obligatoria' })
       .min(1, 'La fecha de vencimiento es obligatoria')
       .regex(FECHA_REGEX, 'Formato: MM/AAAA o DD/MM/AAAA'),
     productoId: z

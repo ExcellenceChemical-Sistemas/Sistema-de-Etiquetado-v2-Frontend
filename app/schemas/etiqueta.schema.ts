@@ -14,7 +14,10 @@ const numeroTexto = /^\d+([.,]\d+)?$/;
 //   proforma en la etiqueta impresa (ni número ni "PF01-").
 export const generarEtiquetaSchema = z.object({
   loteId: z
-    .number({ invalid_type_error: "Selecciona un lote" })
+    .number({
+      required_error: "Selecciona un lote",
+      invalid_type_error: "Selecciona un lote",
+    })
     .min(1, "Selecciona un lote"),
 
   proformaModo: z.enum(["numero", "blanco"], {
@@ -29,7 +32,7 @@ export const generarEtiquetaSchema = z.object({
     .default(""),
 
   pesoBruto: z
-    .string()
+    .string({ required_error: "El peso bruto es obligatorio" })
     .min(1, "El peso bruto es obligatorio")
     .regex(numeroTexto, "Formato inválido (ej. 1.140)"),
   unidadBruto: z.enum(["KG", "GR"], {
@@ -51,13 +54,19 @@ export const generarEtiquetaSchema = z.object({
   // backend: el frontend llama al endpoint una vez por cada copia, porque
   // cada request ya imprime una etiqueta física (ver EtiquetasService.generar).
   cantidad: z
-    .number({ invalid_type_error: "Ingresa un número" })
+    .number({
+      required_error: "Ingresa la cantidad de copias",
+      invalid_type_error: "Ingresa un número",
+    })
     .int("Debe ser un número entero")
     .min(1, "Mínimo 1 copia")
     .max(50, "Máximo 50 copias por tanda"),
 
   plantillaId: z
-    .number({ invalid_type_error: "Selecciona una plantilla" })
+    .number({
+      required_error: "Selecciona una plantilla",
+      invalid_type_error: "Selecciona una plantilla",
+    })
     .min(1, "Selecciona una plantilla"),
 });
 

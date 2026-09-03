@@ -6,7 +6,10 @@ const nfpaField = z.preprocess(
 )
 
 export const productoSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es obligatorio').max(150),
+  nombre: z
+    .string({ required_error: 'El nombre es obligatorio' })
+    .min(1, 'El nombre es obligatorio')
+    .max(150),
   nfpaSalud: nfpaField,
   nfpaInflamabilidad: nfpaField,
   nfpaReactividad: nfpaField,
