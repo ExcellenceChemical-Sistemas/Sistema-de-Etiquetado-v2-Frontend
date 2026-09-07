@@ -27,3 +27,9 @@ Thumbs.db
 # Otros
 *.tsbuildinfo
 coverage/
+
+# Config local de Claude Code para levantar el dev server (no se comparte)
+.claude/launch.json
+
+# Directorio suelto de un comando mal tipeado (solo contiene un node_modules vacío)
+4000/

@@ -20,9 +20,11 @@ import {
   Printer,
   History,
   Users,
+  FolderKanban,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
+import { useAccesoKpisIso } from "~/composables/useAccesoKpisIso";
 
 const { session } = useAuth();
 
@@ -32,16 +34,23 @@ const currentUser = computed(() => ({
   avatar: "",
 }));
 
-const { esAdmin, cargar: cargarUsuarioActual } = useUsuarioActual();
+const { esAdmin, usuarioActual, cargar: cargarUsuarioActual } = useUsuarioActual();
 onMounted(cargarUsuarioActual);
 
 const permisoFabricantes = usePermiso("FABRICANTES");
 const permisoProductos = usePermiso("PRODUCTOS");
 const permisoLotes = usePermiso("LOTES");
 const permisoEtiquetas = usePermiso("ETIQUETAS");
+const permisoUsuarios = usePermiso("USUARIOS");
 
-const items = computed(() => {
-  const base = [
+const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
+
+// Gestiona accesos de KPIs/ISO sin ser admin general: entra a /usuarios
+// aunque no tenga el permiso USUARIOS (ver middleware/permisos.global.ts).
+const esAdminKpis = computed(() => usuarioActual.value?.esAdminKpis === true);
+
+const items = computed(() =>
+  [
     { title: "Inicio", url: "/", icon: Home, visible: true },
     {
       title: "Fabricantes",
@@ -74,15 +83,20 @@ const items = computed(() => {
       icon: History,
       visible: permisoLotes.puedeVer,
     },
-  ].filter((i) => i.visible);
-
-  return esAdmin.value
-    ? [
-        ...base,
-        { title: "Usuarios", url: "/usuarios", icon: Users, visible: true },
-      ]
-    : base;
-});
+    {
+      title: "KPIs / ISO",
+      url: "/kpis",
+      icon: FolderKanban,
+      visible: puedeVerAlgoKpisIso.value,
+    },
+    {
+      title: "Usuarios",
+      url: "/usuarios",
+      icon: Users,
+      visible: permisoUsuarios.puedeVer || esAdminKpis.value,
+    },
+  ].filter((i) => i.visible),
+);
 
 const route = useRoute();
 </script>

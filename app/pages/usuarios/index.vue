@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Users, ChevronRight, ShieldCheck, Plus } from "lucide-vue-next";
 import { useApi } from "~/composables/useApi";
+import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import type { Usuario } from "~/utils/permisos";
@@ -14,12 +15,27 @@ const crearOpen = ref(false);
 const editarOpen = ref(false);
 const usuarioSeleccionado = ref<Usuario | null>(null);
 
+const { esAdmin, usuarioActual, cargar: cargarUsuarioActual } = useUsuarioActual();
+
+/**
+ * Admin de KPIs sin ser admin general: entra a esta pantalla solo para
+ * asignar accesos de KPIs/ISO. No puede leer GET /usuarios (expone los
+ * permisos de los demás módulos) ni crear usuarios.
+ */
+const soloGestionaKpisIso = computed(
+  () => !esAdmin.value && usuarioActual.value?.esAdminKpis === true,
+);
+
 async function cargar() {
   cargando.value = true;
   error.value = "";
   try {
+    await cargarUsuarioActual();
     const api = useApi();
-    const { data } = await api.get("/usuarios");
+    const endpoint = soloGestionaKpisIso.value
+      ? "/usuarios/lista-basica"
+      : "/usuarios";
+    const { data } = await api.get(endpoint);
     usuarios.value = data.data;
   } catch (e: any) {
     error.value =
@@ -62,7 +78,7 @@ onMounted(cargar);
           <h1 class="text-2xl font-semibold mt-1">Usuarios y permisos</h1>
         </div>
       </div>
-      <Button @click="crearOpen = true">
+      <Button v-if="!soloGestionaKpisIso" @click="crearOpen = true">
         <Plus class="h-4 w-4" />
         Nuevo usuario
       </Button>
@@ -101,11 +117,14 @@ onMounted(cargar);
       >
         <div class="min-w-0">
           <p class="text-sm font-medium truncate">{{ u.nombre }}</p>
-          <p class="text-xs text-muted-foreground mt-0.5">
+          <p
+            v-if="!soloGestionaKpisIso"
+            class="text-xs text-muted-foreground mt-0.5"
+          >
             {{
               u.esAdmin
                 ? "Administrador — todos los permisos"
-                : `${u.permisos.filter((p) => p.puedeVer || p.puedeCrear || p.puedeEditar || p.puedeEliminar).length} módulo(s) configurado(s)`
+                : `${(u.permisos ?? []).filter((p) => p.puedeVer || p.puedeCrear || p.puedeEditar || p.puedeEliminar).length} módulo(s) configurado(s)`
             }}
           </p>
         </div>

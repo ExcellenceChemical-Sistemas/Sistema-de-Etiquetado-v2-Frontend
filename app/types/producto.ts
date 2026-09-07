@@ -7,6 +7,7 @@ export interface Producto {
   nfpaSalud?: number | null
   nfpaInflamabilidad?: number | null
   nfpaReactividad?: number | null
+  fichaSeguridadUrl?: string | null
 }
 
 export interface CreateProductoDto {

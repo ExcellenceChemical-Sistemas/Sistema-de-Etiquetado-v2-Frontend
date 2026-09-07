@@ -10,6 +10,7 @@ import {
 } from "~/composables/useLotes";
 import { useProductos } from "~/composables/useProductos";
 import { useFabricantesQuery } from "~/composables/useFabricantes";
+import { usePermiso } from "~/composables/usePermiso";
 import { toast } from "vue-sonner";
 import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { FileText, Trash2, Upload, Eye } from "@lucide/vue";
@@ -21,6 +22,12 @@ const props = defineProps<{ lote?: Lote | null }>();
 const emit = defineEmits<{ success: [] }>();
 
 const isEditing = !!props.lote;
+
+// El COA es parte del recurso LOTES en el backend: subir/reemplazar pide
+// puedeEditar (POST /lotes/:id/coa) y borrar pide puedeEliminar
+// (DELETE /lotes/:id/coa). Mismo usePermiso("LOTES") con el que lotes/index.vue
+// gatea el botón "Editar" que abre este form.
+const permiso = usePermiso("LOTES");
 
 const { data: productos, isLoading: cargandoProductos } = useProductos();
 const { data: fabricantes, isLoading: cargandoFabricantes } =
@@ -238,6 +245,7 @@ const onSubmit = handleSubmit(async (values) => {
         <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
         <span class="flex-1 truncate text-muted-foreground">COA cargado</span>
         <Button
+          v-if="permiso.puedeEliminar"
           type="button"
           variant="ghost"
           size="sm"
@@ -248,7 +256,7 @@ const onSubmit = handleSubmit(async (values) => {
         </Button>
       </div>
 
-      <div v-if="!coaFile">
+      <div v-if="!coaFile && permiso.puedeEditar">
         <label
           for="coaFile"
           class="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -265,7 +273,7 @@ const onSubmit = handleSubmit(async (values) => {
         />
       </div>
 
-      <div v-else class="space-y-1">
+      <div v-if="coaFile" class="space-y-1">
         <div class="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
           <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
           <span class="flex-1 truncate">{{ coaFile.name }}</span>
@@ -293,7 +301,10 @@ const onSubmit = handleSubmit(async (values) => {
         </p>
       </div>
 
-      <p v-if="!coaFile" class="text-xs text-muted-foreground">
+      <p
+        v-if="!coaFile && permiso.puedeEditar"
+        class="text-xs text-muted-foreground"
+      >
         {{
           coaActual
             ? "Subí un archivo para reemplazar el COA actual."

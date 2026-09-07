@@ -7,6 +7,7 @@
     "dev": "nuxt dev --port 3001",
     "generate": "nuxt generate",
     "preview": "nuxt preview --port 3001",
+    "typecheck": "vue-tsc --build --force",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -21,9 +22,11 @@
     "axios": "^1.19.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "docx-preview": "^0.4.0",
     "exceljs": "^4.4.0",
     "lucide-vue-next": "^1.0.0",
     "nuxt": "^4.5.2",
+    "pdfjs-dist": "^6.3.289",
     "pinia": "^4.0.3",
     "reka-ui": "^2.10.4",
     "shadcn-nuxt": "^2.8.2",
@@ -39,6 +42,7 @@
   "devDependencies": {
     "@nuxtjs/color-mode": "^4.0.1",
     "@types/node": "^26.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.11"
   }
 }

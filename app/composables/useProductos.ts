@@ -40,3 +40,33 @@ export function useUpdateProducto() {
     },
   })
 }
+export function useUploadFichaSeguridad() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const { data } = await api.post<Producto>(`/productos/${id}/ficha-seguridad`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productos'] })
+    },
+  })
+}
+
+// GET de la ficha como mutation (no query) a propósito: la signed URL expira
+// a los 5 minutos, así que no conviene cachearla — se pide fresca cada vez que
+// el usuario hace clic en "Ver ficha de seguridad".
+export function useVerFichaSeguridad() {
+  const api = useApi()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.get<{ url: string }>(`/productos/${id}/ficha-seguridad`)
+      return data.url
+    },
+  })
+}

@@ -6,7 +6,8 @@ import { useAvatar } from '@/composables/useAvatar'
 
 const props = defineProps<{
   usuarioId: string
-  avatarUrl?: string
+  /** null cuando el usuario todavía no subió foto (Usuario.avatarUrl es nullable). */
+  avatarUrl?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -16,7 +17,7 @@ const emit = defineEmits<{
 const { subiendo, subirAvatar } = useAvatar()
 
 const inputFile = ref<HTMLInputElement | null>(null)
-const previewUrl = ref<string | undefined>(props.avatarUrl)
+const previewUrl = ref<string | null | undefined>(props.avatarUrl)
 
 watch(
   () => props.avatarUrl,
