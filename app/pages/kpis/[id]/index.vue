@@ -93,8 +93,30 @@ const puedeSubirAqui = computed(() =>
 
 // La cadena de una subcarpeta es exactamente `ruta`: los ancestros de la
 // carpeta actual más ella misma.
+//
+// El backend las devuelve en orden alfabético de `nombre`, así que "10.OCTUBRE"
+// queda antes que "2.FEBRERO" (compara texto, no número). Como todas las
+// carpetas del seed arrancan con "N." (procesos, meses, trimestres, etc.),
+// ordenamos acá por ese prefijo numérico; lo que no tenga uno cae al final,
+// alfabético entre sí.
+function prefijoNumerico(nombre: string): number | null {
+  const m = nombre.match(/^(\d+)\./)
+  return m ? Number(m[1]) : null
+}
+
+function compararPorPrefijo(a: { nombre: string }, b: { nombre: string }): number {
+  const na = prefijoNumerico(a.nombre)
+  const nb = prefijoNumerico(b.nombre)
+  if (na !== null && nb !== null) return na - nb
+  if (na !== null) return -1
+  if (nb !== null) return 1
+  return a.nombre.localeCompare(b.nombre)
+}
+
 const subcarpetasVisibles = computed(() =>
-  contenido.value?.subcarpetas.filter((c) => puedeVerCarpeta(c, ruta.value)) ?? []
+  (contenido.value?.subcarpetas.filter((c) => puedeVerCarpeta(c, ruta.value)) ?? [])
+    .slice()
+    .sort(compararPorPrefijo)
 )
 
 /**
@@ -340,11 +362,21 @@ async function eliminarArchivo(archivoId: number) {
             class="h-full transition-colors hover:border-primary/40 hover:bg-muted/40"
           >
             <CardHeader class="py-4">
-              <div class="flex items-center gap-3">
+              <!--
+                min-w-0 es lo que hace que el título pueda encogerse dentro del
+                flex: sin esto, un nombre largo (los procesos y ISO tienen
+                nombres de hasta 40+ caracteres) empuja la tarjeta más allá de
+                la columna del grid y termina rompiendo el layout con scroll
+                horizontal. line-clamp-2 en vez de truncate porque son nombres
+                que hay que poder distinguir entre sí (COMERCIAL vs. CALIDAD vs.
+                DIRECCIÓN Y PLANEAMIENTO): cortarlos con "…" a mitad de palabra
+                los hace ilegibles.
+              -->
+              <div class="flex items-start gap-3 min-w-0">
                 <div class="shrink-0 rounded-md bg-primary/10 p-1.5">
                   <Folder class="h-4 w-4 text-primary" />
                 </div>
-                <CardTitle class="truncate text-sm font-medium">
+                <CardTitle class="min-w-0 line-clamp-2 text-sm font-medium leading-snug">
                   {{ sub.nombre }}
                 </CardTitle>
               </div>
