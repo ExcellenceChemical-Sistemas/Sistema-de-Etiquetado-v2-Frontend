@@ -81,7 +81,7 @@ const items = computed(() =>
       title: "Historial",
       url: "/historial",
       icon: History,
-      visible: permisoLotes.puedeVer,
+      visible: permisoEtiquetas.puedeVer,
     },
     {
       title: "KPIs / ISO",

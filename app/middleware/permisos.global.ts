@@ -9,7 +9,7 @@ const RUTA_PERMISO: [string, Recurso, Nivel][] = [
   ['/productos', 'PRODUCTOS', 'puedeVer'],
   ['/lotes', 'LOTES', 'puedeVer'],
   ['/generar-etiqueta', 'ETIQUETAS', 'puedeCrear'],
-  ['/historial', 'LOTES', 'puedeVer'],
+  ['/historial', 'ETIQUETAS', 'puedeVer'],
   ['/usuarios', 'USUARIOS', 'puedeVer'],
 ]
 
