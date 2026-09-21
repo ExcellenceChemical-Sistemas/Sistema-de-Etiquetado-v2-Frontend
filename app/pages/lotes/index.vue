@@ -383,6 +383,9 @@ function abrirCoaEnPestana() {
           <span class="font-medium text-foreground">{{ loteAEliminar?.numeroLote }}</span>
           de {{ loteAEliminar?.producto?.nombre }}? Esta acción no se puede deshacer.
         </p>
+        <p class="text-xs text-muted-foreground">
+          Si el lote tiene etiquetas impresas con QR en uso, no se podrá eliminar.
+        </p>
         <div class="flex justify-end gap-2">
           <Button variant="outline" :disabled="eliminando" @click="eliminarOpen = false">
             Cancelar
