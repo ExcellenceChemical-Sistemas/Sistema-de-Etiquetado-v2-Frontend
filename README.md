@@ -2,7 +2,7 @@
 
 Aplicación web (panel administrativo) construida con **Nuxt 4** para Excellence Chemical S.A.C. Cubre dos módulos:
 
-1. **Etiquetado** — fabricantes, productos, lotes (con carga de COA), plantillas, usuarios/permisos e impresión de etiquetas.
+1. **Etiquetado** — fabricantes, productos (con ficha de seguridad y clasificación GHS), lotes (con carga de COA), plantillas, usuarios/permisos, impresión de etiquetas e historial de etiquetas generadas.
 2. **KPIs / Documentación ISO** — árbol de carpetas y documentos con control de acceso granular, visor propio de PDF y de Word.
 
 Es el cliente de la API NestJS que vive en el repo hermano `../backend`.
@@ -58,7 +58,8 @@ app/
 │   └── permisos.global.ts   # permiso por ruta (RUTA_PERMISO)
 ├── pages/
 │   ├── index.vue / login.vue / mi-cuenta.vue
-│   ├── generar-etiqueta.vue / historial.vue
+│   ├── generar-etiqueta.vue / historial.vue   # historial: etiquetas generadas, filtros y enlace al QR
+│   ├── e/[token].vue                          # página pública del QR (sin login)
 │   ├── fabricantes/index.vue · productos/index.vue · lotes/index.vue
 │   ├── kpis/index.vue                       # raíces (KPIs-SGC / ISO-SGC)
 │   ├── kpis/[id]/index.vue                  # contenido de una carpeta
@@ -132,6 +133,17 @@ Gestiona los accesos de KPIs/ISO de otros usuarios sin ser admin general. `middl
 El diálogo trae los accesos de KPIs/ISO con `GET /usuarios/:id/accesos-kpis-iso` cuando se abre, y **no habilita el botón de guardar hasta que esa respuesta llegó**: guardar con el estado en blanco borraría los accesos del usuario, porque el backend hace `deleteMany` + `createMany`. Si el fetch falla, se muestra una tarjeta de aviso y el guardado queda bloqueado.
 
 El grid se indexa **por `proceso`, nunca por el `id` de la fila** de Prisma: esos ids cambian en cada guardado.
+
+## Fichas de seguridad y pictogramas GHS
+
+- En el formulario de producto, al elegir la **ficha de seguridad (PDF)** se llama a `POST /productos/analizar-ficha` (`useAnalizarFicha`) y se rellenan pictogramas, palabra de advertencia y frases H/P como **propuesta** (aviso ámbar "revísalos"). Si la ficha dice que el producto no es peligroso se avisa; si es un PDF escaneado, o no se encuentra nada, los pictogramas se marcan a mano.
+- Los 9 pictogramas oficiales de la ONU están en `public/ghs/GHS01.png`–`GHS09.png`; `utils/ghs.ts` tiene sus nombres y descripciones y `components/etiquetas/PictogramaGhs.vue` los dibuja.
+- Se ven en la **página pública del QR** (`pages/e/[token].vue`), no en la etiqueta impresa.
+
+## Historial y lotes
+
+- `/historial` lista las etiquetas generadas (búsqueda, filtro por estado, paginación, abrir/copiar el enlace del QR). Requiere `ETIQUETAS:puedeVer`.
+- En `/lotes` el botón de eliminar borra el lote con su historial, salvo que tenga un QR vigente (menos de 2 años): en ese caso el backend responde 409 y se muestra su mensaje.
 
 ## Visores de documentos
 
