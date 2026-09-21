@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { Search, ExternalLink, Copy } from "@lucide/vue";
+import { Search, ExternalLink, Copy, Inbox } from "@lucide/vue";
 import { toast } from "vue-sonner";
 import {
   useHistorialEtiquetas,
@@ -47,9 +47,6 @@ const fmtFecha = (iso: string) =>
 
 function neto(e: EtiquetaHistorial) {
   return e.cantidadNeta ? `${e.cantidadNeta} ${e.unidadNeta.toLowerCase()}` : "—";
-}
-function envase(e: EtiquetaHistorial) {
-  return e.envaseNumero && e.envaseTotal ? `${e.envaseNumero}/${e.envaseTotal}` : "—";
 }
 
 const ESTADO_UI = {
@@ -121,7 +118,6 @@ async function copiarQr(e: EtiquetaHistorial) {
             <TableHead>Lote</TableHead>
             <TableHead>Proforma</TableHead>
             <TableHead>Neto</TableHead>
-            <TableHead class="text-center">Envase</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Creada por</TableHead>
             <TableHead class="w-24 text-right">QR</TableHead>
@@ -130,12 +126,12 @@ async function copiarQr(e: EtiquetaHistorial) {
         <TableBody>
           <template v-if="isPending">
             <TableRow v-for="i in 5" :key="i">
-              <TableCell v-for="c in 9" :key="c"><Skeleton class="h-4 w-full" /></TableCell>
+              <TableCell v-for="c in 8" :key="c"><Skeleton class="h-4 w-full" /></TableCell>
             </TableRow>
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="9" class="py-8 text-center">
+              <TableCell colspan="8" class="py-8 text-center">
                 <p class="mb-2 text-sm text-destructive">No se pudo cargar el historial</p>
                 <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
               </TableCell>
@@ -143,9 +139,18 @@ async function copiarQr(e: EtiquetaHistorial) {
           </template>
           <template v-else-if="filtradas.length === 0">
             <TableRow>
-              <TableCell colspan="9" class="py-8 text-center text-muted-foreground">
-                No hay etiquetas
-                {{ search || estado !== "todos" ? "que coincidan con el filtro" : "generadas todavía" }}
+              <TableCell colspan="8" class="py-16 text-center text-muted-foreground">
+                <Inbox class="mx-auto mb-3 h-10 w-10 opacity-50" />
+                <p class="font-medium text-foreground">
+                  {{ search || estado !== "todos" ? "Sin resultados" : "Aún no hay etiquetas" }}
+                </p>
+                <p class="text-sm">
+                  {{
+                    search || estado !== "todos"
+                      ? "Ninguna etiqueta coincide con el filtro."
+                      : "Las etiquetas que generes aparecerán aquí."
+                  }}
+                </p>
               </TableCell>
             </TableRow>
           </template>
@@ -158,7 +163,6 @@ async function copiarQr(e: EtiquetaHistorial) {
               <TableCell>{{ e.lote.numeroLote }}</TableCell>
               <TableCell>{{ e.proforma }}</TableCell>
               <TableCell class="whitespace-nowrap">{{ neto(e) }}</TableCell>
-              <TableCell class="text-center">{{ envase(e) }}</TableCell>
               <TableCell>
                 <span
                   class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"

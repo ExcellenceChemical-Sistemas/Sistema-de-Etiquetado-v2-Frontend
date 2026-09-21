@@ -11,8 +11,6 @@ export interface EtiquetaHistorial {
   cantidadNeta: string | null
   unidadNeta: string
   tara: string | null
-  envaseNumero: number | null
-  envaseTotal: number | null
   proforma: string
   token: string | null
   plantilla: { nombre: string }
