@@ -328,7 +328,7 @@ function abrirFichaEnPestana() {
     </div>
 
     <Dialog v-model:open="dialogOpen">
-      <DialogContent>
+      <DialogContent class="max-h-[90vh] overflow-y-auto">
         <DialogTitle>{{
           editando ? "Editar producto" : "Nuevo producto"
         }}</DialogTitle>

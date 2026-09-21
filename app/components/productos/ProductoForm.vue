@@ -102,6 +102,16 @@ function onFichaChange(e: Event) {
 // propuesta: la persona la revisa y corrige antes de guardar el producto.
 const { mutateAsync: analizarFicha, isPending: leyendoFicha } = useAnalizarFicha()
 const clasificacionLeida = ref(false)
+// La sección GHS se muestra si el producto ya tiene datos, cuando la FDS los propone,
+// o si la persona decide marcarlos a mano.
+const mostrarGhs = ref(
+  !!(
+    props.producto?.pictogramasGhs?.length ||
+    props.producto?.palabraAdvertencia ||
+    props.producto?.frasesH?.length ||
+    props.producto?.frasesP?.length
+  ),
+)
 
 async function leerClasificacion(file: File) {
   clasificacionLeida.value = false
@@ -116,6 +126,7 @@ async function leerClasificacion(file: File) {
     frasesH.value = c.frasesH
     frasesP.value = c.frasesP
     clasificacionLeida.value = true
+    mostrarGhs.value = true
   } catch (e: any) {
     toast.error(e?.response?.data?.message ?? 'No se pudo leer la ficha de seguridad')
   }
@@ -202,6 +213,152 @@ const onSubmit = handleSubmit(async (values) => {
     </div>
 
     <div class="space-y-2">
+      <Label for="fichaFile">
+        Ficha de seguridad
+        <span class="text-muted-foreground font-normal">(opcional)</span>
+      </Label>
+
+      <div
+        v-if="fichaActual && !fichaFile"
+        class="flex items-center gap-2 rounded-md border border-border p-2 text-sm"
+      >
+        <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span class="flex-1 truncate text-muted-foreground">Ficha de seguridad cargada</span>
+      </div>
+
+      <div v-if="permiso.puedeEditar && !fichaFile">
+        <label
+          for="fichaFile"
+          class="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <Upload class="h-4 w-4" />
+          {{ fichaActual ? 'Reemplazar archivo PDF' : 'Seleccionar archivo PDF' }}
+        </label>
+        <input
+          id="fichaFile"
+          type="file"
+          accept="application/pdf"
+          class="hidden"
+          @change="onFichaChange"
+        />
+      </div>
+
+      <div v-else-if="fichaFile" class="space-y-1">
+        <div class="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+          <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span class="flex-1 truncate">{{ fichaFile.name }}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title="Previsualizar"
+            @click="previewOpen = true"
+          >
+            <Eye class="h-4 w-4 text-muted-foreground" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title="Cancelar selección"
+            @click="cancelarFichaSeleccionada"
+          >
+            <X class="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+        <p v-if="fichaActual" class="text-xs text-amber-500">
+          La ficha actual será reemplazada por este archivo al guardar los cambios.
+        </p>
+      </div>
+
+      <p v-if="permiso.puedeEditar && !fichaFile" class="text-xs text-muted-foreground">
+        {{
+          fichaActual
+            ? 'Subí un archivo para reemplazar la ficha de seguridad actual.'
+            : 'Opcional. Solo PDF, máx. 10MB.'
+        }}
+      </p>
+    </div>
+
+    <!-- Clasificación GHS: la propone el lector de la FDS; a mano solo si hace falta -->
+    <div v-if="mostrarGhs">
+      <div class="space-y-2">
+        <Label>Pictogramas GHS <span class="text-muted-foreground font-normal">(opcional)</span></Label>
+        <p v-if="leyendoFicha" class="text-xs text-muted-foreground">Leyendo la ficha de seguridad…</p>
+        <p
+          v-else-if="clasificacionLeida"
+          class="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300"
+        >
+          Datos leídos de la ficha de seguridad. Revísalos con la sección 2 de la FDS antes de guardar.
+        </p>
+        <div class="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <button
+            v-for="p in PICTOGRAMAS_GHS"
+            :key="p.codigo"
+            type="button"
+            class="flex flex-col items-center rounded-md border p-2 transition-colors"
+            :class="pictogramasGhs?.includes(p.codigo) ? 'border-primary bg-primary/10' : 'border-border opacity-60 hover:opacity-100'"
+            :title="p.nombre"
+            @click="alternarPictograma(p.codigo)"
+          >
+            <PictogramaGhs :codigo="p.codigo" mostrar-nombre />
+          </button>
+        </div>
+        <p class="text-xs text-muted-foreground">Se muestran al escanear el QR de la etiqueta.</p>
+
+        <div class="space-y-1 pt-2">
+          <Label class="text-xs font-normal text-muted-foreground">Palabra de advertencia</Label>
+          <div class="flex gap-2">
+            <button
+              v-for="op in [{ v: 'PELIGRO', t: 'Peligro' }, { v: 'ATENCION', t: 'Atención' }]"
+              :key="op.v"
+              type="button"
+              class="rounded-md border px-3 py-1.5 text-sm transition-colors"
+              :class="palabraAdvertencia === op.v ? 'border-primary bg-primary/10 font-medium' : 'border-border text-muted-foreground'"
+              @click="palabraAdvertencia = palabraAdvertencia === op.v ? null : op.v"
+            >
+              {{ op.t }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-1 pt-2">
+          <Label for="frasesH" class="text-xs font-normal text-muted-foreground">
+            Frases H — indicaciones de peligro (una por línea)
+          </Label>
+          <textarea
+            id="frasesH"
+            v-model="textoFrasesH"
+            rows="3"
+            placeholder="H314: Provoca quemaduras graves en la piel y lesiones oculares graves."
+            class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+          />
+        </div>
+        <div class="space-y-1">
+          <Label for="frasesP" class="text-xs font-normal text-muted-foreground">
+            Frases P — consejos de prudencia (una por línea)
+          </Label>
+          <textarea
+            id="frasesP"
+            v-model="textoFrasesP"
+            rows="3"
+            placeholder="P280: Llevar guantes, prendas y gafas de protección."
+            class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+          />
+          <p class="text-xs text-muted-foreground">Cópialas de la sección 2 de la FDS del proveedor.</p>
+        </div>
+      </div>
+    </div>
+    <button
+      v-else
+      type="button"
+      class="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+      @click="mostrarGhs = true"
+    >
+      Marcar pictogramas GHS a mano
+    </button>
+
+    <div class="space-y-2">
       <Label>Rombo NFPA 704 <span class="text-muted-foreground font-normal">(opcional)</span></Label>
       <div class="grid grid-cols-3 gap-3">
         <div class="space-y-1">
@@ -271,141 +428,6 @@ const onSubmit = handleSubmit(async (values) => {
       <p class="text-xs text-muted-foreground">
         Solo para líquidos (neto en ML o L): con la densidad, la etiqueta calcula la tara.
         Sin ella, la tara de líquidos queda en «—».
-      </p>
-    </div>
-
-    <div class="space-y-2">
-      <Label>Pictogramas GHS <span class="text-muted-foreground font-normal">(opcional)</span></Label>
-      <p v-if="leyendoFicha" class="text-xs text-muted-foreground">Leyendo la ficha de seguridad…</p>
-      <p
-        v-else-if="clasificacionLeida"
-        class="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300"
-      >
-        Datos leídos de la ficha de seguridad. Revísalos con la sección 2 de la FDS antes de guardar.
-      </p>
-      <div class="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        <button
-          v-for="p in PICTOGRAMAS_GHS"
-          :key="p.codigo"
-          type="button"
-          class="flex flex-col items-center rounded-md border p-2 transition-colors"
-          :class="pictogramasGhs?.includes(p.codigo) ? 'border-primary bg-primary/10' : 'border-border opacity-60 hover:opacity-100'"
-          :title="p.nombre"
-          @click="alternarPictograma(p.codigo)"
-        >
-          <PictogramaGhs :codigo="p.codigo" mostrar-nombre />
-        </button>
-      </div>
-      <p class="text-xs text-muted-foreground">Se muestran al escanear el QR de la etiqueta.</p>
-
-      <div class="space-y-1 pt-2">
-        <Label class="text-xs font-normal text-muted-foreground">Palabra de advertencia</Label>
-        <div class="flex gap-2">
-          <button
-            v-for="op in [{ v: 'PELIGRO', t: 'Peligro' }, { v: 'ATENCION', t: 'Atención' }]"
-            :key="op.v"
-            type="button"
-            class="rounded-md border px-3 py-1.5 text-sm transition-colors"
-            :class="palabraAdvertencia === op.v ? 'border-primary bg-primary/10 font-medium' : 'border-border text-muted-foreground'"
-            @click="palabraAdvertencia = palabraAdvertencia === op.v ? null : op.v"
-          >
-            {{ op.t }}
-          </button>
-        </div>
-      </div>
-
-      <div class="space-y-1 pt-2">
-        <Label for="frasesH" class="text-xs font-normal text-muted-foreground">
-          Frases H — indicaciones de peligro (una por línea)
-        </Label>
-        <textarea
-          id="frasesH"
-          v-model="textoFrasesH"
-          rows="3"
-          placeholder="H314: Provoca quemaduras graves en la piel y lesiones oculares graves."
-          class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
-        />
-      </div>
-      <div class="space-y-1">
-        <Label for="frasesP" class="text-xs font-normal text-muted-foreground">
-          Frases P — consejos de prudencia (una por línea)
-        </Label>
-        <textarea
-          id="frasesP"
-          v-model="textoFrasesP"
-          rows="3"
-          placeholder="P280: Llevar guantes, prendas y gafas de protección."
-          class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
-        />
-        <p class="text-xs text-muted-foreground">Cópialas de la sección 2 de la FDS del proveedor.</p>
-      </div>
-    </div>
-
-    <div class="space-y-2">
-      <Label for="fichaFile">
-        Ficha de seguridad
-        <span class="text-muted-foreground font-normal">(opcional)</span>
-      </Label>
-
-      <div
-        v-if="fichaActual && !fichaFile"
-        class="flex items-center gap-2 rounded-md border border-border p-2 text-sm"
-      >
-        <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span class="flex-1 truncate text-muted-foreground">Ficha de seguridad cargada</span>
-      </div>
-
-      <div v-if="permiso.puedeEditar && !fichaFile">
-        <label
-          for="fichaFile"
-          class="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-        >
-          <Upload class="h-4 w-4" />
-          {{ fichaActual ? 'Reemplazar archivo PDF' : 'Seleccionar archivo PDF' }}
-        </label>
-        <input
-          id="fichaFile"
-          type="file"
-          accept="application/pdf"
-          class="hidden"
-          @change="onFichaChange"
-        />
-      </div>
-
-      <div v-else-if="fichaFile" class="space-y-1">
-        <div class="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
-          <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span class="flex-1 truncate">{{ fichaFile.name }}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            title="Previsualizar"
-            @click="previewOpen = true"
-          >
-            <Eye class="h-4 w-4 text-muted-foreground" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            title="Cancelar selección"
-            @click="cancelarFichaSeleccionada"
-          >
-            <X class="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </div>
-        <p v-if="fichaActual" class="text-xs text-amber-500">
-          La ficha actual será reemplazada por este archivo al guardar los cambios.
-        </p>
-      </div>
-
-      <p v-if="permiso.puedeEditar && !fichaFile" class="text-xs text-muted-foreground">
-        {{
-          fichaActual
-            ? 'Subí un archivo para reemplazar la ficha de seguridad actual.'
-            : 'Opcional. Solo PDF, máx. 10MB.'
-        }}
       </p>
     </div>
 
