@@ -9,8 +9,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   await init()
 
   const rutasPublicas = ['/login', '/olvide-password', '/restablecer-password']
+  // /e/<token>: página de trazabilidad que abre quien escanea el QR de la
+  // etiqueta; no tiene sesión y no la necesita.
+  const esRutaPublica = rutasPublicas.includes(to.path) || to.path.startsWith('/e/')
 
-  if (!session.value && !rutasPublicas.includes(to.path)) {
+  if (!session.value && !esRutaPublica) {
     return navigateTo('/login')
   }
 

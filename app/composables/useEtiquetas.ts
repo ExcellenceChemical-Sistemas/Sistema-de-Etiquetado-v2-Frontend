@@ -6,6 +6,8 @@ export interface GenerarEtiquetaPayload {
   plantillaId: number
   pesoBruto: string
   unidadBruto: 'KG' | 'GR'
+  envaseNumero?: number
+  envaseTotal?: number
   cantidadNeta?: string
   unidadNeta: 'KG' | 'GR' | 'ML' | 'L'
   proforma: string
