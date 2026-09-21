@@ -58,10 +58,6 @@ const tara = computed(() =>
 const pesoBruto = computed(() =>
   etiqueta.value ? conUnidad(etiqueta.value.pesoBruto, etiqueta.value.unidadBruto) : "—",
 );
-const envase = computed(() => {
-  const e = etiqueta.value;
-  return e?.envaseNumero && e?.envaseTotal ? `${e.envaseNumero} de ${e.envaseTotal}` : "—";
-});
 
 const errorCoa = ref("");
 const abriendoCoa = ref(false);
@@ -181,11 +177,7 @@ async function descargarCoa() {
           </p>
         </div>
 
-        <div class="border-b border-r p-4">
-          <p class="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Envase</p>
-          <p class="mt-1 font-semibold">{{ envase }}</p>
-        </div>
-        <div class="border-b bg-primary/5 p-4">
+        <div class="col-span-2 border-b bg-primary/5 p-4">
           <p class="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Cantidad neta
           </p>
