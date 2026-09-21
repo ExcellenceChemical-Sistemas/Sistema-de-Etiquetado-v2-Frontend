@@ -9,9 +9,14 @@ export interface EtiquetaPublica {
   pesoBruto: string
   unidadBruto: 'KG' | 'GR'
   tara: string | null
-  envaseNumero: number | null
-  envaseTotal: number | null
   tieneCoa: boolean
+  tieneFds: boolean
+  pictogramasGhs: string[]
+  palabraAdvertencia: 'PELIGRO' | 'ATENCION' | null
+  frasesH: string[]
+  frasesP: string[]
+  etiquetadoEn: string
+  impreso: boolean
 }
 
 // Sin useApi a propósito: esta página la abre quien escanea el QR, sin sesión,
@@ -30,5 +35,11 @@ export function useEtiquetaPublica() {
     })
   }
 
-  return { obtener, urlCoa }
+  function urlFds(token: string, descargar: boolean) {
+    return $fetch<{ url: string }>(`${base}/${encodeURIComponent(token)}/fds`, {
+      query: descargar ? { descargar: '1' } : undefined,
+    })
+  }
+
+  return { obtener, urlCoa, urlFds }
 }

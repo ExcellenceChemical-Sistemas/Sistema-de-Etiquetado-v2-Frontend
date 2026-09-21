@@ -120,13 +120,8 @@ async function imprimir(values: GenerarEtiquetaFormValues) {
   try {
     for (let i = 0; i < values.cantidad; i++) {
       copiaActual.value = i + 1;
-      // Cada copia es un envase distinto ("Envase 2 de 5") y su etiqueta
-      // lleva su propio QR con sus propios pesos.
-      await generarEtiqueta({
-        ...payload,
-        envaseNumero: i + 1,
-        envaseTotal: values.cantidad,
-      });
+      // Cada copia lleva su propio QR con sus propios pesos.
+      await generarEtiqueta(payload);
     }
 
     toast.success(
@@ -371,7 +366,7 @@ function limpiarFormulario() {
             <div class="space-y-1.5">
               <Label for="cantidad" class="flex items-center gap-1.5">
                 <CopyIcon class="h-3.5 w-3.5 text-muted-foreground" />
-                Cantidad de envases (una etiqueta por envase)
+                Cantidad de copias (una etiqueta por copia)
               </Label>
               <Input
                 id="cantidad"

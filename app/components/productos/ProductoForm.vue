@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { productoSchema, type ProductoFormValues } from '~/schemas/producto.schema'
@@ -7,11 +7,14 @@ import {
   useCreateProducto,
   useUpdateProducto,
   useUploadFichaSeguridad,
+  useAnalizarFicha,
 } from '~/composables/useProductos'
 import { usePermiso } from '~/composables/usePermiso'
 import { toast } from 'vue-sonner'
 import { FileText, X, Upload, Eye } from '@lucide/vue'
 import type { Producto } from '~/types/producto'
+import { PICTOGRAMAS_GHS } from '~/utils/ghs'
+import PictogramaGhs from '~/components/etiquetas/PictogramaGhs.vue'
 
 const props = defineProps<{ producto?: Producto | null }>()
 const emit = defineEmits<{ success: [] }>()
@@ -26,6 +29,11 @@ const { handleSubmit, defineField, errors, isSubmitting } = useForm<ProductoForm
     nfpaSalud: props.producto?.nfpaSalud ?? undefined,
     nfpaInflamabilidad: props.producto?.nfpaInflamabilidad ?? undefined,
     nfpaReactividad: props.producto?.nfpaReactividad ?? undefined,
+    densidad: props.producto?.densidad ?? undefined,
+    pictogramasGhs: props.producto?.pictogramasGhs ?? [],
+    palabraAdvertencia: props.producto?.palabraAdvertencia ?? null,
+    frasesH: props.producto?.frasesH ?? [],
+    frasesP: props.producto?.frasesP ?? [],
   },
 })
 
@@ -33,6 +41,28 @@ const [nombre, nombreAttrs] = defineField('nombre')
 const [nfpaSalud, nfpaSaludAttrs] = defineField('nfpaSalud')
 const [nfpaInflamabilidad, nfpaInflamabilidadAttrs] = defineField('nfpaInflamabilidad')
 const [nfpaReactividad, nfpaReactividadAttrs] = defineField('nfpaReactividad')
+const [densidad, densidadAttrs] = defineField('densidad')
+const [pictogramasGhs] = defineField('pictogramasGhs')
+const [palabraAdvertencia] = defineField('palabraAdvertencia')
+const [frasesH] = defineField('frasesH')
+const [frasesP] = defineField('frasesP')
+
+// Los textareas trabajan con texto (una frase por línea); el form guarda arreglos.
+const textoFrasesH = computed({
+  get: () => (frasesH.value ?? []).join('\n'),
+  set: (v: string) => { frasesH.value = v.split('\n').map((l) => l.trim()).filter(Boolean) },
+})
+const textoFrasesP = computed({
+  get: () => (frasesP.value ?? []).join('\n'),
+  set: (v: string) => { frasesP.value = v.split('\n').map((l) => l.trim()).filter(Boolean) },
+})
+
+function alternarPictograma(codigo: string) {
+  const actuales = pictogramasGhs.value ?? []
+  pictogramasGhs.value = actuales.includes(codigo)
+    ? actuales.filter((c) => c !== codigo)
+    : [...actuales, codigo]
+}
 
 const nombreInputRef = ref<{ $el: HTMLInputElement } | null>(null)
 onMounted(() => {
@@ -65,6 +95,30 @@ function onFichaChange(e: Event) {
     return
   }
   fichaFile.value = file
+  if (file) leerClasificacion(file)
+}
+
+// Al elegir una FDS se lee su sección 2 y se rellena la clasificación GHS como
+// propuesta: la persona la revisa y corrige antes de guardar el producto.
+const { mutateAsync: analizarFicha, isPending: leyendoFicha } = useAnalizarFicha()
+const clasificacionLeida = ref(false)
+
+async function leerClasificacion(file: File) {
+  clasificacionLeida.value = false
+  try {
+    const c = await analizarFicha(file)
+    if (!c.pictogramasGhs.length && !c.frasesH.length && !c.palabraAdvertencia) {
+      toast.warning('No se encontró la clasificación GHS en la ficha. Márcala a mano.')
+      return
+    }
+    pictogramasGhs.value = c.pictogramasGhs
+    palabraAdvertencia.value = c.palabraAdvertencia
+    frasesH.value = c.frasesH
+    frasesP.value = c.frasesP
+    clasificacionLeida.value = true
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? 'No se pudo leer la ficha de seguridad')
+  }
 }
 
 // --- Previsualización del archivo recién seleccionado (Dialog secundario) ---
@@ -96,7 +150,11 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     let productoId: number
     if (isEditing && props.producto) {
-      const actualizado = await actualizar({ id: props.producto.id, dto: values })
+      // densidad vacía se manda como null para poder borrarla al editar
+      const actualizado = await actualizar({
+        id: props.producto.id,
+        dto: { ...values, densidad: values.densidad ?? null, palabraAdvertencia: values.palabraAdvertencia ?? null } as any,
+      })
       productoId = actualizado.id
       toast.success('Producto actualizado')
     } else {
@@ -194,6 +252,92 @@ const onSubmit = handleSubmit(async (values) => {
           />
           <p v-if="errors.nfpaReactividad" class="text-xs text-destructive">{{ errors.nfpaReactividad }}</p>
         </div>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <Label for="densidad">
+        Densidad (g/ml)
+        <span class="text-muted-foreground font-normal">(opcional)</span>
+      </Label>
+      <Input
+        id="densidad"
+        v-model="densidad"
+        v-bind="densidadAttrs"
+        inputmode="decimal"
+        placeholder="Ej. 1.19"
+      />
+      <p v-if="errors.densidad" class="text-sm text-destructive">{{ errors.densidad }}</p>
+      <p class="text-xs text-muted-foreground">
+        Solo para líquidos (neto en ML o L): con la densidad, la etiqueta calcula la tara.
+        Sin ella, la tara de líquidos queda en «—».
+      </p>
+    </div>
+
+    <div class="space-y-2">
+      <Label>Pictogramas GHS <span class="text-muted-foreground font-normal">(opcional)</span></Label>
+      <p v-if="leyendoFicha" class="text-xs text-muted-foreground">Leyendo la ficha de seguridad…</p>
+      <p
+        v-else-if="clasificacionLeida"
+        class="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300"
+      >
+        Datos leídos de la ficha de seguridad. Revísalos con la sección 2 de la FDS antes de guardar.
+      </p>
+      <div class="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <button
+          v-for="p in PICTOGRAMAS_GHS"
+          :key="p.codigo"
+          type="button"
+          class="flex flex-col items-center rounded-md border p-2 transition-colors"
+          :class="pictogramasGhs?.includes(p.codigo) ? 'border-primary bg-primary/10' : 'border-border opacity-60 hover:opacity-100'"
+          :title="p.nombre"
+          @click="alternarPictograma(p.codigo)"
+        >
+          <PictogramaGhs :codigo="p.codigo" mostrar-nombre />
+        </button>
+      </div>
+      <p class="text-xs text-muted-foreground">Se muestran al escanear el QR de la etiqueta.</p>
+
+      <div class="space-y-1 pt-2">
+        <Label class="text-xs font-normal text-muted-foreground">Palabra de advertencia</Label>
+        <div class="flex gap-2">
+          <button
+            v-for="op in [{ v: 'PELIGRO', t: 'Peligro' }, { v: 'ATENCION', t: 'Atención' }]"
+            :key="op.v"
+            type="button"
+            class="rounded-md border px-3 py-1.5 text-sm transition-colors"
+            :class="palabraAdvertencia === op.v ? 'border-primary bg-primary/10 font-medium' : 'border-border text-muted-foreground'"
+            @click="palabraAdvertencia = palabraAdvertencia === op.v ? null : op.v"
+          >
+            {{ op.t }}
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-1 pt-2">
+        <Label for="frasesH" class="text-xs font-normal text-muted-foreground">
+          Frases H — indicaciones de peligro (una por línea)
+        </Label>
+        <textarea
+          id="frasesH"
+          v-model="textoFrasesH"
+          rows="3"
+          placeholder="H314: Provoca quemaduras graves en la piel y lesiones oculares graves."
+          class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+        />
+      </div>
+      <div class="space-y-1">
+        <Label for="frasesP" class="text-xs font-normal text-muted-foreground">
+          Frases P — consejos de prudencia (una por línea)
+        </Label>
+        <textarea
+          id="frasesP"
+          v-model="textoFrasesP"
+          rows="3"
+          placeholder="P280: Llevar guantes, prendas y gafas de protección."
+          class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+        />
+        <p class="text-xs text-muted-foreground">Cópialas de la sección 2 de la FDS del proveedor.</p>
       </div>
     </div>
 

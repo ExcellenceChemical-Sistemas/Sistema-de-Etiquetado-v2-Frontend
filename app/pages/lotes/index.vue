@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Download, FileText, FileX, ExternalLink, Pencil, Eye } from "@lucide/vue";
-import { useLotes, useVerCoa } from "~/composables/useLotes";
+import { Download, FileText, FileX, ExternalLink, Pencil, Eye, Trash2 } from "@lucide/vue";
+import { useLotes, useVerCoa, useDeleteLote } from "~/composables/useLotes";
 import { useLotesListado } from "~/composables/useloteslistado";
 import {
   useXlsxExport,
@@ -109,6 +109,27 @@ function abrirDetalle(lote: Lote) {
   detalleOpen.value = true;
 }
 
+// --- Eliminar ---
+const { mutateAsync: eliminarLote, isPending: eliminando } = useDeleteLote();
+const eliminarOpen = ref(false);
+const loteAEliminar = ref<Lote | null>(null);
+
+function pedirEliminar(lote: Lote) {
+  loteAEliminar.value = lote;
+  eliminarOpen.value = true;
+}
+
+async function confirmarEliminar() {
+  if (!loteAEliminar.value) return;
+  try {
+    await eliminarLote(loteAEliminar.value.id);
+    toast.success("Lote eliminado");
+    eliminarOpen.value = false;
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? "No se pudo eliminar el lote");
+  }
+}
+
 function onSuccess() {
   dialogOpen.value = false;
 }
@@ -188,7 +209,7 @@ function abrirCoaEnPestana() {
             <TableHead>Fabricante</TableHead>
             <TableHead>Vencimiento</TableHead>
             <TableHead class="w-16 text-center">COA</TableHead>
-            <TableHead class="w-24 text-right">Acciones</TableHead>
+            <TableHead class="w-32 text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -281,7 +302,15 @@ function abrirCoaEnPestana() {
                 >
                   <Pencil class="h-4 w-4" />
                 </Button>
-                <span v-else class="text-xs text-muted-foreground">—</span>
+                <Button
+                  v-if="permiso.puedeEliminar"
+                  variant="ghost"
+                  size="icon"
+                  title="Eliminar"
+                  @click="pedirEliminar(l)"
+                >
+                  <Trash2 class="h-4 w-4 text-destructive" />
+                </Button>
               </TableCell>
             </TableRow>
           </template>
@@ -343,6 +372,25 @@ function abrirCoaEnPestana() {
           :lote="editando"
           @success="onSuccess"
         />
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="eliminarOpen">
+      <DialogContent class="max-w-md">
+        <DialogTitle>Eliminar lote</DialogTitle>
+        <p class="text-sm text-muted-foreground">
+          ¿Seguro que quieres eliminar el lote
+          <span class="font-medium text-foreground">{{ loteAEliminar?.numeroLote }}</span>
+          de {{ loteAEliminar?.producto?.nombre }}? Esta acción no se puede deshacer.
+        </p>
+        <div class="flex justify-end gap-2">
+          <Button variant="outline" :disabled="eliminando" @click="eliminarOpen = false">
+            Cancelar
+          </Button>
+          <Button variant="destructive" :disabled="eliminando" @click="confirmarEliminar">
+            Eliminar
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
 

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { CircleCheck, TriangleAlert, FileText, Download, SearchX } from "@lucide/vue";
+import { CircleCheck, TriangleAlert, FileText, Download, SearchX, ShieldAlert } from "@lucide/vue";
 import {
   useEtiquetaPublica,
   type EtiquetaPublica,
 } from "~/composables/useEtiquetaPublica";
+import { PICTOGRAMAS_GHS } from "~/utils/ghs";
+import PictogramaGhs from "~/components/etiquetas/PictogramaGhs.vue";
 import VencimientoBadge from "~/components/lotes/Vencimientobadge.vue";
 
 // Página pública que abre quien escanea el QR de la etiqueta: sin sidebar
@@ -17,7 +19,7 @@ useHead({
 
 const route = useRoute();
 const token = computed(() => String(route.params.token));
-const { obtener, urlCoa } = useEtiquetaPublica();
+const { obtener, urlCoa, urlFds } = useEtiquetaPublica();
 
 const etiqueta = ref<EtiquetaPublica | null>(null);
 const cargando = ref(true);
@@ -93,6 +95,54 @@ async function descargarCoa() {
     descargandoCoa.value = false;
   }
 }
+
+// Vencido = la fecha (MM/AAAA -> fin de ese mes, o DD/MM/AAAA) ya pasó.
+const vencido = computed(() => {
+  const f = etiqueta.value?.fechaVencimiento;
+  if (!f) return false;
+  const p = f.split("/").map(Number);
+  if (p.some((n) => Number.isNaN(n))) return false;
+  const fin = p.length === 2 ? new Date(p[1]!, p[0]!, 0) : new Date(p[2]!, p[1]! - 1, p[0]!);
+  fin.setHours(23, 59, 59, 999);
+  return fin.getTime() < Date.now();
+});
+
+const fmtFecha = (iso: string) =>
+  new Date(iso).toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" });
+
+const pasos = computed(() => {
+  const e = etiqueta.value;
+  if (!e) return [];
+  return [
+    { titulo: "Fabricado", detalle: `${e.fabricante} · lote ${e.numeroLote} · ${e.fechaFabricacion}` },
+    { titulo: "Calidad", detalle: e.tieneCoa ? "Certificado COA validado" : "COA pendiente de adjuntar" },
+    { titulo: "Fraccionado y etiquetado", detalle: `Excellence Chemical · ${fmtFecha(e.etiquetadoEn)}` },
+    { titulo: "Etiqueta impresa", detalle: e.impreso ? "Confirmada" : "En cola de impresión" },
+  ];
+});
+
+const pictogramasInfo = computed(() =>
+  (etiqueta.value?.pictogramasGhs ?? [])
+    .map((c) => PICTOGRAMAS_GHS.find((p) => p.codigo === c))
+    .filter((p): p is (typeof PICTOGRAMAS_GHS)[number] => !!p),
+);
+
+const abriendoFds = ref(false);
+async function verFds() {
+  errorCoa.value = "";
+  abriendoFds.value = true;
+  const ventana = window.open("", "_blank");
+  try {
+    const { url } = await urlFds(token.value, false);
+    if (ventana) ventana.location.href = url;
+    else window.location.href = url;
+  } catch {
+    ventana?.close();
+    errorCoa.value = "No se pudo abrir la ficha de seguridad. Inténtalo de nuevo.";
+  } finally {
+    abriendoFds.value = false;
+  }
+}
 </script>
 
 <template>
@@ -142,6 +192,19 @@ async function descargarCoa() {
           <p class="font-semibold text-amber-600 dark:text-amber-400">Etiqueta registrada</p>
           <p class="text-sm text-amber-700/80 dark:text-amber-300/80">
             Este lote aún no tiene certificado COA adjunto
+          </p>
+        </div>
+      </div>
+
+      <div
+        v-if="vencido"
+        class="flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4"
+      >
+        <TriangleAlert class="h-9 w-9 shrink-0 text-red-500" />
+        <div>
+          <p class="font-semibold text-red-600 dark:text-red-400">Producto vencido</p>
+          <p class="text-sm text-red-700/80 dark:text-red-300/80">
+            Venció el {{ etiqueta.fechaVencimiento }}. No lo uses sin consultar a Calidad.
           </p>
         </div>
       </div>
@@ -196,6 +259,52 @@ async function descargarCoa() {
         </div>
       </div>
 
+      <div
+        v-if="pictogramasInfo.length || etiqueta.palabraAdvertencia || etiqueta.frasesH?.length || etiqueta.frasesP?.length"
+        class="space-y-4 rounded-xl border bg-card p-4"
+      >
+        <div class="flex items-center justify-between">
+          <p class="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Seguridad (GHS)
+          </p>
+          <span
+            v-if="etiqueta.palabraAdvertencia"
+            class="rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
+            :class="etiqueta.palabraAdvertencia === 'PELIGRO' ? 'bg-red-600 text-white' : 'bg-amber-400 text-black'"
+          >
+            {{ etiqueta.palabraAdvertencia === "PELIGRO" ? "Peligro" : "Atención" }}
+          </span>
+        </div>
+
+        <ul v-if="pictogramasInfo.length" class="space-y-3">
+          <li v-for="p in pictogramasInfo" :key="p.codigo" class="flex items-center gap-4">
+            <PictogramaGhs :codigo="p.codigo" class="!w-16 shrink-0" />
+            <div>
+              <p class="text-sm font-semibold">{{ p.nombre }}</p>
+              <p class="text-sm text-muted-foreground">{{ p.descripcion }}</p>
+            </div>
+          </li>
+        </ul>
+
+        <div v-if="etiqueta.frasesH?.length">
+          <p class="mb-1 text-sm font-semibold">Indicaciones de peligro</p>
+          <ul class="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+            <li v-for="(f, i) in etiqueta.frasesH" :key="i">{{ f }}</li>
+          </ul>
+        </div>
+        <div v-if="etiqueta.frasesP?.length">
+          <p class="mb-1 text-sm font-semibold">Consejos de prudencia</p>
+          <ul class="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+            <li v-for="(f, i) in etiqueta.frasesP" :key="i">{{ f }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <Button v-if="etiqueta.tieneFds" variant="outline" size="lg" class="w-full" :disabled="abriendoFds" @click="verFds">
+        <ShieldAlert class="mr-2 h-4 w-4" />
+        Ficha de seguridad (FDS)
+      </Button>
+
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Button
           variant="outline"
@@ -212,6 +321,19 @@ async function descargarCoa() {
         </Button>
       </div>
       <p v-if="errorCoa" class="text-center text-sm text-destructive">{{ errorCoa }}</p>
+
+      <div class="rounded-xl border bg-card p-4">
+        <p class="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Trazabilidad
+        </p>
+        <ol class="relative ml-2 space-y-4 border-l pl-5">
+          <li v-for="(p, i) in pasos" :key="i" class="relative">
+            <span class="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
+            <p class="text-sm font-semibold">{{ p.titulo }}</p>
+            <p class="text-sm text-muted-foreground">{{ p.detalle }}</p>
+          </li>
+        </ol>
+      </div>
     </template>
   </div>
 </template>

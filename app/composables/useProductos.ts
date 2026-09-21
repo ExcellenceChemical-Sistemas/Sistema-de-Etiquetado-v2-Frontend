@@ -70,3 +70,26 @@ export function useVerFichaSeguridad() {
     },
   })
 }
+
+
+export interface ClasificacionFds {
+  pictogramasGhs: string[]
+  palabraAdvertencia: 'PELIGRO' | 'ATENCION' | null
+  frasesH: string[]
+  frasesP: string[]
+}
+
+// Lee una FDS (PDF) y devuelve la clasificación GHS propuesta. No guarda nada.
+export function useAnalizarFicha() {
+  const api = useApi()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const { data } = await api.post<ClasificacionFds>('/productos/analizar-ficha', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return data
+    },
+  })
+}

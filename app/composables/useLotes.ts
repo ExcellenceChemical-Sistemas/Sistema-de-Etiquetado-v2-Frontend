@@ -41,6 +41,20 @@ export function useUpdateLote() {
   })
 }
 
+export function useDeleteLote() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.delete<Lote>(`/lotes/${id}`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lotes'] })
+    },
+  })
+}
+
 export function useUploadCoa() {
   const api = useApi()
   const queryClient = useQueryClient()
