@@ -117,6 +117,10 @@ async function leerClasificacion(file: File) {
   clasificacionLeida.value = false
   try {
     const c = await analizarFicha(file)
+    if (c.noPeligroso) {
+      toast.success('La ficha indica que el producto no está clasificado como peligroso: no lleva pictogramas.')
+      return
+    }
     if (!c.pictogramasGhs.length && !c.frasesH.length && !c.palabraAdvertencia) {
       toast.warning('No se encontró la clasificación GHS en la ficha. Márcala a mano.')
       return

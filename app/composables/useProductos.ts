@@ -77,6 +77,7 @@ export interface ClasificacionFds {
   palabraAdvertencia: 'PELIGRO' | 'ATENCION' | null
   frasesH: string[]
   frasesP: string[]
+  noPeligroso: boolean
 }
 
 // Lee una FDS (PDF) y devuelve la clasificación GHS propuesta. No guarda nada.
