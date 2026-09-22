@@ -26,6 +26,18 @@ const rankingFds = computed(() =>
   porProducto.value.filter((p) => p.fdsVistas > 0).sort((a, b) => b.fdsVistas - a.fdsVistas),
 );
 
+// El ScrollArea de shadcn necesita una altura CONCRETA para poder recortar y
+// scrollear (su viewport interno es height:100%; con solo max-height el
+// contenido se desborda en vez de scrollear — ver comentario más abajo). Por
+// eso el alto fijo se aplica recién cuando hay contenido de sobra para
+// llenarlo; con pocas filas, sin clase de alto, el ScrollArea se limita a
+// mostrarlas todas sin scroll ni espacio vacío de más.
+const UMBRAL_SCROLL = 6;
+const UMBRAL_SCROLL_DETALLE = 10;
+const alturaCoa = computed(() => (rankingCoa.value.length > UMBRAL_SCROLL ? "h-72" : ""));
+const alturaFds = computed(() => (rankingFds.value.length > UMBRAL_SCROLL ? "h-72" : ""));
+const detalleEsLargo = computed(() => porProducto.value.length > UMBRAL_SCROLL_DETALLE);
+
 const TARJETAS = computed(() => [
   { label: "Escaneos de QR", valor: totales.value.escaneos, icon: QrCode },
   { label: "COA vistos", valor: totales.value.coaVistas, icon: FileText },
@@ -91,9 +103,7 @@ const TARJETAS = computed(() => [
             <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
             Todavía nadie vio ni descargó un COA desde el QR.
           </div>
-          <!-- max-h propio: con muchos productos, esta tarjeta scrollea sola
-               en vez de estirar toda la página. -->
-          <ScrollArea v-else class="max-h-72">
+          <ScrollArea v-else :class="alturaCoa">
             <Table>
               <TableHeader class="sticky top-0 z-10 bg-background">
                 <TableRow>
@@ -122,7 +132,7 @@ const TARJETAS = computed(() => [
             <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
             Todavía nadie vio una ficha de seguridad desde el QR.
           </div>
-          <ScrollArea v-else class="max-h-72">
+          <ScrollArea v-else :class="alturaFds">
             <Table>
               <TableHeader class="sticky top-0 z-10 bg-background">
                 <TableRow>
@@ -141,9 +151,12 @@ const TARJETAS = computed(() => [
         </div>
       </div>
 
-      <div class="flex max-h-[28rem] min-h-0 shrink-0 flex-col overflow-hidden rounded-md border border-border">
+      <div
+        class="shrink-0 rounded-md border border-border"
+        :class="detalleEsLargo ? 'flex h-[28rem] min-h-0 flex-col overflow-hidden' : ''"
+      >
         <h2 class="shrink-0 border-b p-4 text-sm font-medium">Detalle completo por producto</h2>
-        <ScrollArea class="min-h-0 flex-1">
+        <ScrollArea :class="detalleEsLargo ? 'min-h-0 flex-1' : ''">
           <Table>
             <TableHeader class="sticky top-0 z-10 bg-background">
               <TableRow>
@@ -183,3 +196,16 @@ const TARJETAS = computed(() => [
     </template>
   </div>
 </template>
+
+<style scoped>
+/* El <Table> de shadcn envuelve la tabla en su propio div con overflow-auto
+   (Table.vue: data-slot="table-container"). Dentro de un ScrollArea eso
+   crea un segundo contenedor con scroll propio, y el thead "sticky" termina
+   pegándose a ESE div en vez de al viewport del ScrollArea — como ese div
+   no es el que realmente scrollea acá, el header visualmente no se queda
+   fijo. Se neutraliza su overflow para que el único que scrollee sea el
+   ScrollArea de afuera. */
+:deep([data-slot="table-container"]) {
+  overflow: visible;
+}
+</style>
