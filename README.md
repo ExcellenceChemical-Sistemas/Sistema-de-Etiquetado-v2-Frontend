@@ -143,7 +143,7 @@ El grid se indexa **por `proceso`, nunca por el `id` de la fila** de Prisma: eso
 
 ## Historial y lotes
 
-- `/historial` lista las etiquetas generadas (búsqueda, filtro por estado, paginación, abrir/copiar el enlace del QR, y una columna **Escaneos** con el contador y la fecha del último). Requiere `ETIQUETAS:puedeVer`.
+- `/historial` lista las etiquetas generadas (búsqueda, filtro por estado, paginación, abrir/copiar el enlace del QR, una columna **Escaneos** con el contador y la fecha del último, y una columna **COA / FDS** con tres contadores — veces vista y descargada el COA, veces vista la ficha de seguridad — tomados de `coaVistas`/`coaDescargas`/`fdsVistas` del historial). Requiere `ETIQUETAS:puedeVer`.
 - En `/lotes` el botón de eliminar borra el lote con su historial, salvo que tenga un QR vigente (menos de 2 años): en ese caso el backend responde 409 y se muestra su mensaje.
 
 ## Alertas de impresión y vista previa

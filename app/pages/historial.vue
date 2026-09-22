@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { Search, ExternalLink, Copy, Inbox, QrCode } from "@lucide/vue";
+import { Search, ExternalLink, Copy, Inbox, QrCode, FileText, Download, ShieldAlert } from "@lucide/vue";
 import { toast } from "vue-sonner";
 import {
   useHistorialEtiquetas,
@@ -135,18 +135,19 @@ async function copiarQr(e: EtiquetaHistorial) {
             <TableHead>Estado</TableHead>
             <TableHead>Creada por</TableHead>
             <TableHead class="text-center">Escaneos</TableHead>
+            <TableHead class="text-center">COA / FDS</TableHead>
             <TableHead class="w-24 text-right">QR</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <template v-if="isPending">
             <TableRow v-for="i in 5" :key="i">
-              <TableCell v-for="c in 9" :key="c"><Skeleton class="h-4 w-full" /></TableCell>
+              <TableCell v-for="c in 10" :key="c"><Skeleton class="h-4 w-full" /></TableCell>
             </TableRow>
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="9" class="py-8 text-center">
+              <TableCell colspan="10" class="py-8 text-center">
                 <p class="mb-2 text-sm text-destructive">No se pudo cargar el historial</p>
                 <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
               </TableCell>
@@ -154,7 +155,7 @@ async function copiarQr(e: EtiquetaHistorial) {
           </template>
           <template v-else-if="filtradas.length === 0">
             <TableRow>
-              <TableCell colspan="9" class="py-16 text-center text-muted-foreground">
+              <TableCell colspan="10" class="py-16 text-center text-muted-foreground">
                 <Inbox class="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p class="font-medium text-foreground">
                   {{ search || estado !== "todos" ? "Sin resultados" : "Aún no hay etiquetas" }}
@@ -198,6 +199,22 @@ async function copiarQr(e: EtiquetaHistorial) {
                   >
                     {{ fmtFecha(e.ultimoEscaneoAt) }}
                   </p>
+                </template>
+                <span v-else class="text-xs text-muted-foreground">—</span>
+              </TableCell>
+              <TableCell class="text-center">
+                <template v-if="e.token">
+                  <div class="flex items-center justify-center gap-3 text-xs tabular-nums text-muted-foreground">
+                    <span class="inline-flex items-center gap-1" title="Veces que se vio el COA">
+                      <FileText class="h-3.5 w-3.5" />{{ e.coaVistas }}
+                    </span>
+                    <span class="inline-flex items-center gap-1" title="Veces que se descargó el COA">
+                      <Download class="h-3.5 w-3.5" />{{ e.coaDescargas }}
+                    </span>
+                    <span class="inline-flex items-center gap-1" title="Veces que se vio la ficha de seguridad (FDS)">
+                      <ShieldAlert class="h-3.5 w-3.5" />{{ e.fdsVistas }}
+                    </span>
+                  </div>
                 </template>
                 <span v-else class="text-xs text-muted-foreground">—</span>
               </TableCell>

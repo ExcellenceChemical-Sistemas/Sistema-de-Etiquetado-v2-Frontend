@@ -16,6 +16,9 @@ export interface EtiquetaHistorial {
   token: string | null
   escaneos: number
   ultimoEscaneoAt: string | null
+  coaVistas: number
+  coaDescargas: number
+  fdsVistas: number
   plantilla: { nombre: string }
   creadoPor: { nombre: string }
   lote: {
