@@ -12,6 +12,19 @@ const totales = computed(() => totalesEstadisticas(etiquetas.value));
 const productosMasEscaneados = computed(() => agruparEscaneosPorProducto(etiquetas.value));
 const porProducto = computed(() => agruparEstadisticasPorProducto(etiquetas.value));
 
+// Ranking de COA: qué producto es de quien se vio/descargó el certificado,
+// ordenado por actividad total (vistas + descargas). Solo los que tienen algo.
+const rankingCoa = computed(() =>
+  porProducto.value
+    .filter((p) => p.coaVistas > 0 || p.coaDescargas > 0)
+    .sort((a, b) => b.coaVistas + b.coaDescargas - (a.coaVistas + a.coaDescargas)),
+);
+
+// Ranking de FDS: mismo criterio, pero para la ficha de seguridad.
+const rankingFds = computed(() =>
+  porProducto.value.filter((p) => p.fdsVistas > 0).sort((a, b) => b.fdsVistas - a.fdsVistas),
+);
+
 const TARJETAS = computed(() => [
   { label: "Escaneos de QR", valor: totales.value.escaneos, icon: QrCode },
   { label: "COA vistos", valor: totales.value.coaVistas, icon: FileText },
@@ -26,7 +39,7 @@ const TARJETAS = computed(() => [
       <h1 class="text-2xl font-semibold">Estadísticas</h1>
       <p class="text-sm text-muted-foreground">
         Uso de las etiquetas desde que se escanea el QR: aperturas, y vistas/descargas del COA
-        y la ficha de seguridad.
+        y la ficha de seguridad, por producto.
       </p>
     </div>
 
@@ -64,7 +77,65 @@ const TARJETAS = computed(() => [
         <DonutProductosEscaneados :datos="productosMasEscaneados" />
       </div>
 
+      <!-- Estos dos van separados a propósito, cada uno con su propia lista de
+           productos: la duda que motivó esta página era justo "de qué producto
+           es cada COA/ficha", así que no alcanza con un total suelto. -->
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-md border border-border p-4">
+          <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
+            <FileText class="h-4 w-4 text-muted-foreground" />
+            COA — vistas y descargas por producto
+          </h2>
+          <div v-if="rankingCoa.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+            <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
+            Todavía nadie vio ni descargó un COA desde el QR.
+          </div>
+          <Table v-else>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Producto</TableHead>
+                <TableHead class="text-center">Vistas</TableHead>
+                <TableHead class="text-center">Descargas</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="p in rankingCoa" :key="p.nombre">
+                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
+                <TableCell class="text-center tabular-nums">{{ p.coaVistas }}</TableCell>
+                <TableCell class="text-center tabular-nums">{{ p.coaDescargas }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+
+        <div class="rounded-md border border-border p-4">
+          <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
+            <ShieldAlert class="h-4 w-4 text-muted-foreground" />
+            Ficha de seguridad (FDS) — vistas por producto
+          </h2>
+          <div v-if="rankingFds.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+            <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
+            Todavía nadie vio una ficha de seguridad desde el QR.
+          </div>
+          <Table v-else>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Producto</TableHead>
+                <TableHead class="text-center">Vistas</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="p in rankingFds" :key="p.nombre">
+                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
+                <TableCell class="text-center tabular-nums">{{ p.fdsVistas }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
       <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
+        <h2 class="border-b p-4 text-sm font-medium">Detalle completo por producto</h2>
         <Table>
           <TableHeader class="sticky top-0 z-10 bg-background">
             <TableRow>
