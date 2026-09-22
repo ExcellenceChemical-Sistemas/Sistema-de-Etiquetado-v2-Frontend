@@ -201,3 +201,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Barra de scroll fina y del tema (mismo color que usa el ScrollBar de
+   shadcn: bg-border) para contenedores con overflow-y-auto NATIVO. Se usa
+   en vez del ScrollArea de shadcn en los pocos lugares donde el contenido
+   tiene que "abrazarse" cuando es corto y recién scrollear si crece más
+   allá de un max-height — el viewport interno del ScrollArea es
+   height:100%, y eso no se resuelve bien contra un ancestro con
+   max-height (ni con flex-1 ni con grid 1fr): necesita una altura fija,
+   no un tope variable. El scroll nativo no tiene ese problema, solo se
+   veía feo con la barra gris del sistema — esto la re-pinta. */
+.scroll-tema {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scroll-tema::-webkit-scrollbar {
+  width: 10px;
+}
+.scroll-tema::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-tema::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

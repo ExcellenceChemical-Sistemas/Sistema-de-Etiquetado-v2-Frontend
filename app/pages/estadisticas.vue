@@ -151,12 +151,17 @@ const TARJETAS = computed(() => [
         </div>
       </div>
 
+      <!-- grid-rows-[auto_1fr] en vez de flex+flex-1: el ScrollArea de shadcn
+           es height:100% por dentro, y un flex-item con flex-1 NO le da una
+           altura lo bastante "definida" para que ese 100% funcione (el
+           contenido se sale igual, sin scroll) — un track "1fr" de grid sí
+           resuelve bien esa altura. -->
       <div
         class="shrink-0 rounded-md border border-border"
-        :class="detalleEsLargo ? 'flex h-[28rem] min-h-0 flex-col overflow-hidden' : ''"
+        :class="detalleEsLargo ? 'grid h-[28rem] grid-rows-[auto_1fr] overflow-hidden' : ''"
       >
-        <h2 class="shrink-0 border-b p-4 text-sm font-medium">Detalle completo por producto</h2>
-        <ScrollArea :class="detalleEsLargo ? 'min-h-0 flex-1' : ''">
+        <h2 class="border-b p-4 text-sm font-medium">Detalle completo por producto</h2>
+        <ScrollArea :class="detalleEsLargo ? 'h-full min-h-0' : ''">
           <Table>
             <TableHeader class="sticky top-0 z-10 bg-background">
               <TableRow>

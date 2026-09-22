@@ -361,7 +361,13 @@ function abrirFichaEnPestana() {
     </div>
 
     <Dialog v-model:open="dialogOpen">
-      <DialogContent class="max-h-[90vh] overflow-y-auto">
+      <!-- overflow-y-auto nativo + .scroll-tema (ver tailwind.css): el
+           ScrollArea de shadcn no sirve acá porque el diálogo tiene que
+           "abrazar" el contenido cuando es corto y recién limitarse a
+           max-h-[90vh] si crece — su viewport interno es height:100% y eso
+           no se resuelve bien contra un ancestro con max-height (probado
+           con flex-1 y con grid 1fr, ninguno funciona sin una altura fija). -->
+      <DialogContent class="scroll-tema max-h-[90vh] overflow-y-auto">
         <DialogTitle>{{
           editando ? "Editar producto" : "Nuevo producto"
         }}</DialogTitle>

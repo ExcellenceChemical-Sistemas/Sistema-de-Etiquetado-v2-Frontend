@@ -458,7 +458,10 @@ function limpiarFormulario() {
       </Card>
     </form>
     <Dialog v-model:open="previaOpen">
-      <DialogContent class="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <!-- overflow-y-auto nativo + .scroll-tema (ver tailwind.css): mismo
+           motivo que en productos/index.vue — el ScrollArea de shadcn no
+           "abraza" contenido corto dentro de un max-height. -->
+      <DialogContent class="scroll-tema max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogTitle>Vista previa de la etiqueta</DialogTitle>
         <img
           v-if="previaImagen"
