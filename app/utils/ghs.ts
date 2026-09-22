@@ -1,3 +1,19 @@
+// Estado de la clasificación GHS de un producto:
+//  - completo: tiene pictogramas.
+//  - incompleto: tiene frases H o palabra de advertencia pero NO pictogramas (falta marcarlos).
+//  - sin: no tiene nada cargado.
+export type EstadoGhs = 'completo' | 'incompleto' | 'sin'
+
+export function estadoGhs(p: {
+  pictogramasGhs?: string[] | null
+  palabraAdvertencia?: string | null
+  frasesH?: string[] | null
+}): EstadoGhs {
+  if (p.pictogramasGhs?.length) return 'completo'
+  if (p.frasesH?.length || p.palabraAdvertencia) return 'incompleto'
+  return 'sin'
+}
+
 // Pictogramas GHS/SGA: nombre corto y qué significa (se muestra al escanear el QR).
 export const PICTOGRAMAS_GHS = [
   { codigo: 'GHS01', nombre: 'Explosivo', descripcion: 'Puede explotar por calor, golpe o fricción.' },

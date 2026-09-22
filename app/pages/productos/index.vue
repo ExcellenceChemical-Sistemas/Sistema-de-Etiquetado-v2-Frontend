@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useProductos, useVerFichaSeguridad } from "~/composables/useProductos";
 import { useProductosListado } from "~/composables/useProductosListado";
 import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from "@lucide/vue";
 import { toast } from "vue-sonner";
+import { estadoGhs } from "~/utils/ghs";
 import { usePermiso } from "~/composables/usePermiso";
 
 const permiso = usePermiso("PRODUCTOS");
@@ -39,6 +40,11 @@ const {
   paginados,
   PAGE_SIZE,
 } = useProductosListado(productos);
+
+// Productos con frases de peligro o palabra de advertencia pero sin pictogramas.
+const incompletosGhs = computed(
+  () => (productos.value ?? []).filter((p) => estadoGhs(p) === "incompleto").length,
+);
 
 const { progress, isExporting, exportar } = useXlsxExport();
 function estadoRombo(p: Producto): string {
@@ -176,12 +182,21 @@ function abrirFichaEnPestana() {
       :result-count="filtrados.length"
       class="shrink-0"
     />
+    <p
+      v-if="incompletosGhs"
+      class="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400"
+    >
+      {{ incompletosGhs }} producto{{ incompletosGhs === 1 ? "" : "s" }}
+      tiene{{ incompletosGhs === 1 ? "" : "n" }} frases de peligro pero ningún pictograma
+      (marcados «Incompleto»). Edítalos y marca los pictogramas.
+    </p>
     <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
       <Table>
         <TableHeader class="sticky top-0 z-10 bg-background">
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead>NFPA</TableHead>
+            <TableHead class="w-28 text-center">GHS</TableHead>
             <TableHead class="w-24 text-center">Ficha</TableHead>
             <TableHead class="w-24 text-right">Acciones</TableHead>
           </TableRow>
@@ -191,6 +206,7 @@ function abrirFichaEnPestana() {
             <TableRow v-for="i in 4" :key="i">
               <TableCell><Skeleton class="h-4 w-48" /></TableCell>
               <TableCell><Skeleton class="h-4 w-16" /></TableCell>
+              <TableCell class="text-center"><Skeleton class="h-4 w-12 mx-auto" /></TableCell>
               <TableCell class="text-center"
                 ><Skeleton class="h-4 w-6 mx-auto"
               /></TableCell>
@@ -201,7 +217,7 @@ function abrirFichaEnPestana() {
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="4" class="text-center py-8">
+              <TableCell colspan="5" class="text-center py-8">
                 <p class="text-sm text-destructive mb-2">
                   No se pudieron cargar los productos
                 </p>
@@ -214,7 +230,7 @@ function abrirFichaEnPestana() {
           <template v-else-if="filtrados.length === 0">
             <TableRow>
               <TableCell
-                colspan="4"
+                colspan="5"
                 class="text-center text-muted-foreground py-8"
               >
                 No hay productos
@@ -235,6 +251,23 @@ function abrirFichaEnPestana() {
                   :nfpa-inflamabilidad="p.nfpaInflamabilidad"
                   :nfpa-reactividad="p.nfpaReactividad"
                 />
+              </TableCell>
+              <TableCell class="text-center">
+                <span
+                  v-if="estadoGhs(p) === 'completo'"
+                  class="inline-flex rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-600 dark:text-green-400"
+                  :title="p.pictogramasGhs?.join(', ')"
+                >
+                  {{ p.pictogramasGhs?.length }} pictograma{{ p.pictogramasGhs?.length === 1 ? "" : "s" }}
+                </span>
+                <span
+                  v-else-if="estadoGhs(p) === 'incompleto'"
+                  class="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+                  title="Tiene frases de peligro o palabra de advertencia, pero no pictogramas"
+                >
+                  Incompleto
+                </span>
+                <span v-else class="text-xs text-muted-foreground">—</span>
               </TableCell>
               <TableCell class="text-center">
                 <button

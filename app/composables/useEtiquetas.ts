@@ -57,3 +57,33 @@ export function useGenerarEtiqueta() {
     },
   })
 }
+
+interface EstadoVistaPrevia {
+  estado: 'PENDIENTE' | 'PROCESANDO' | 'LISTA' | 'ERROR'
+  imagen: string | null
+  error: string | null
+}
+
+const PREVIA_TIMEOUT_MS = 25000
+
+// Pide al agente que dibuje la etiqueta SIN imprimirla y devuelve la imagen
+// (data URL). No crea ningún trabajo ni deja rastro en el historial.
+export function useVistaPrevia() {
+  const api = useApi()
+  return useMutation({
+    mutationFn: async (dto: GenerarEtiquetaPayload) => {
+      const { data } = await api.post<{ id: string }>('/etiquetas/vista-previa', dto)
+      const limite = Date.now() + PREVIA_TIMEOUT_MS
+
+      while (Date.now() < limite) {
+        await esperar(1000)
+        const { data: previa } = await api.get<EstadoVistaPrevia>(`/etiquetas/vista-previa/${data.id}`)
+        if (previa.estado === 'LISTA' && previa.imagen) return previa.imagen
+        if (previa.estado === 'ERROR') {
+          throw new Error(previa.error || 'No se pudo dibujar la vista previa')
+        }
+      }
+      throw new Error('La vista previa no respondió a tiempo. Verifica que el agente de impresión esté encendido.')
+    },
+  })
+}

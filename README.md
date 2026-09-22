@@ -139,11 +139,17 @@ El grid se indexa **por `proceso`, nunca por el `id` de la fila** de Prisma: eso
 - En el formulario de producto, al elegir la **ficha de seguridad (PDF)** se llama a `POST /productos/analizar-ficha` (`useAnalizarFicha`) y se rellenan pictogramas, palabra de advertencia y frases H/P como **propuesta** (aviso ámbar "revísalos"). Si la ficha dice que el producto no es peligroso se avisa; si es un PDF escaneado, o no se encuentra nada, los pictogramas se marcan a mano.
 - Los 9 pictogramas oficiales de la ONU están en `public/ghs/GHS01.png`–`GHS09.png`; `utils/ghs.ts` tiene sus nombres y descripciones y `components/etiquetas/PictogramaGhs.vue` los dibuja.
 - Se ven en la **página pública del QR** (`pages/e/[token].vue`), no en la etiqueta impresa.
+- En `/productos`, la columna **GHS** marca "N pictogramas" (verde) o "Incompleto" (ámbar, `utils/ghs.ts` → `estadoGhs()`) cuando el producto tiene frases H o palabra de advertencia pero ningún pictograma marcado; un aviso arriba de la tabla cuenta cuántos productos están así. El mismo aviso aparece dentro del formulario al editar ese producto.
 
 ## Historial y lotes
 
-- `/historial` lista las etiquetas generadas (búsqueda, filtro por estado, paginación, abrir/copiar el enlace del QR). Requiere `ETIQUETAS:puedeVer`.
+- `/historial` lista las etiquetas generadas (búsqueda, filtro por estado, paginación, abrir/copiar el enlace del QR, y una columna **Escaneos** con el contador y la fecha del último). Requiere `ETIQUETAS:puedeVer`.
 - En `/lotes` el botón de eliminar borra el lote con su historial, salvo que tenga un QR vigente (menos de 2 años): en ese caso el backend responde 409 y se muestra su mensaje.
+
+## Alertas de impresión y vista previa
+
+- `components/etiquetas/AlertasImpresion.vue`, montado en `layouts/default.vue`, consulta cada 15s `GET /etiquetas/agente/estado` (`useEstadoImpresion`) y muestra un banner + toast cuando el agente de impresión no responde, la impresora tiene un problema (papel, tinta, tapa abierta...) o hay etiquetas esperando demasiado. Solo lo ven quienes tienen `ETIQUETAS:puedeVer` o `puedeCrear`.
+- En `/generar-etiqueta`, el botón **Vista previa** (`useVistaPrevia`) pide al agente que dibuje la etiqueta con los datos del formulario, sin imprimirla ni crear ningún trabajo; se muestra en un diálogo con scroll.
 
 ## Visores de documentos
 

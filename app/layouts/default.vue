@@ -6,6 +6,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import AlertasImpresion from '@/components/etiquetas/AlertasImpresion.vue'
 </script>
 
 <template>
@@ -21,6 +22,7 @@ import { Separator } from '@/components/ui/separator'
       </header>
 
       <div class="flex flex-1 flex-col gap-4 p-4">
+        <AlertasImpresion />
         <slot />
       </div>
     </SidebarInset>

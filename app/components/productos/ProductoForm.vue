@@ -295,6 +295,13 @@ const onSubmit = handleSubmit(async (values) => {
         >
           Datos leídos de la ficha de seguridad. Revísalos con la sección 2 de la FDS antes de guardar.
         </p>
+        <p
+          v-if="!leyendoFicha && (frasesH ?? []).length && !(pictogramasGhs ?? []).length"
+          class="rounded-md border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-600 dark:text-red-400"
+        >
+          Hay frases de peligro (H) pero ningún pictograma marcado. Revisa la sección 2 de la
+          ficha: si el producto es peligroso, falta marcar sus pictogramas.
+        </p>
         <div class="grid grid-cols-3 gap-2 sm:grid-cols-5">
           <button
             v-for="p in PICTOGRAMAS_GHS"

@@ -120,18 +120,19 @@ async function copiarQr(e: EtiquetaHistorial) {
             <TableHead>Neto</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Creada por</TableHead>
+            <TableHead class="text-center">Escaneos</TableHead>
             <TableHead class="w-24 text-right">QR</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <template v-if="isPending">
             <TableRow v-for="i in 5" :key="i">
-              <TableCell v-for="c in 8" :key="c"><Skeleton class="h-4 w-full" /></TableCell>
+              <TableCell v-for="c in 9" :key="c"><Skeleton class="h-4 w-full" /></TableCell>
             </TableRow>
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="8" class="py-8 text-center">
+              <TableCell colspan="9" class="py-8 text-center">
                 <p class="mb-2 text-sm text-destructive">No se pudo cargar el historial</p>
                 <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
               </TableCell>
@@ -139,7 +140,7 @@ async function copiarQr(e: EtiquetaHistorial) {
           </template>
           <template v-else-if="filtradas.length === 0">
             <TableRow>
-              <TableCell colspan="8" class="py-16 text-center text-muted-foreground">
+              <TableCell colspan="9" class="py-16 text-center text-muted-foreground">
                 <Inbox class="mx-auto mb-3 h-10 w-10 opacity-50" />
                 <p class="font-medium text-foreground">
                   {{ search || estado !== "todos" ? "Sin resultados" : "Aún no hay etiquetas" }}
@@ -173,6 +174,19 @@ async function copiarQr(e: EtiquetaHistorial) {
                 </span>
               </TableCell>
               <TableCell>{{ e.creadoPor.nombre }}</TableCell>
+              <TableCell class="text-center">
+                <template v-if="e.token">
+                  <span class="tabular-nums">{{ e.escaneos }}</span>
+                  <p
+                    v-if="e.ultimoEscaneoAt"
+                    class="whitespace-nowrap text-xs text-muted-foreground"
+                    title="Último escaneo"
+                  >
+                    {{ fmtFecha(e.ultimoEscaneoAt) }}
+                  </p>
+                </template>
+                <span v-else class="text-xs text-muted-foreground">—</span>
+              </TableCell>
               <TableCell class="text-right">
                 <template v-if="e.token">
                   <Button variant="ghost" size="icon" title="Abrir página del QR" @click="abrirQr(e)">

@@ -13,6 +13,8 @@ export interface EtiquetaHistorial {
   tara: string | null
   proforma: string
   token: string | null
+  escaneos: number
+  ultimoEscaneoAt: string | null
   plantilla: { nombre: string }
   creadoPor: { nombre: string }
   lote: {

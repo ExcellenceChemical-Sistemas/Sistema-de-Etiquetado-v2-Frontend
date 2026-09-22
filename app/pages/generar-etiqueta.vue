@@ -9,10 +9,11 @@ import {
   Scale,
   Receipt,
   Copy as CopyIcon,
+  Eye,
 } from "@lucide/vue";
 import { useLotes } from "~/composables/useLotes";
 import { usePlantillasActivas } from "~/composables/usePlantillas";
-import { useGenerarEtiqueta } from "~/composables/useEtiquetas";
+import { useGenerarEtiqueta, useVistaPrevia } from "~/composables/useEtiquetas";
 import type { Lote } from "~/types/lote";
 
 import {
@@ -26,6 +27,11 @@ const { data: plantillasActivas, isLoading: cargandoPlantillas } =
 
 const { mutateAsync: generarEtiqueta, isPending: generando } =
   useGenerarEtiqueta();
+
+const {
+  mutateAsync: pedirVistaPrevia,
+  isPending: cargandoPrevia,
+} = useVistaPrevia();
 
 const { handleSubmit, defineField, errors, resetForm } =
   useForm<GenerarEtiquetaFormValues>({
@@ -96,7 +102,7 @@ async function confirmarImpresion() {
   valoresPendientes.value = null;
 }
 
-async function imprimir(values: GenerarEtiquetaFormValues) {
+function armarPayload(values: GenerarEtiquetaFormValues) {
   const proforma =
     values.proformaModo === "blanco"
       ? " "
@@ -104,7 +110,7 @@ async function imprimir(values: GenerarEtiquetaFormValues) {
         ? `PF01-${values.proformaNumero}`
         : "PF01-";
 
-  const payload = {
+  return {
     loteId: values.loteId,
     plantillaId: values.plantillaId,
     pesoBruto: values.pesoBruto,
@@ -113,6 +119,26 @@ async function imprimir(values: GenerarEtiquetaFormValues) {
     unidadNeta: values.unidadNeta,
     proforma,
   };
+}
+
+// --- Vista previa: el agente dibuja la etiqueta, no se imprime ni se guarda ---
+const previaOpen = ref(false);
+const previaImagen = ref<string | null>(null);
+
+const verVistaPrevia = handleSubmit(async (values) => {
+  previaImagen.value = null;
+  try {
+    previaImagen.value = await pedirVistaPrevia(armarPayload(values));
+    previaOpen.value = true;
+  } catch (error) {
+    toast.error(
+      error instanceof Error ? error.message : "No se pudo mostrar la vista previa",
+    );
+  }
+});
+
+async function imprimir(values: GenerarEtiquetaFormValues) {
+  const payload = armarPayload(values);
 
   totalCopias.value = values.cantidad;
   copiaActual.value = 0;
@@ -169,7 +195,8 @@ function limpiarFormulario() {
       <div>
         <h1 class="text-2xl font-semibold leading-tight">Generar etiqueta</h1>
         <p class="text-sm text-muted-foreground">
-          Se imprime directo en la Epson al confirmar — sin vista previa.
+          Revisa cómo quedará con «Vista previa» (no imprime). «Generar e imprimir» la
+          manda directo a la Epson.
         </p>
       </div>
     </div>
@@ -405,6 +432,16 @@ function limpiarFormulario() {
             </Button>
             <Button
               type="button"
+              variant="secondary"
+              size="lg"
+              :disabled="generando || cargandoPrevia || cargandoLotes"
+              @click="verVistaPrevia"
+            >
+              <Eye class="mr-2 h-4 w-4" />
+              {{ cargandoPrevia ? "Dibujando…" : "Vista previa" }}
+            </Button>
+            <Button
+              type="button"
               variant="outline"
               size="lg"
               :disabled="generando"
@@ -420,6 +457,24 @@ function limpiarFormulario() {
         </CardFooter>
       </Card>
     </form>
+    <Dialog v-model:open="previaOpen">
+      <DialogContent class="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogTitle>Vista previa de la etiqueta</DialogTitle>
+        <img
+          v-if="previaImagen"
+          :src="previaImagen"
+          alt="Vista previa de la etiqueta"
+          class="w-full rounded border border-border bg-white"
+        />
+        <p class="text-xs text-muted-foreground">
+          Así se dibuja con los datos actuales. El código QR es de muestra: el real se
+          genera al imprimir.
+        </p>
+        <div class="flex justify-end pt-1">
+          <Button variant="outline" @click="previaOpen = false">Cerrar</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     <Dialog v-model:open="confirmOpen">
       <DialogContent>
         <DialogTitle>
