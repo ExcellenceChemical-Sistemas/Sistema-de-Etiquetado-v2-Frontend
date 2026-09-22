@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ChartPie, QrCode, FileText, Download, ShieldAlert, Inbox } from "@lucide/vue";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useHistorialEtiquetas } from "~/composables/useHistorialEtiquetas";
 import DonutProductosEscaneados from "~/components/etiquetas/DonutProductosEscaneados.vue";
 import { agruparEscaneosPorProducto } from "~/utils/escaneos";
@@ -90,22 +91,26 @@ const TARJETAS = computed(() => [
             <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
             Todavía nadie vio ni descargó un COA desde el QR.
           </div>
-          <Table v-else>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead class="text-center">Vistas</TableHead>
-                <TableHead class="text-center">Descargas</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="p in rankingCoa" :key="p.nombre">
-                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.coaVistas }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.coaDescargas }}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+          <!-- max-h propio: con muchos productos, esta tarjeta scrollea sola
+               en vez de estirar toda la página. -->
+          <ScrollArea v-else class="max-h-72">
+            <Table>
+              <TableHeader class="sticky top-0 z-10 bg-background">
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead class="text-center">Vistas</TableHead>
+                  <TableHead class="text-center">Descargas</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="p in rankingCoa" :key="p.nombre">
+                  <TableCell class="font-medium">{{ p.nombre }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.coaVistas }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.coaDescargas }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </div>
 
         <div class="rounded-md border border-border p-4">
@@ -117,59 +122,63 @@ const TARJETAS = computed(() => [
             <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
             Todavía nadie vio una ficha de seguridad desde el QR.
           </div>
-          <Table v-else>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead class="text-center">Vistas</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="p in rankingFds" :key="p.nombre">
-                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.fdsVistas }}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+          <ScrollArea v-else class="max-h-72">
+            <Table>
+              <TableHeader class="sticky top-0 z-10 bg-background">
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead class="text-center">Vistas</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="p in rankingFds" :key="p.nombre">
+                  <TableCell class="font-medium">{{ p.nombre }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.fdsVistas }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </div>
       </div>
 
-      <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
-        <h2 class="border-b p-4 text-sm font-medium">Detalle completo por producto</h2>
-        <Table>
-          <TableHeader class="sticky top-0 z-10 bg-background">
-            <TableRow>
-              <TableHead>Producto</TableHead>
-              <TableHead class="text-center">Escaneos</TableHead>
-              <TableHead class="text-center">COA visto</TableHead>
-              <TableHead class="text-center">COA descargado</TableHead>
-              <TableHead class="text-center">FDS vista</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <template v-if="porProducto.length === 0">
+      <div class="flex max-h-[28rem] min-h-0 shrink-0 flex-col overflow-hidden rounded-md border border-border">
+        <h2 class="shrink-0 border-b p-4 text-sm font-medium">Detalle completo por producto</h2>
+        <ScrollArea class="min-h-0 flex-1">
+          <Table>
+            <TableHeader class="sticky top-0 z-10 bg-background">
               <TableRow>
-                <TableCell colspan="5" class="py-16 text-center text-muted-foreground">
-                  <Inbox class="mx-auto mb-3 h-10 w-10 opacity-50" />
-                  <p class="font-medium text-foreground">Todavía no hay actividad registrada</p>
-                  <p class="text-sm">
-                    Cuando alguien escanee un QR, vea o descargue un COA, o vea una ficha de
-                    seguridad, aparecerá acá.
-                  </p>
-                </TableCell>
+                <TableHead>Producto</TableHead>
+                <TableHead class="text-center">Escaneos</TableHead>
+                <TableHead class="text-center">COA visto</TableHead>
+                <TableHead class="text-center">COA descargado</TableHead>
+                <TableHead class="text-center">FDS vista</TableHead>
               </TableRow>
-            </template>
-            <template v-else>
-              <TableRow v-for="p in porProducto" :key="p.nombre">
-                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.escaneos }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.coaVistas }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.coaDescargas }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.fdsVistas }}</TableCell>
-              </TableRow>
-            </template>
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              <template v-if="porProducto.length === 0">
+                <TableRow>
+                  <TableCell colspan="5" class="py-16 text-center text-muted-foreground">
+                    <Inbox class="mx-auto mb-3 h-10 w-10 opacity-50" />
+                    <p class="font-medium text-foreground">Todavía no hay actividad registrada</p>
+                    <p class="text-sm">
+                      Cuando alguien escanee un QR, vea o descargue un COA, o vea una ficha de
+                      seguridad, aparecerá acá.
+                    </p>
+                  </TableCell>
+                </TableRow>
+              </template>
+              <template v-else>
+                <TableRow v-for="p in porProducto" :key="p.nombre">
+                  <TableCell class="font-medium">{{ p.nombre }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.escaneos }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.coaVistas }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.coaDescargas }}</TableCell>
+                  <TableCell class="text-center tabular-nums">{{ p.fdsVistas }}</TableCell>
+                </TableRow>
+              </template>
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
     </template>
   </div>
