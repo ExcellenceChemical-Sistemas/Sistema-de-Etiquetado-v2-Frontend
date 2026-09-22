@@ -1,17 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight, QrCode } from '@lucide/vue'
+import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight } from '@lucide/vue'
 import { useProductos } from '~/composables/useProductos'
 import { useLotes } from '~/composables/useLotes'
-import { useHistorialEtiquetas } from '~/composables/useHistorialEtiquetas'
-import { usePermiso } from '~/composables/usePermiso'
-import { agruparEscaneosPorProducto } from '~/utils/escaneos'
-import DonutProductosEscaneados from '~/components/etiquetas/DonutProductosEscaneados.vue'
-
-// El historial requiere ETIQUETAS:puedeVer — sin ese permiso no se pide ni se muestra el gráfico.
-const permisoEtiquetas = usePermiso('ETIQUETAS')
-const { data: etiquetas } = useHistorialEtiquetas(computed(() => permisoEtiquetas.puedeVer))
-const productosMasEscaneados = computed(() => agruparEscaneosPorProducto(etiquetas.value))
 
 const { data: productos, isPending: cargandoProductos } = useProductos()
 const { data: lotes, isPending: cargandoLotes } = useLotes()
@@ -170,15 +161,6 @@ const accesosRapidos = [
           />
         </NuxtLink>
       </div>
-    </div>
-
-    <!-- productos más escaneados: solo si hay permiso e hay datos -->
-    <div v-if="permisoEtiquetas.puedeVer && productosMasEscaneados.length" class="rounded-lg border bg-card p-6">
-      <p class="mb-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        <QrCode class="h-3.5 w-3.5" />
-        Productos más escaneados
-      </p>
-      <DonutProductosEscaneados :datos="productosMasEscaneados" />
     </div>
 
   </div>

@@ -1,19 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { Search, ExternalLink, Copy, Inbox, QrCode, FileText, Download, ShieldAlert } from "@lucide/vue";
+import { Search, ExternalLink, Copy, Inbox, FileText, Download, ShieldAlert } from "@lucide/vue";
 import { toast } from "vue-sonner";
 import {
   useHistorialEtiquetas,
   type EtiquetaHistorial,
 } from "~/composables/useHistorialEtiquetas";
 import Spinner from "~/components/ui/Spinner.vue";
-import DonutProductosEscaneados from "~/components/etiquetas/DonutProductosEscaneados.vue";
-import { agruparEscaneosPorProducto } from "~/utils/escaneos";
 
 const PAGE_SIZE = 15;
 
 const { data: etiquetas, isPending, isFetching, isError, refetch } = useHistorialEtiquetas();
-const productosMasEscaneados = computed(() => agruparEscaneosPorProducto(etiquetas.value));
 
 type FiltroEstado = "todos" | EtiquetaHistorial["estado"];
 const search = ref("");
@@ -76,22 +73,16 @@ async function copiarQr(e: EtiquetaHistorial) {
 
 <template>
   <div class="flex h-full min-h-0 flex-col gap-4 p-4 lg:p-6">
-    <div class="shrink-0">
-      <h1 class="text-2xl font-semibold">Historial</h1>
-      <p class="text-sm text-muted-foreground">
-        Etiquetas generadas, de la más reciente a la más antigua
-      </p>
-    </div>
-
-    <div
-      v-if="!isPending && productosMasEscaneados.length"
-      class="shrink-0 rounded-md border border-border p-4"
-    >
-      <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
-        <QrCode class="h-4 w-4 text-muted-foreground" />
-        Productos más escaneados
-      </h2>
-      <DonutProductosEscaneados :datos="productosMasEscaneados" />
+    <div class="flex shrink-0 items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold">Historial</h1>
+        <p class="text-sm text-muted-foreground">
+          Etiquetas generadas, de la más reciente a la más antigua
+        </p>
+      </div>
+      <NuxtLink to="/estadisticas" class="shrink-0 text-sm font-medium text-primary hover:underline">
+        Ver estadísticas →
+      </NuxtLink>
     </div>
 
     <div class="flex shrink-0 flex-wrap items-center gap-3">
