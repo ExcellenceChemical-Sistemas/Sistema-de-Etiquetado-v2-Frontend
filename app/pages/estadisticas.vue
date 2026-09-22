@@ -203,9 +203,12 @@ const TARJETAS = computed(() => [
    crea un segundo contenedor con scroll propio, y el thead "sticky" termina
    pegándose a ESE div en vez de al viewport del ScrollArea — como ese div
    no es el que realmente scrollea acá, el header visualmente no se queda
-   fijo. Se neutraliza su overflow para que el único que scrollee sea el
-   ScrollArea de afuera. */
+   fijo. Se neutraliza el overflow VERTICAL para que el único que scrollee
+   en Y sea el ScrollArea de afuera — pero el horizontal se deja en "auto":
+   la tabla de detalle tiene 5 columnas y en celulares (~375px) no entra
+   entera, así que sigue haciendo falta poder scrollearla de lado. */
 :deep([data-slot="table-container"]) {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 </style>
