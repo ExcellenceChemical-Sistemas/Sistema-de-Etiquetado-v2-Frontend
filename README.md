@@ -150,6 +150,13 @@ El grid se indexa **por `proceso`, nunca por el `id` de la fila** de Prisma: eso
 
 - `components/etiquetas/AlertasImpresion.vue`, montado en `layouts/default.vue`, consulta cada 15s `GET /etiquetas/agente/estado` (`useEstadoImpresion`) y muestra un banner + toast cuando el agente de impresión no responde, la impresora tiene un problema (papel, tinta, tapa abierta...) o hay etiquetas esperando demasiado. Solo lo ven quienes tienen `ETIQUETAS:puedeVer` o `puedeCrear`.
 - En `/generar-etiqueta`, el botón **Vista previa** (`useVistaPrevia`) pide al agente que dibuje la etiqueta con los datos del formulario, sin imprimirla ni crear ningún trabajo; se muestra en un diálogo con scroll.
+- El Inicio y `/historial` muestran un donut (`DonutProductosEscaneados.vue`) con los productos más escaneados, sumando `escaneos` por producto (`utils/escaneos.ts` → `agruparEscaneosPorProducto()`). En el Inicio solo se pide/muestra si el usuario tiene `ETIQUETAS:puedeVer` (`useHistorialEtiquetas` acepta un `habilitado` reactivo para eso, y así no tira 403 a quien no tiene el permiso).
+
+## Color de fondo
+
+- `SelectorPaleta.vue` (ícono de paleta en el header, junto al `SidebarTrigger`) deja elegir entre 6 paletas de fondo oscuro (Noche, Ciruela, Abismo, Bosque, Carbón —la de hoy, por defecto—, Vino). `composables/useTemaColor.ts` guarda la elegida en `localStorage` y la aplica como `data-paleta` en `<html>`; los colores están en `assets/css/tailwind.css` bajo `.dark[data-paleta="..."]`.
+- Ninguna paleta toca `--destructive`: el rojo de peligro/eliminar se ve igual sin importar cuál esté elegida — importante en un sistema con etiquetas de riesgo químico.
+- No hay traducción de idioma todavía (el sistema sigue en español); si se agrega, debería vivir al lado de este selector.
 
 ## Visores de documentos
 

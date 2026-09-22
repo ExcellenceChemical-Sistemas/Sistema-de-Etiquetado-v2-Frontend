@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import AlertasImpresion from '@/components/etiquetas/AlertasImpresion.vue'
+import SelectorPaleta from '@/components/SelectorPaleta.vue'
 </script>
 
 <template>
@@ -19,6 +20,7 @@ import AlertasImpresion from '@/components/etiquetas/AlertasImpresion.vue'
         <SidebarTrigger class="-ml-1" />
         <Separator orientation="vertical" class="mr-2 h-4" />
         <!-- acá podés meter breadcrumbs con el nombre de la vista actual -->
+        <SelectorPaleta class="ml-auto" />
       </header>
 
       <div class="flex flex-1 flex-col gap-4 p-4">

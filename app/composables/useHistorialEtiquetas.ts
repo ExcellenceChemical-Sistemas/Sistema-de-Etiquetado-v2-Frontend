@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import type { MaybeRefOrGetter } from 'vue'
 import { useApi } from './useApi'
 
 export interface EtiquetaHistorial {
@@ -24,7 +25,9 @@ export interface EtiquetaHistorial {
   }
 }
 
-export function useHistorialEtiquetas() {
+// `habilitado`: por defecto pide siempre. Pásalo cuando quien mire la página puede
+// no tener ETIQUETAS:puedeVer (ej. el Inicio, que todos ven) — evita el 403.
+export function useHistorialEtiquetas(habilitado: MaybeRefOrGetter<boolean> = true) {
   const api = useApi()
   return useQuery({
     queryKey: ['historial-etiquetas'],
@@ -32,5 +35,6 @@ export function useHistorialEtiquetas() {
       const { data } = await api.get<EtiquetaHistorial[]>('/etiquetas/historial')
       return data
     },
+    enabled: habilitado,
   })
 }

@@ -114,6 +114,85 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Paletas de color de fondo (selector en el header). "Carbón" es la que ya está
+   arriba en .dark, sin overrides. --destructive NO se toca en ninguna: el rojo
+   de peligro/eliminar tiene que verse igual sin importar la paleta elegida. */
+.dark[data-paleta="noche"] {
+  --background: oklch(0.16 0.025 264);
+  --card: oklch(0.205 0.03 264);
+  --popover: oklch(0.205 0.03 264);
+  --secondary: oklch(0.269 0.025 264);
+  --muted: oklch(0.269 0.025 264);
+  --accent: oklch(0.269 0.035 264);
+  --primary: oklch(0.72 0.14 264);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.6 0.14 264);
+  --sidebar: oklch(0.145 0.025 264);
+  --sidebar-primary: oklch(0.72 0.14 264);
+  --sidebar-accent: oklch(0.24 0.03 264);
+  --sidebar-ring: oklch(0.6 0.14 264);
+}
+.dark[data-paleta="ciruela"] {
+  --background: oklch(0.17 0.025 320);
+  --card: oklch(0.215 0.03 320);
+  --popover: oklch(0.215 0.03 320);
+  --secondary: oklch(0.279 0.03 320);
+  --muted: oklch(0.279 0.03 320);
+  --accent: oklch(0.279 0.04 320);
+  --primary: oklch(0.72 0.15 320);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.6 0.14 320);
+  --sidebar: oklch(0.15 0.025 320);
+  --sidebar-primary: oklch(0.72 0.15 320);
+  --sidebar-accent: oklch(0.25 0.03 320);
+  --sidebar-ring: oklch(0.6 0.14 320);
+}
+.dark[data-paleta="abismo"] {
+  --background: oklch(0.16 0.025 200);
+  --card: oklch(0.205 0.03 200);
+  --popover: oklch(0.205 0.03 200);
+  --secondary: oklch(0.269 0.03 200);
+  --muted: oklch(0.269 0.03 200);
+  --accent: oklch(0.269 0.04 200);
+  --primary: oklch(0.75 0.13 200);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.62 0.12 200);
+  --sidebar: oklch(0.145 0.025 200);
+  --sidebar-primary: oklch(0.75 0.13 200);
+  --sidebar-accent: oklch(0.24 0.03 200);
+  --sidebar-ring: oklch(0.62 0.12 200);
+}
+.dark[data-paleta="bosque"] {
+  --background: oklch(0.17 0.025 152);
+  --card: oklch(0.215 0.03 152);
+  --popover: oklch(0.215 0.03 152);
+  --secondary: oklch(0.279 0.03 152);
+  --muted: oklch(0.279 0.03 152);
+  --accent: oklch(0.279 0.04 152);
+  --primary: oklch(0.72 0.15 152);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.6 0.14 152);
+  --sidebar: oklch(0.15 0.025 152);
+  --sidebar-primary: oklch(0.72 0.15 152);
+  --sidebar-accent: oklch(0.25 0.03 152);
+  --sidebar-ring: oklch(0.6 0.14 152);
+}
+.dark[data-paleta="vino"] {
+  --background: oklch(0.17 0.025 18);
+  --card: oklch(0.215 0.028 18);
+  --popover: oklch(0.215 0.028 18);
+  --secondary: oklch(0.279 0.03 18);
+  --muted: oklch(0.279 0.03 18);
+  --accent: oklch(0.279 0.038 18);
+  --primary: oklch(0.68 0.13 18);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.58 0.12 18);
+  --sidebar: oklch(0.15 0.025 18);
+  --sidebar-primary: oklch(0.68 0.13 18);
+  --sidebar-accent: oklch(0.25 0.028 18);
+  --sidebar-ring: oklch(0.58 0.12 18);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
