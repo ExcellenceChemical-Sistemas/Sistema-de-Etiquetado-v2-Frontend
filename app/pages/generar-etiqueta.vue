@@ -23,8 +23,11 @@ import {
 } from "~/schemas/etiqueta.schema";
 
 const { data: lotes, isLoading: cargandoLotes } = useLotes();
-const { data: plantillasActivas, isLoading: cargandoPlantillas } =
-  usePlantillasActivas();
+const {
+  data: plantillasActivas,
+  isLoading: cargandoPlantillas,
+  isError: errorPlantillas,
+} = usePlantillasActivas();
 
 const { mutateAsync: generarEtiqueta, isPending: generando } =
   useGenerarEtiqueta();
@@ -255,6 +258,20 @@ function limpiarFormulario() {
                 class="text-sm text-muted-foreground"
               >
                 Cargando plantillas…
+              </p>
+              <!-- El 403 de GET /plantillas (falta el permiso Plantillas > Ver) y la
+                   lista vacía dan el mismo síntoma acá (plantillasActivas sin datos),
+                   pero la causa y el arreglo son distintos: uno es de permisos, el
+                   otro de datos. Sin distinguirlos, un admin con ETIQUETAS.puedeCrear
+                   pero sin PLANTILLAS.puedeVer ve "no hay plantillas configuradas" y
+                   se pone a buscar plantillas en vez de revisar sus propios permisos. -->
+              <p
+                v-else-if="errorPlantillas"
+                class="text-sm text-destructive"
+              >
+                No tenés permiso para ver las plantillas de etiqueta. Pedile a
+                un administrador que te asigne el permiso "Plantillas &gt;
+                Ver".
               </p>
               <p
                 v-else-if="!plantillasActivas?.length"

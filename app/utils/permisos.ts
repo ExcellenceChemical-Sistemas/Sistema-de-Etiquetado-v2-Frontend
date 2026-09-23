@@ -3,7 +3,10 @@
 // Debe reflejar el enum de usuarios.dto.ts (backend). Si se agrega un recurso
 // allá, agregarlo también acá.
 
-export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'COA', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS'] as const
+// COA no es un recurso propio: subir/reemplazar/eliminar el COA de un lote se
+// controla con LOTES.puedeEditar (ver lotes.controller.ts en el backend). No
+// se lista acá para no ofrecer en el grid un permiso que ningún guard consulta.
+export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS'] as const
 export type Recurso = (typeof RECURSOS)[number]
 
 export const RECURSO_LABEL: Record<Recurso, string> = {
@@ -11,7 +14,6 @@ export const RECURSO_LABEL: Record<Recurso, string> = {
   PRODUCTOS: 'Productos',
   FABRICANTES: 'Fabricantes',
   PLANTILLAS: 'Plantillas',
-  COA: 'COA',
   USUARIOS: 'Usuarios',
   ETIQUETAS: 'Generar Etiquetas',
   PEDIDOS: 'Pedidos',

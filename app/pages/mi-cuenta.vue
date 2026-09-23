@@ -28,7 +28,6 @@ const RECURSOS: { valor: Recurso; etiqueta: string }[] = [
   { valor: 'PRODUCTOS', etiqueta: 'Productos' },
   { valor: 'FABRICANTES', etiqueta: 'Fabricantes' },
   { valor: 'PLANTILLAS', etiqueta: 'Plantillas' },
-  { valor: 'COA', etiqueta: 'COA' },
   { valor: 'USUARIOS', etiqueta: 'Usuarios' },
 ]
 
