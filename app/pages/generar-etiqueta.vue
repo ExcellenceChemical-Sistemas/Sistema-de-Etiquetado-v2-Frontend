@@ -22,7 +22,11 @@ import {
   type GenerarEtiquetaFormValues,
 } from "~/schemas/etiqueta.schema";
 
-const { data: lotes, isLoading: cargandoLotes } = useLotes();
+const {
+  data: lotes,
+  isLoading: cargandoLotes,
+  isError: errorLotes,
+} = useLotes();
 const {
   data: plantillasActivas,
   isLoading: cargandoPlantillas,
@@ -229,7 +233,11 @@ function limpiarFormulario() {
                 placeholder="Buscar por producto, fabricante o número de lote…"
                 loading-placeholder="Cargando lotes…"
               />
-              <p v-if="errors.loteId" class="text-sm text-destructive">
+              <p v-if="errorLotes" class="text-sm text-destructive">
+                No tenés permiso para ver los lotes. Pedile a un administrador
+                que te asigne el permiso "Lotes &gt; Ver".
+              </p>
+              <p v-else-if="errors.loteId" class="text-sm text-destructive">
                 {{ errors.loteId }}
               </p>
             </div>

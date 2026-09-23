@@ -44,6 +44,8 @@ export interface Usuario {
   nombre: string
   email?: string
   esAdmin: boolean
+  /** false = cuenta desactivada por un admin (sin acceso, historial conservado). Ausente = activa. */
+  activo?: boolean
   /**
    * Gestiona accesos de KPIs/ISO de otros usuarios. NO implica acceso propio
    * al contenido: para ver algo dentro de KPIs/ISO necesita que se le asignen

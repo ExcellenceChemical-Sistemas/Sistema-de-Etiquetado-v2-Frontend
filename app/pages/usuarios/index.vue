@@ -120,7 +120,12 @@ onMounted(cargar);
         @click="abrirEditar(u)"
       >
         <div class="min-w-0">
-          <p class="text-sm font-medium truncate">{{ u.nombre }}</p>
+          <p
+            class="text-sm font-medium truncate"
+            :class="{ 'text-muted-foreground': u.activo === false }"
+          >
+            {{ u.nombre }}
+          </p>
           <p
             v-if="!soloGestionaKpisIso"
             class="text-xs text-muted-foreground mt-0.5"
@@ -133,6 +138,12 @@ onMounted(cargar);
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <span
+            v-if="u.activo === false"
+            class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+          >
+            Desactivado
+          </span>
           <ShieldCheck v-if="u.esAdmin" class="h-4 w-4 text-primary" />
           <ChevronRight
             class="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors"

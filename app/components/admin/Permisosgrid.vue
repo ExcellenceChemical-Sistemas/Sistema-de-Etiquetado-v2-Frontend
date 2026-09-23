@@ -13,13 +13,25 @@ const props = defineProps<{
   disabled?: boolean;
 }>();
 
-// Generar Etiqueta llena su selector con GET /plantillas, que exige
-// PLANTILLAS.puedeVer. Dar ETIQUETAS.puedeCrear sin eso deja la pantalla a
-// medias (selector vacío), así que se tilda solo. Se puede destildar a mano.
-function cambiar(recurso: Recurso, key: (typeof ACCIONES)[number]["key"], valor: boolean) {
+// Dependencias entre permisos: algunas pantallas llenan sus selectores con
+// listas de otro recurso. Sin el "Ver" de ese recurso el backend responde 403
+// y el selector queda vacío, así que se tilda solo. Se puede destildar a mano.
+//   - Generar etiqueta: plantillas (PLANTILLAS) y lotes (LOTES).
+//   - Formulario de lote: productos (PRODUCTOS) y fabricantes (FABRICANTES).
+type Accion = (typeof ACCIONES)[number]["key"];
+const DEPENDENCIAS: { recurso: Recurso; accion: Accion; requiere: Recurso[] }[] = [
+  { recurso: "ETIQUETAS", accion: "puedeCrear", requiere: ["PLANTILLAS", "LOTES"] },
+  { recurso: "LOTES", accion: "puedeCrear", requiere: ["PRODUCTOS", "FABRICANTES"] },
+  { recurso: "LOTES", accion: "puedeEditar", requiere: ["PRODUCTOS", "FABRICANTES"] },
+];
+
+function cambiar(recurso: Recurso, key: Accion, valor: boolean) {
   props.modelValue[recurso][key] = valor;
-  if (valor && recurso === "ETIQUETAS" && key === "puedeCrear") {
-    props.modelValue.PLANTILLAS.puedeVer = true;
+  if (!valor) return;
+  for (const d of DEPENDENCIAS) {
+    if (d.recurso === recurso && d.accion === key) {
+      for (const r of d.requiere) props.modelValue[r].puedeVer = true;
+    }
   }
 }
 </script>

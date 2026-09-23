@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch, ref, computed } from "vue";
-import { Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-vue-next";
+import { Loader2, ShieldCheck, Trash2, TriangleAlert, UserX, UserCheck } from "lucide-vue-next";
 import Spinner from "~/components/ui/Spinner.vue";
 import { useApi } from "~/composables/useApi";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
@@ -56,6 +56,37 @@ const soloKpisIso = computed(
 const puedeEliminar = computed(
   () => soyAdmin.value && !!props.usuario && props.usuario.id !== usuarioLogueado.value?.id,
 );
+
+// Desactivar es la salida para quien no se puede eliminar por tener historial:
+// pierde el acceso (el backend le responde 403) pero su historial queda. Es
+// reversible, por eso no pide confirmación. `activoLocal` evita que el botón
+// quede desactualizado: la lista reemplaza la fila pero `usuario` es la vieja.
+const activoLocal = ref(true);
+watch(
+  () => props.usuario,
+  (u) => {
+    activoLocal.value = u?.activo !== false;
+  },
+  { immediate: true },
+);
+const cambiandoActivo = ref(false);
+
+async function alternarActivo() {
+  if (!props.usuario) return;
+  const nuevo = !activoLocal.value;
+  cambiandoActivo.value = true;
+  try {
+    const api = useApi();
+    const { data } = await api.patch(`/usuarios/${props.usuario.id}/activo`, { activo: nuevo });
+    activoLocal.value = nuevo;
+    toast.success(nuevo ? "Usuario reactivado" : "Usuario desactivado");
+    emit("actualizado", data.data);
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? "No se pudo cambiar el estado del usuario");
+  } finally {
+    cambiandoActivo.value = false;
+  }
+}
 
 const confirmarEliminarOpen = ref(false);
 const eliminando = ref(false);
@@ -250,6 +281,16 @@ async function guardar() {
         >
           <Trash2 class="h-4 w-4" />
           Eliminar usuario
+        </Button>
+        <Button
+          v-if="puedeEliminar"
+          variant="ghost"
+          :disabled="guardando || cambiandoActivo"
+          @click="alternarActivo"
+        >
+          <UserCheck v-if="!activoLocal" class="h-4 w-4" />
+          <UserX v-else class="h-4 w-4" />
+          {{ activoLocal ? "Desactivar" : "Reactivar" }}
         </Button>
         <Button variant="outline" :disabled="guardando" @click="open = false"
           >Cerrar</Button
