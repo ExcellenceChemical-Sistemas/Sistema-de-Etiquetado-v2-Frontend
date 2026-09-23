@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch, ref, computed } from "vue";
-import { Loader2, ShieldCheck, TriangleAlert } from "lucide-vue-next";
+import { Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-vue-next";
 import Spinner from "~/components/ui/Spinner.vue";
 import { useApi } from "~/composables/useApi";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
@@ -33,6 +33,7 @@ const open = defineModel<boolean>("open", { default: false });
 
 const emit = defineEmits<{
   actualizado: [usuario: Usuario];
+  eliminado: [usuarioId: number];
 }>();
 
 const permisosState = reactive(crearPermisosStateVacio());
@@ -49,6 +50,34 @@ const { esAdmin: soyAdmin, usuarioActual: usuarioLogueado } = useUsuarioActual()
 const soloKpisIso = computed(
   () => !soyAdmin.value && usuarioLogueado.value?.esAdminKpis === true,
 );
+
+// Solo el admin general elimina (DELETE /usuarios/:id es de EsAdminGuard), y
+// nunca a sí mismo: el backend lo rechaza igual, acá solo se evita ofrecerlo.
+const puedeEliminar = computed(
+  () => soyAdmin.value && !!props.usuario && props.usuario.id !== usuarioLogueado.value?.id,
+);
+
+const confirmarEliminarOpen = ref(false);
+const eliminando = ref(false);
+
+async function eliminarUsuario() {
+  if (!props.usuario) return;
+  eliminando.value = true;
+  try {
+    const api = useApi();
+    await api.delete(`/usuarios/${props.usuario.id}`);
+    toast.success(`Usuario "${props.usuario.nombre}" eliminado`);
+    emit("eliminado", props.usuario.id);
+    confirmarEliminarOpen.value = false;
+    open.value = false;
+  } catch (e: any) {
+    // 409: tiene historial (etiquetas, pedidos o archivos) y no se puede borrar
+    toast.error(e?.response?.data?.message ?? "No se pudo eliminar el usuario");
+    confirmarEliminarOpen.value = false;
+  } finally {
+    eliminando.value = false;
+  }
+}
 
 /**
  * Los accesos NUNCA se leen de la fila de la lista: `GET /usuarios/lista-basica`
@@ -212,6 +241,16 @@ async function guardar() {
       </ScrollArea>
 
       <DialogFooter class="px-6 py-4 border-t gap-2">
+        <Button
+          v-if="puedeEliminar"
+          variant="ghost"
+          class="text-destructive hover:text-destructive sm:mr-auto"
+          :disabled="guardando"
+          @click="confirmarEliminarOpen = true"
+        >
+          <Trash2 class="h-4 w-4" />
+          Eliminar usuario
+        </Button>
         <Button variant="outline" :disabled="guardando" @click="open = false"
           >Cerrar</Button
         >
@@ -222,6 +261,32 @@ async function guardar() {
         >
           <Loader2 v-if="guardando" class="h-4 w-4 animate-spin" />
           {{ soloKpisIso ? "Guardar accesos" : "Guardar permisos" }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog v-model:open="confirmarEliminarOpen">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>¿Eliminar a {{ usuario?.nombre }}?</DialogTitle>
+        <DialogDescription>
+          Se borra su cuenta y todos sus permisos. Esta acción no se puede
+          deshacer. Si el usuario ya imprimió etiquetas, cargó pedidos o subió
+          archivos, no se va a poder eliminar.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter class="gap-2">
+        <Button
+          variant="outline"
+          :disabled="eliminando"
+          @click="confirmarEliminarOpen = false"
+        >
+          Cancelar
+        </Button>
+        <Button variant="destructive" :disabled="eliminando" @click="eliminarUsuario">
+          <Loader2 v-if="eliminando" class="h-4 w-4 animate-spin" />
+          Eliminar
         </Button>
       </DialogFooter>
     </DialogContent>

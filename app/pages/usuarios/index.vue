@@ -59,6 +59,10 @@ function onActualizado(usuario: Usuario) {
   if (i !== -1) usuarios.value[i] = usuario;
 }
 
+function onEliminado(usuarioId: number) {
+  usuarios.value = usuarios.value.filter((u) => u.id !== usuarioId);
+}
+
 onMounted(cargar);
 </script>
 
@@ -142,6 +146,7 @@ onMounted(cargar);
       v-model:open="editarOpen"
       :usuario="usuarioSeleccionado"
       @actualizado="onActualizado"
+      @eliminado="onEliminado"
     />
   </div>
 </template>
