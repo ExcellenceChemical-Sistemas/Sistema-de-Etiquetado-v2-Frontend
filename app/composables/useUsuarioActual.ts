@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import { toast } from 'vue-sonner'
 import { useApi } from './useApi'
 import type { Usuario } from '~/utils/permisos'
 
@@ -28,24 +27,38 @@ export function useUsuarioActual() {
       const { data } = await api.get('/usuarios/me')
       if (epocaDelPedido !== epoca) return // hubo reset() mientras tanto
       usuarioActual.value = data.data
-    } catch (e: any) {
-      // sin sesión válida todavía, o el endpoint falló — se trata como "no admin"
+    } catch {
+      // sin sesión válida todavía, o el endpoint falló — se trata como "no admin".
+      // (Una cuenta desactivada la maneja el interceptor de useApi.)
       if (epocaDelPedido !== epoca) return
       usuarioActual.value = null
-      // 403 en /usuarios/me = cuenta desactivada por un admin (el login de
-      // Supabase sigue andando, pero el backend la rechaza). Se cierra la
-      // sesión para que no quede navegando una app vacía.
-      if (e?.response?.status === 403) {
-        toast.error(e.response.data?.message ?? 'Tu cuenta está desactivada')
-        await useAuth().logout()
-        await navigateTo('/login')
-      }
     } finally {
       // si hubo reset(), esas banderas ya las dejó él en su estado inicial
       if (epocaDelPedido === epoca) {
         cargado.value = true
         cargando.value = false
       }
+    }
+  }
+
+  /**
+   * Vuelve a pedir /usuarios/me sin tocar `cargado` ni vaciar el usuario, para
+   * que los cambios que hizo un admin (permisos, accesos) lleguen a una sesión
+   * ya abierta sin recargar la página. Devuelve true si algo cambió. Los
+   * errores se ignoran: uno de red no debe deslogear ni vaciar la UI.
+   */
+  async function refrescar() {
+    if (!usuarioActual.value || cargando.value) return false
+    const epocaDelPedido = epoca
+    try {
+      const api = useApi()
+      const { data } = await api.get('/usuarios/me')
+      if (epocaDelPedido !== epoca) return false // logout o cambio de usuario en el medio
+      const cambio = JSON.stringify(data.data) !== JSON.stringify(usuarioActual.value)
+      if (cambio) usuarioActual.value = data.data
+      return cambio
+    } catch {
+      return false
     }
   }
 
@@ -68,6 +81,7 @@ export function useUsuarioActual() {
     cargado,
     cargando,
     cargar,
+    refrescar,
     reset,
   }
 }
