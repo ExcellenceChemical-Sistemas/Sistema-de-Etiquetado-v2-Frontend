@@ -92,7 +92,6 @@ function onAvatarActualizado(url: string) {
           <CardContent>
             <AvatarUploader
               v-if="usuarioActual"
-              :usuario-id="String(usuarioActual.id)"
               :avatar-url="usuarioActual.avatarUrl"
               @actualizado="onAvatarActualizado"
             />

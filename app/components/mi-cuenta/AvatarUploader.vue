@@ -5,7 +5,6 @@ import Spinner from '@/components/ui/Spinner.vue'
 import { useAvatar } from '@/composables/useAvatar'
 
 const props = defineProps<{
-  usuarioId: string
   /** null cuando el usuario todavía no subió foto (Usuario.avatarUrl es nullable). */
   avatarUrl?: string | null
 }>()
@@ -37,7 +36,7 @@ async function onFileSeleccionado(e: Event) {
   const urlAnterior = previewUrl.value
   previewUrl.value = URL.createObjectURL(file)
 
-  const urlFinal = await subirAvatar(file, props.usuarioId)
+  const urlFinal = await subirAvatar(file)
 
   if (urlFinal) {
     previewUrl.value = urlFinal
