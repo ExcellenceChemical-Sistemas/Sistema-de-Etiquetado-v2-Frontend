@@ -16,7 +16,7 @@ defineProps<{
 <template>
   <div
     v-if="modelValue"
-    class="w-full min-w-0 rounded-lg border bg-card overflow-x-auto"
+    class="scroll-tema w-full min-w-0 rounded-lg border bg-card overflow-x-auto"
   >
     <div class="min-w-max">
       <!-- Indicadores: 5 permisos por proceso -->

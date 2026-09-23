@@ -217,6 +217,7 @@
 }
 .scroll-tema::-webkit-scrollbar {
   width: 10px;
+  height: 10px;
 }
 .scroll-tema::-webkit-scrollbar-track {
   background: transparent;

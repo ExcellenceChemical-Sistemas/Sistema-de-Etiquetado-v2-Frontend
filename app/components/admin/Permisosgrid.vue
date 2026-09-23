@@ -14,7 +14,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="w-full min-w-0 rounded-lg border bg-card overflow-x-auto">
+  <div class="scroll-tema w-full min-w-0 rounded-lg border bg-card overflow-x-auto">
     <div class="min-w-max">
       <div
         class="grid grid-cols-[1fr_repeat(4,72px)] items-center gap-2 px-5 py-3 border-b bg-muted/40"
