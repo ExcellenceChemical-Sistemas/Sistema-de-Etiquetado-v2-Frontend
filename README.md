@@ -4,7 +4,7 @@ Aplicación web (panel administrativo) construida con **Nuxt 4** para Excellence
 
 1. **Etiquetado** — fabricantes, productos (con ficha de seguridad y clasificación GHS), lotes (con carga de COA), plantillas, usuarios/permisos, impresión de etiquetas e historial de etiquetas generadas.
 2. **KPIs / Documentación ISO** — árbol de carpetas y documentos con control de acceso granular, visor propio de PDF y de Word.
-3. **Pedidos / tiempo de entrega** (en diseño) — reemplaza el registro manual en Excel del lead time de pedidos.
+3. **Pedidos / tiempo de entrega** — reemplaza el registro manual en Excel del lead time de pedidos: pedidos con sus etapas (recibido → en preparación → preparado → salió → entregado), clientes e indicadores de tiempos (`/pedidos`, `/clientes`, `/pedidos/indicadores`).
 
 Es el cliente de la API NestJS que vive en el repo hermano `../backend`.
 
@@ -33,7 +33,8 @@ app/
 │   ├── AppSidebar.vue / NavUser.vue / ModeToggle.vue
 │   ├── ComboboxBuscador.vue / Searchcombobox.vue / LoteCombobox.vue
 │   ├── admin/           # Crearusuario.vue, Editarpermisos.vue, Permisosgrid.vue,
-│   │                    # Accesoskpisiso.vue (grid de accesos KPIs/ISO)
+│   │                    # Accesoskpisiso.vue (grid de accesos KPIs/ISO),
+│   │                    # Historialusuarios.vue (auditoría de cambios sobre cuentas)
 │   ├── documentos/      # VisorWord.vue (docx-preview)
 │   ├── fabricantes/     # FabricanteForm.vue, FabricantesFiltroBar.vue
 │   ├── lotes/           # LoteForm.vue, Lotesfiltrobar.vue, Vencimientobadge.vue
@@ -56,10 +57,11 @@ app/
 ├── lib/utils.ts
 ├── middleware/
 │   ├── auth.global.ts       # sesión / rutas públicas
-│   └── permisos.global.ts   # permiso por ruta (RUTA_PERMISO)
+│   └── permisos.global.ts   # aplica utils/rutasPermisos.ts al navegar
 ├── pages/
 │   ├── index.vue / login.vue / mi-cuenta.vue
-│   ├── generar-etiqueta.vue / historial.vue   # historial: etiquetas generadas, filtros y enlace al QR
+│   ├── generar-etiqueta.vue / historial.vue / estadisticas.vue   # historial: etiquetas generadas, filtros y enlace al QR
+│   ├── pedidos/index.vue · pedidos/indicadores.vue · clientes/index.vue
 │   ├── e/[token].vue                          # página pública del QR (sin login)
 │   ├── fabricantes/index.vue · productos/index.vue · lotes/index.vue
 │   ├── kpis/index.vue                       # raíces (KPIs-SGC / ISO-SGC)
@@ -67,10 +69,13 @@ app/
 │   ├── kpis/[id]/documento/[archivoId].vue  # visor de un documento
 │   ├── olvide-password.vue / restablecer-password.vue
 │   └── usuarios/index.vue, usuarios/[id].vue
-├── plugins/               # vee-validate.ts, vue-query.ts
+├── plugins/               # vee-validate.ts, vue-query.ts, refrescar-permisos.client.ts
 ├── schemas/               # etiqueta, fabricante, lote, producto (Zod)
 ├── types/                 # fabricante, lote, plantilla, producto
-└── utils/                 # supabase.client.ts, permisos.ts, fechavencimiento.ts
+└── utils/                 # supabase.client.ts, permisos.ts, rutasPermisos.ts, fechavencimiento.ts, fechaHora.ts, ...
+
+vitest.config.ts            # tests de lógica pura (*.spec.ts junto al código)
+.github/workflows/ci.yml    # typecheck + test + build en cada push
 ```
 
 ## Arquitectura
@@ -91,6 +96,8 @@ app/
 - `middleware/auth.global.ts` redirige a `/login` si no hay sesión, salvo en las rutas públicas (`/login`, `/olvide-password`, `/restablecer-password`), y de `/login` a `/` si ya hay sesión.
 - Cada request adjunta el `access_token` como `Bearer`.
 - `useUsuarioActual.reset()` **está cableado** al ciclo de vida de la sesión: se llama al hacer login, al hacer logout y desde `onAuthStateChange` cuando cambia el `user.id` (cubre expiración de token o `signOut` desde otra pestaña). Usa un contador de época para descartar respuestas de `/usuarios/me` que llegan tarde, después de un reset — sin eso, los permisos del usuario anterior sobrevivían a un cambio de usuario.
+- **Cuenta desactivada.** Si un admin desactiva la cuenta, el backend responde 403 con `code: 'CUENTA_DESACTIVADA'` en cualquier endpoint. El interceptor de respuesta de `useApi` lo detecta, avisa, cierra la sesión y manda a `/login` (una sola vez aunque fallen varios requests a la vez). Un 403 común, por falta de permiso, **no** cierra la sesión.
+- **Permisos en vivo.** `plugins/refrescar-permisos.client.ts` vuelve a pedir `/usuarios/me` cuando la pestaña recupera el foco (con un mínimo de 30 s entre pedidos) y cada 5 minutos (`useUsuarioActual().refrescar()`). Si algo cambió avisa "Tus permisos fueron actualizados", y si la persona estaba en una pantalla a la que ya no puede entrar la manda a Inicio. Un error de red no desloguea ni vacía la UI.
 
 ## Permisos — dos sistemas en paralelo
 
@@ -98,15 +105,19 @@ No hay que confundirlos: son modelos distintos, con endpoints distintos.
 
 ### 1. Permisos CRUD (`Permiso`)
 
-`app/utils/permisos.ts` es la fuente de verdad: `RECURSOS` (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `COA`, `USUARIOS`, `ETIQUETAS`) × cuatro booleanos (`puedeVer` / `puedeCrear` / `puedeEditar` / `puedeEliminar`). Este archivo tiene que espejar el enum `Recurso` del backend (`usuarios.dto.ts`).
+`app/utils/permisos.ts` es la fuente de verdad: `RECURSOS` (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`) × cuatro booleanos (`puedeVer` / `puedeCrear` / `puedeEditar` / `puedeEliminar`). Este archivo tiene que espejar el enum `Recurso` del backend (`usuarios.dto.ts`). No hay recurso `COA`: subir el COA es `LOTES.puedeEditar`. `/clientes` comparte `PEDIDOS` a propósito.
 
 `usePermiso('RECURSO')` devuelve un objeto reactivo con el bypass de `esAdmin` ya incorporado.
 
 **Habilitar una ruta nueva toca tres lugares:**
 
-1. la tabla `RUTA_PERMISO` en `middleware/permisos.global.ts` (prefijo de ruta → recurso + nivel; lo que no está listado es libre),
+1. la tabla `RUTA_PERMISO` en `utils/rutasPermisos.ts` (prefijo de ruta → recurso + nivel; lo que no está listado es libre). La comparten el middleware y el refresco de permisos en vivo, a través de `rutaPermitida()`,
 2. el flag `visible:` del ítem de navegación en `components/AppSidebar.vue`,
 3. `usePermiso` dentro de la página, para los botones de acción.
+
+**Permisos que dependen de otros.** Algunas pantallas llenan sus selectores con la lista de otro recurso, así que necesitan además su "Ver": Generar etiqueta necesita `PLANTILLAS` y `LOTES`; el formulario de lote necesita `PRODUCTOS` y `FABRICANTES`. `Permisosgrid.vue` los tilda solos (tabla `DEPENDENCIAS`; se pueden destildar a mano) y cada pantalla muestra un mensaje "No tenés permiso para ver…" ante un 403 en vez de un selector vacío. Una dependencia nueva es una fila más en esa tabla.
+
+**Consultas sin permiso.** `useProductos`, `useLotes` y `useFabricantesQuery` aceptan `{ enabled }`; la portada lo ata al `puedeVer` de cada recurso para no disparar requests que devolverían 403. Las tarjetas de la portada y las filas de `mi-cuenta` también respetan los permisos.
 
 ### 2. Accesos de KPIs / ISO
 
@@ -129,7 +140,7 @@ Gestiona los accesos de KPIs/ISO de otros usuarios sin ser admin general. `middl
 
 ### Panel de administración
 
-`pages/usuarios/index.vue` lista usuarios y abre el diálogo `components/admin/Editarpermisos.vue`, que combina `Permisosgrid.vue` (los 4 booleanos × recurso) y `Accesoskpisiso.vue` (los 5 booleanos × proceso + ISO + `gestionaObsoleto`), y hace el `PATCH`.
+`pages/usuarios/index.vue` lista usuarios y abre el diálogo `components/admin/Editarpermisos.vue`, que combina `Permisosgrid.vue` (los 4 booleanos × recurso) y `Accesoskpisiso.vue` (los 5 booleanos × proceso + ISO + `gestionaObsoleto`), y hace el `PATCH`. Un admin general puede además **desactivar/reactivar** una cuenta (sin confirmación, es reversible; la persona pierde el acceso pero conserva su historial) o **eliminarla** (con confirmación; el backend responde 409 si tiene etiquetas, pedidos o archivos, y entonces conviene desactivarla). La lista marca las cuentas desactivadas con "Desactivado el … por …", y el botón **Historial** abre `Historialusuarios.vue`: quién desactivó, reactivó, eliminó o cambió los permisos de quién (`GET /usuarios/auditoria`).
 
 El diálogo trae los accesos de KPIs/ISO con `GET /usuarios/:id/accesos-kpis-iso` cuando se abre, y **no habilita el botón de guardar hasta que esa respuesta llegó**: guardar con el estado en blanco borraría los accesos del usuario, porque el backend hace `deleteMany` + `createMany`. Si el fetch falla, se muestra una tarjeta de aviso y el guardado queda bloqueado.
 
@@ -200,6 +211,9 @@ npm run dev
 # verificación de tipos (vue-tsc)
 npm run typecheck
 
+# tests (vitest)
+npm test
+
 # build de producción
 npm run build
 
@@ -209,7 +223,15 @@ npm run preview
 
 El backend tiene que estar corriendo para que funcione cualquier cosa más allá de `/login`.
 
-**No hay linter ni test runner instalados** (no hay eslint, ni vitest/jest). `npm run typecheck` y `npm run build` son la única verificación mecánica disponible.
+**No hay linter** (no hay eslint). La verificación es `npm run typecheck` (0 errores), `npm test` y `npm run build`, y **GitHub Actions** (`.github/workflows/ci.yml`) corre las tres en cada push y pull request.
+
+## Tests
+
+`npm test` corre **vitest** sobre `app/**/*.spec.ts`. Solo cubre lógica pura (utils y composables); no arranca Nuxt ni prueba componentes. Lo que un composable toma de los auto-imports de Nuxt (`useRuntimeConfig`, `useAuth`, `navigateTo`...) se reemplaza en el test con `vi.stubGlobal` (ver `composables/useApi.spec.ts`).
+
+- `utils/rutasPermisos.spec.ts` — qué rutas puede ver cada usuario (nivel exacto, subrutas, admin, Admin de KPIs).
+- `composables/useUsuarioActual.spec.ts` — `refrescar()`: detecta cambios, ignora errores de red, descarta respuestas que llegan después de un logout.
+- `composables/useApi.spec.ts` — el interceptor: una cuenta desactivada cierra la sesión (una sola vez), un 403 común no.
 
 ## Convenciones de UI
 
@@ -226,6 +248,6 @@ El backend tiene que estar corriendo para que funcione cualquier cosa más allá
 - El frontend corre fijo en el puerto **3001**; el backend habilita CORS para `http://localhost:3000` y `http://localhost:3001`.
 - **La forma de las respuestas es inconsistente**: la mayoría de los endpoints devuelven el payload directo (`const { data } = await api.get<Producto[]>(...)`), pero `/usuarios/me` viene envuelto — `useUsuarioActual` lee `data.data`. Conviene verificar en el backend antes de asumir.
 - La vista "Mi cuenta" (`pages/mi-cuenta.vue`, composable `useAvatar`) permite subir/cambiar la foto de perfil.
-- El recurso `COA` es configurable en el grid de admin pero todavía no lo consume ninguna pantalla; los botones de COA en `LoteForm.vue` se gatean con el recurso `LOTES`.
+- Los botones de COA en `LoteForm.vue` se gatean con el recurso `LOTES` (no hay recurso `COA`).
 - `contexto-fase3-kpis-iso.md` en la raíz es el documento de diseño del módulo KPIs/ISO. Está **parcialmente desactualizado**: describe el rediseño de permisos como "decidido pero no implementado", cuando en realidad ya está implementado en backend y frontend. Sirve para entender el *porqué* de las reglas, no como estado de avance.
 - `4000/` en la raíz es un directorio suelto creado por un comando mal tipeado (contiene solo un `node_modules` vacío) — no es parte del build.

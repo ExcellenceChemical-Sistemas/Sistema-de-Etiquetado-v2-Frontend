@@ -78,6 +78,11 @@ route is no longer allowed, sends the user home. `useApi`'s response interceptor
 with `code: 'CUENTA_DESACTIVADA'` (deactivated account). Composables like `useProductos/useLotes/
 useFabricantesQuery` take `{ enabled }` so a page can skip queries the user can't see (no useless 403s).
 
+**Account admin (`pages/usuarios`).** `Editarpermisos.vue` also lets a general admin deactivate/reactivate
+(`PATCH /usuarios/:id/activo`, reversible, no confirm) or delete (`DELETE /usuarios/:id`, 409 if the user has
+history) an account; `Historialusuarios.vue` shows the audit log (`GET /usuarios/auditoria`). Deactivate is the
+answer whenever delete answers 409.
+
 **Two parallel permission systems.** Do not conflate them:
 
 1. *CRUD permisos* — `utils/permisos.ts` holds `RECURSOS`
