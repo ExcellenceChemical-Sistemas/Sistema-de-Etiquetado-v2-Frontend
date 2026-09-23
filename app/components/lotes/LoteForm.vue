@@ -29,9 +29,19 @@ const isEditing = !!props.lote;
 // gatea el botón "Editar" que abre este form.
 const permiso = usePermiso("LOTES");
 
-const { data: productos, isLoading: cargandoProductos } = useProductos();
-const { data: fabricantes, isLoading: cargandoFabricantes } =
-  useFabricantesQuery();
+// Las listas de los selectores son de otros recursos: sin "Ver" en Productos o
+// Fabricantes el backend responde 403 y el selector quedaría vacío sin explicar
+// por qué, así que se avisa (mismo criterio que generar-etiqueta.vue).
+const {
+  data: productos,
+  isLoading: cargandoProductos,
+  isError: errorProductos,
+} = useProductos();
+const {
+  data: fabricantes,
+  isLoading: cargandoFabricantes,
+  isError: errorFabricantes,
+} = useFabricantesQuery();
 
 const { handleSubmit, defineField, errors, isSubmitting } =
   useForm<LoteFormValues>({
@@ -176,7 +186,11 @@ const onSubmit = handleSubmit(async (values) => {
         placeholder="Buscar producto…"
         loading-placeholder="Cargando productos…"
       />
-      <p v-if="errors.productoId" class="text-sm text-destructive">
+      <p v-if="errorProductos" class="text-sm text-destructive">
+        No tenés permiso para ver los productos. Pedile a un administrador que
+        te asigne el permiso "Productos &gt; Ver".
+      </p>
+      <p v-else-if="errors.productoId" class="text-sm text-destructive">
         {{ errors.productoId }}
       </p>
     </div>
@@ -191,7 +205,11 @@ const onSubmit = handleSubmit(async (values) => {
         placeholder="Buscar fabricante…"
         loading-placeholder="Cargando fabricantes…"
       />
-      <p v-if="errors.fabricanteId" class="text-sm text-destructive">
+      <p v-if="errorFabricantes" class="text-sm text-destructive">
+        No tenés permiso para ver los fabricantes. Pedile a un administrador
+        que te asigne el permiso "Fabricantes &gt; Ver".
+      </p>
+      <p v-else-if="errors.fabricanteId" class="text-sm text-destructive">
         {{ errors.fabricanteId }}
       </p>
     </div>
