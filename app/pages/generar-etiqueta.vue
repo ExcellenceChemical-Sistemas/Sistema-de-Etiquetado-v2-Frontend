@@ -14,6 +14,7 @@ import {
 import { useLotes } from "~/composables/useLotes";
 import { usePlantillasActivas } from "~/composables/usePlantillas";
 import { useGenerarEtiqueta, useVistaPrevia } from "~/composables/useEtiquetas";
+import AlertasImpresion from "~/components/etiquetas/AlertasImpresion.vue";
 import type { Lote } from "~/types/lote";
 
 import {
@@ -200,6 +201,8 @@ function limpiarFormulario() {
         </p>
       </div>
     </div>
+
+    <AlertasImpresion />
 
     <form @submit="onSubmit">
       <Card>
