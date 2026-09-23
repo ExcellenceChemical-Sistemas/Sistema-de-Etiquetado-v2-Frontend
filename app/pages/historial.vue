@@ -114,7 +114,7 @@ async function copiarQr(e: EtiquetaHistorial) {
       </div>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
+    <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
       <Table>
         <TableHeader class="sticky top-0 z-10 bg-background">
           <TableRow>
@@ -224,7 +224,7 @@ async function copiarQr(e: EtiquetaHistorial) {
           </template>
         </TableBody>
       </Table>
-    </div>
+    </ScrollArea>
 
     <div
       v-if="isFetching && !isPending"

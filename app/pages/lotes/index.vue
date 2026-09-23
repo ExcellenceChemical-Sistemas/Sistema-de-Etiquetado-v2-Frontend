@@ -200,7 +200,7 @@ function abrirCoaEnPestana() {
       class="shrink-0"
     />
 
-    <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
+    <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
       <Table>
         <TableHeader class="sticky top-0 z-10 bg-background">
           <TableRow>
@@ -259,9 +259,9 @@ function abrirCoaEnPestana() {
           </template>
           <template v-else>
             <TableRow v-for="l in paginados" :key="l.id">
-              <TableCell>{{ l.producto?.nombre }}</TableCell>
+              <TableCell class="max-w-48 truncate" :title="l.producto?.nombre">{{ l.producto?.nombre }}</TableCell>
               <TableCell>{{ l.numeroLote }}</TableCell>
-              <TableCell>{{ l.fabricante?.nombre }}</TableCell>
+              <TableCell class="max-w-48 truncate" :title="l.fabricante?.nombre">{{ l.fabricante?.nombre }}</TableCell>
               <TableCell>
                 <VencimientoBadge :fecha="l.fechaVencimiento" />
               </TableCell>
@@ -316,7 +316,7 @@ function abrirCoaEnPestana() {
           </template>
         </TableBody>
       </Table>
-    </div>
+    </ScrollArea>
 
     <div
       v-if="isFetching && !isPending"

@@ -190,7 +190,7 @@ function abrirFichaEnPestana() {
       tiene{{ incompletosGhs === 1 ? "" : "n" }} frases de peligro pero ningún pictograma
       (marcados «Incompleto»). Edítalos y marca los pictogramas.
     </p>
-    <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
+    <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
       <Table>
         <TableHeader class="sticky top-0 z-10 bg-background">
           <TableRow>
@@ -244,7 +244,7 @@ function abrirFichaEnPestana() {
           </template>
           <template v-else>
             <TableRow v-for="p in paginados" :key="p.id">
-              <TableCell>{{ p.nombre }}</TableCell>
+              <TableCell class="max-w-64 truncate" :title="p.nombre">{{ p.nombre }}</TableCell>
               <TableCell>
                 <NfpaBadge
                   :nfpa-salud="p.nfpaSalud"
@@ -312,7 +312,7 @@ function abrirFichaEnPestana() {
           </template>
         </TableBody>
       </Table>
-    </div>
+    </ScrollArea>
 
     <div
       v-if="isFetching && !isPending"

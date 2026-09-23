@@ -97,7 +97,7 @@ function onFormSuccess() {
       class="shrink-0"
     />
 
-    <div class="min-h-0 flex-1 overflow-auto rounded-md border border-border">
+    <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
       <Table>
         <TableHeader class="sticky top-0 z-10 bg-background">
           <TableRow>
@@ -139,7 +139,7 @@ function onFormSuccess() {
           </template>
           <template v-else>
             <TableRow v-for="f in paginados" :key="f.id">
-              <TableCell>{{ f.nombre }}</TableCell>
+              <TableCell class="max-w-64 truncate" :title="f.nombre">{{ f.nombre }}</TableCell>
               <TableCell class="text-right">
                 <Button
                   v-if="permiso.puedeEditar"
@@ -156,7 +156,7 @@ function onFormSuccess() {
           </template>
         </TableBody>
       </Table>
-    </div>
+    </ScrollArea>
 
     <div
       v-if="isFetching && !isPending"

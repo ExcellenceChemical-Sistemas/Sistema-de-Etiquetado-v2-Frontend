@@ -386,9 +386,9 @@ async function eliminarArchivo(archivoId: number) {
       </div>
 
       <!-- Archivos -->
-      <div
+      <ScrollArea
         v-if="archivosVisibles.length"
-        class="min-h-0 flex-1 overflow-auto rounded-md border border-border"
+        class="min-h-0 flex-1 rounded-md border border-border"
       >
         <Table>
           <TableHeader class="sticky top-0 z-10 bg-background">
@@ -450,7 +450,7 @@ async function eliminarArchivo(archivoId: number) {
             </TableRow>
           </TableBody>
         </Table>
-      </div>
+      </ScrollArea>
     </template>
   </div>
 </template>
