@@ -1,10 +1,13 @@
+import type { MaybeRefOrGetter } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useApi } from './useApi'
 import type { Lote, CreateLoteDto, UpdateLoteDto } from '~/types/lote'
 
-export function useLotes() {
+// `enabled` permite no disparar la consulta si el usuario no tiene puedeVer (evita un 403 inútil).
+export function useLotes(options: { enabled?: MaybeRefOrGetter<boolean> } = {}) {
   const api = useApi()
   return useQuery({
+    enabled: options.enabled,
     queryKey: ['lotes'],
     queryFn: async () => {
       const { data } = await api.get<Lote[]>('/lotes')

@@ -4,9 +4,15 @@ import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight } fr
 import { useProductos } from '~/composables/useProductos'
 import { useLotes } from '~/composables/useLotes'
 
-const { data: productos, isPending: cargandoProductos } = useProductos()
-const { data: lotes, isPending: cargandoLotes } = useLotes()
-const { data: fabricantes, isPending: cargandoFabricantes } = useFabricantesQuery()
+// Misma regla que el sidebar y el middleware: sin puedeVer no se consulta ni se muestra.
+const permisoProductos = usePermiso('PRODUCTOS')
+const permisoLotes = usePermiso('LOTES')
+const permisoFabricantes = usePermiso('FABRICANTES')
+const permisoEtiquetas = usePermiso('ETIQUETAS')
+
+const { data: productos, isPending: cargandoProductos } = useProductos({ enabled: () => permisoProductos.puedeVer })
+const { data: lotes, isPending: cargandoLotes } = useLotes({ enabled: () => permisoLotes.puedeVer })
+const { data: fabricantes, isPending: cargandoFabricantes } = useFabricantesQuery({ enabled: () => permisoFabricantes.puedeVer })
 
 const totalProductos = computed(() => productos.value?.length ?? 0)
 const totalLotes = computed(() => lotes.value?.length ?? 0)
@@ -28,12 +34,6 @@ const lotesPorVencer = computed(() => {
 // tres "resguardos" de datos, con el número tratado como lectura de
 // instrumento (tabular, monoespaciado) — el mismo lenguaje visual que
 // LOTE / PESO BRUTO en la etiqueta impresa
-// Misma regla que el sidebar y el middleware: sin puedeVer no se muestra la
-// tarjeta (si no, un usuario sin acceso veía "00" porque el backend le da 403).
-const permisoProductos = usePermiso('PRODUCTOS')
-const permisoLotes = usePermiso('LOTES')
-const permisoFabricantes = usePermiso('FABRICANTES')
-const permisoEtiquetas = usePermiso('ETIQUETAS')
 
 const resguardos = computed(() =>
   [

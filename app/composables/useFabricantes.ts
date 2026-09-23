@@ -1,9 +1,12 @@
+import type { MaybeRefOrGetter } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import type { Fabricante, FabricanteInput } from '~/types/fabricante'
 
-export function useFabricantesQuery() {
+// `enabled` permite no disparar la consulta si el usuario no tiene puedeVer (evita un 403 inútil).
+export function useFabricantesQuery(options: { enabled?: MaybeRefOrGetter<boolean> } = {}) {
   const api = useApi()
   return useQuery({
+    enabled: options.enabled,
     queryKey: ['fabricantes'],
     queryFn: async () => {
       const { data } = await api.get<Fabricante[]>('/fabricantes')
