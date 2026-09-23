@@ -8,6 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview --port 3001",
     "typecheck": "vue-tsc --build --force",
+    "test": "vitest run",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -43,6 +44,7 @@
     "@nuxtjs/color-mode": "^4.0.1",
     "@types/node": "^26.2.0",
     "typescript": "^5.9.3",
+    "vitest": "^5.0.1",
     "vue-tsc": "^3.3.11"
   }
 }

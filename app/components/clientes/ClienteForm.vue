@@ -60,7 +60,7 @@ const updateMutation = useUpdateCliente();
 const onSubmit = handleSubmit(async (values) => {
   const input = {
     nombre: values.nombre,
-    tipoDocumento: values.tipoDocumento as Cliente["tipoDocumento"] | undefined,
+    tipoDocumento: values.tipoDocumento as NonNullable<Cliente["tipoDocumento"]> | undefined,
     numeroDocumento: values.numeroDocumento || undefined,
     direccion: values.direccion || undefined,
     celular: values.celular || undefined,

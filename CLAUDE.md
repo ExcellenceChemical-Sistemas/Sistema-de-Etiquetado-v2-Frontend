@@ -21,11 +21,15 @@ npm install              # postinstall runs "nuxt prepare"
 npm run dev              # http://localhost:3001 (port is fixed in the script)
 npm run build            # nuxt build → .output/
 npm run preview          # also port 3001
+npm run typecheck        # vue-tsc; must stay at 0 errors (CI runs it)
+npm test                 # vitest run — pure logic only (utils, composables), Nuxt is NOT booted
 ```
 
-There is **no lint, no typecheck, and no test runner** installed (no eslint, no vue-tsc, no
-vitest/jest). `npm run build` is the only mechanical verification available — don't tell the
-user to run `npm test` or `npm run lint`.
+There is **no lint** (no eslint). Verification is `npm run typecheck`, `npm test` and
+`npm run build`; GitHub Actions (`.github/workflows/ci.yml`) runs all three on every push. Tests live
+next to the code as `*.spec.ts` and only cover logic that doesn't need Nuxt: what a composable takes
+from Nuxt's auto-imports (`useRuntimeConfig`, `useAuth`, `navigateTo`...) is replaced with
+`vi.stubGlobal` in the test (see `composables/useApi.spec.ts`). Components are not tested.
 
 The backend must be running for anything past `/login` to work.
 

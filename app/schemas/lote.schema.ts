@@ -12,10 +12,10 @@ function anioMesDe(fecha: string): { anio: number; mes: number } {
   const partes = fecha.split('/').map(Number)
   if (partes.length === 2) {
     // MM/AAAA
-    return { mes: partes[0], anio: partes[1] }
+    return { mes: partes[0]!, anio: partes[1]! }
   }
   // DD/MM/AAAA
-  return { mes: partes[1], anio: partes[2] }
+  return { mes: partes[1]!, anio: partes[2]! }
 }
 
 function esFechaFutura(fecha: string): boolean {

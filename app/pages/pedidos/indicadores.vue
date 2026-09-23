@@ -133,7 +133,7 @@ const etapas = computed<EtapaProm[]>(() => {
 const etapaMaxHoras = computed(() => Math.max(...etapas.value.map((e) => e.horas), 0.01));
 
 const etapaCuello = computed(() =>
-  etapas.value.reduce((max, e) => (e.horas > max.horas ? e : max), etapas.value[0]),
+  etapas.value.reduce((max, e) => (e.horas > max.horas ? e : max), etapas.value[0]!),
 );
 
 function formatNumero(n: number, decimales = 1) {
