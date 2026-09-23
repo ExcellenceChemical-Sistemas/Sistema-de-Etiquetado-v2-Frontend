@@ -3,6 +3,7 @@ import { ref, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "@lucide/vue";
 import { usePdfViewer } from "~/composables/usePdfViewer";
 import Spinner from "~/components/ui/Spinner.vue";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 const props = defineProps<{
   url: string | null;
@@ -77,16 +78,24 @@ onBeforeUnmount(() => {
       </Button>
     </div>
 
-    <div ref="contenedorEl" class="relative min-h-0 flex-1 overflow-auto bg-muted/30 py-4">
-      <div v-if="cargando" class="flex h-full items-center justify-center">
-        <Spinner class="h-6 w-6" />
-      </div>
-      <p v-else-if="error" class="flex h-full items-center justify-center text-sm text-destructive">
-        {{ error }}
-      </p>
-      <div class="flex justify-center">
-        <canvas ref="canvasEl" class="shadow-md" :class="{ hidden: cargando || error }" />
-      </div>
+    <!-- contenedorEl mide clientWidth para el ajuste de zoom del PDF
+         (usePdfViewer.calcularEscalaAncho): tiene que ser el wrapper FIJO,
+         no el que scrollea, para que el ancho no varíe con el scroll. El
+         ScrollArea de shadcn vive adentro, sin afectar esa medición. -->
+    <div ref="contenedorEl" class="relative min-h-0 flex-1 bg-muted/30">
+      <ScrollArea class="h-full">
+        <div class="min-h-full py-4">
+          <div v-if="cargando" class="flex min-h-[50vh] items-center justify-center">
+            <Spinner class="h-6 w-6" />
+          </div>
+          <p v-else-if="error" class="flex min-h-[50vh] items-center justify-center text-sm text-destructive">
+            {{ error }}
+          </p>
+          <div class="flex justify-center">
+            <canvas ref="canvasEl" class="shadow-md" :class="{ hidden: cargando || error }" />
+          </div>
+        </div>
+      </ScrollArea>
     </div>
   </div>
 </template>

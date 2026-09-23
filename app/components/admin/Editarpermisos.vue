@@ -165,7 +165,7 @@ async function guardar() {
         </DialogDescription>
       </DialogHeader>
 
-      <ScrollArea class="max-h-[55vh] px-6">
+      <ScrollArea class="max-h-[55vh] min-w-0 px-6">
         <div class="space-y-4 pb-6">
           <div
             v-if="usuario?.esAdmin"

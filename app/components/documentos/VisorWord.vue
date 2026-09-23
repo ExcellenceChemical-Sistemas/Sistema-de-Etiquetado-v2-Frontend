@@ -3,6 +3,7 @@ import { ref, watch, nextTick, onBeforeUnmount } from "vue";
 import { renderAsync } from "docx-preview";
 import Spinner from "~/components/ui/Spinner.vue";
 import { useBloqueoDocumento } from "~/composables/useBloqueoDocumento";
+import { ScrollArea } from "~/components/ui/scroll-area";
 
 const props = defineProps<{
   url: string | null;
@@ -72,22 +73,24 @@ onBeforeUnmount(() => {
        usa VisorPdf y tiene el mismo alcance: NO es protección real (punto 4.1
        del contexto). Quien quiera el archivo lo tiene en la pestaña Network. -->
   <div class="flex h-full w-full select-none flex-col">
-    <div class="relative min-h-0 flex-1 overflow-auto bg-muted/30 p-4">
-      <div
-        v-if="cargando"
-        class="absolute inset-0 z-10 flex items-center justify-center bg-background/60"
-      >
-        <Spinner class="h-6 w-6" />
+    <ScrollArea class="relative min-h-0 flex-1 bg-muted/30">
+      <div class="relative min-h-full p-4">
+        <div
+          v-if="cargando"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-background/60"
+        >
+          <Spinner class="h-6 w-6" />
+        </div>
+
+        <p
+          v-else-if="error"
+          class="flex min-h-[50vh] items-center justify-center text-sm text-destructive"
+        >
+          {{ error }}
+        </p>
+
+        <div ref="contenedorEl" class="mx-auto w-fit" />
       </div>
-
-      <p
-        v-else-if="error"
-        class="flex h-full items-center justify-center text-sm text-destructive"
-      >
-        {{ error }}
-      </p>
-
-      <div ref="contenedorEl" class="mx-auto w-fit" />
-    </div>
+    </ScrollArea>
   </div>
 </template>
