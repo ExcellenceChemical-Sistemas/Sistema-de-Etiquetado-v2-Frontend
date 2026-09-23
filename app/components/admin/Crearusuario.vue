@@ -93,12 +93,18 @@ async function guardar() {
         </DialogDescription>
       </DialogHeader>
 
-      <ScrollArea class="max-h-[55vh] px-6">
+      <!-- El contenedor interno de Reka lleva min-width: fit-content inline y
+           crece hasta la línea más larga (el checkbox de administrador), más
+           ancho que el diálogo en pantallas chicas. Se anula acá para que el
+           texto envuelva; el grid de permisos ya scrollea solo. -->
+      <ScrollArea
+        class="max-h-[55vh] min-w-0 px-6 [&_[data-slot=scroll-area-viewport]>div]:min-w-0!"
+      >
         <form autocomplete="off" class="space-y-4 pb-6" @submit.prevent>
           <input type="text" name="fakeusernameremembered" class="hidden" tabindex="-1" />
           <input type="password" name="fakepasswordremembered" class="hidden" tabindex="-1" />
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="space-y-1.5">
               <Label for="nombre">Nombre</Label>
               <Input id="nombre" v-model="nombre" name="nuevo-usuario-nombre" autocomplete="off" placeholder="Jheremy" />
