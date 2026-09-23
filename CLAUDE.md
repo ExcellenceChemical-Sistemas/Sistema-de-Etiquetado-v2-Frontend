@@ -68,17 +68,24 @@ unless the path is in `rutasPublicas` (`/login`, `/olvide-password`, `/restablec
 `useAuth` calls `useUsuarioActual.reset()` on logout and on any session user change, so a cached
 `usuarioActual` does not survive a user switch.
 
+**Session stays in sync.** `plugins/refrescar-permisos.client.ts` re-fetches `/usuarios/me` when the tab
+regains focus and every 5 min (`useUsuarioActual().refrescar()`); on a change it toasts and, if the current
+route is no longer allowed, sends the user home. `useApi`'s response interceptor signs the user out on a 403
+with `code: 'CUENTA_DESACTIVADA'` (deactivated account). Composables like `useProductos/useLotes/
+useFabricantesQuery` take `{ enabled }` so a page can skip queries the user can't see (no useless 403s).
+
 **Two parallel permission systems.** Do not conflate them:
 
 1. *CRUD permisos* — `utils/permisos.ts` holds `RECURSOS`
    (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`) × four
    booleans (`puedeVer`/`puedeCrear`/`puedeEditar`/`puedeEliminar`). This file must mirror the
    backend's Zod enum in `usuarios.dto.ts`; adding a recurso there means adding it here.
-   `COA` is deliberately absent: it still exists in the Prisma enum but no guard reads it — COA
-   upload is controlled by `LOTES.puedeEditar`. `/clientes` shares `PEDIDOS` on purpose.
+   There is no `COA` resource: COA upload is controlled by `LOTES.puedeEditar`. `/clientes` shares `PEDIDOS` on purpose.
    `usePermiso('RECURSO')` returns a reactive object with `esAdmin` bypass baked in.
-   Generar Etiqueta needs `PLANTILLAS.puedeVer` too (its template selector calls
-   `GET /plantillas`); `Permisosgrid.vue` auto-ticks it when `ETIQUETAS.puedeCrear` is ticked.
+   Some screens fill their selectors from another resource's list, so they need that "Ver" too:
+   Generar Etiqueta needs `PLANTILLAS` and `LOTES` (`puedeVer`); the lote form needs `PRODUCTOS` and
+   `FABRICANTES`. `Permisosgrid.vue` auto-ticks them through its `DEPENDENCIAS` table, and each screen
+   shows a "no tenés permiso" message on a 403 instead of an empty selector. New dependency → add a row.
 2. *KPIs/ISO accesos* — `useAccesoKpisIso()` resolves per-folder access from
    `usuarioActual.accesosIndicador` (per `ProcesoIndicador`) and `accesoIso`, each with five
    booleans (`puedeVer`/`puedeDescargar`/`puedeAdjuntar`/`puedeEditar`/`puedeEliminar`; ISO adds
@@ -87,7 +94,7 @@ unless the path is in `rutasPublicas` (`/login`, `/olvide-password`, `/restablec
    and a non-admin can never delete an ISO PDF.
 
 Gating a new route means touching **three** places: the `RUTA_PERMISO` table in
-`middleware/permisos.global.ts` (route prefix → recurso + nivel; unlisted routes are free),
+`utils/rutasPermisos.ts` (shared by the middleware and the live refresh) (route prefix → recurso + nivel; unlisted routes are free),
 the `visible:` flag on the nav item in `components/AppSidebar.vue`, and `usePermiso` inside the
 page for the action buttons.
 

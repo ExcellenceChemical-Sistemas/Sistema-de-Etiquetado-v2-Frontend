@@ -6,6 +6,7 @@ import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import type { Usuario } from "~/utils/permisos";
+import { formatFechaHora } from "~/utils/fechaHora";
 
 const usuarios = ref<Usuario[]>([]);
 const cargando = ref(true);
@@ -131,7 +132,9 @@ onMounted(cargar);
             class="text-xs text-muted-foreground mt-0.5"
           >
             {{
-              u.esAdmin
+              u.activo === false
+                ? `Desactivado el ${formatFechaHora(u.desactivadoEn)}${u.desactivadoPor ? ` por ${u.desactivadoPor.nombre}` : ""}`
+                : u.esAdmin
                 ? "Administrador — todos los permisos"
                 : `${(u.permisos ?? []).filter((p) => p.puedeVer || p.puedeCrear || p.puedeEditar || p.puedeEliminar).length} módulo(s) configurado(s)`
             }}

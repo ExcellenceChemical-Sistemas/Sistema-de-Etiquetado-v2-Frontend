@@ -46,6 +46,9 @@ export interface Usuario {
   esAdmin: boolean
   /** false = cuenta desactivada por un admin (sin acceso, historial conservado). Ausente = activa. */
   activo?: boolean
+  /** Cuándo y quién desactivó la cuenta (solo lo devuelve GET /usuarios, para el admin). */
+  desactivadoEn?: string | null
+  desactivadoPor?: { id: number; nombre: string } | null
   /**
    * Gestiona accesos de KPIs/ISO de otros usuarios. NO implica acceso propio
    * al contenido: para ver algo dentro de KPIs/ISO necesita que se le asignen
