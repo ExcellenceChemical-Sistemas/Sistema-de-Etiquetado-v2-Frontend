@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { Users, ChevronRight, ShieldCheck, Plus } from "lucide-vue-next";
+import { Users, ChevronRight, ShieldCheck, Plus, History } from "lucide-vue-next";
 import { useApi } from "~/composables/useApi";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,7 @@ const cargando = ref(true);
 const error = ref("");
 
 const crearOpen = ref(false);
+const historialOpen = ref(false);
 const editarOpen = ref(false);
 const usuarioSeleccionado = ref<Usuario | null>(null);
 
@@ -83,10 +84,16 @@ onMounted(cargar);
           <h1 class="text-2xl font-semibold mt-1">Usuarios y permisos</h1>
         </div>
       </div>
-      <Button v-if="!soloGestionaKpisIso" @click="crearOpen = true">
-        <Plus class="h-4 w-4" />
-        Nuevo usuario
-      </Button>
+      <div v-if="!soloGestionaKpisIso" class="flex items-center gap-2">
+        <Button variant="outline" @click="historialOpen = true">
+          <History class="h-4 w-4" />
+          Historial
+        </Button>
+        <Button @click="crearOpen = true">
+          <Plus class="h-4 w-4" />
+          Nuevo usuario
+        </Button>
+      </div>
     </div>
 
     <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
@@ -156,6 +163,7 @@ onMounted(cargar);
     </div>
 
     <AdminCrearusuario v-model:open="crearOpen" @creado="onCreado" />
+    <AdminHistorialusuarios v-if="!soloGestionaKpisIso" v-model:open="historialOpen" />
     <AdminEditarpermisos
       v-model:open="editarOpen"
       :usuario="usuarioSeleccionado"
