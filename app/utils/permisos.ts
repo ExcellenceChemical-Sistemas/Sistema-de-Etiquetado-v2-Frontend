@@ -3,7 +3,7 @@
 // Debe reflejar el enum de usuarios.dto.ts (backend). Si se agrega un recurso
 // allá, agregarlo también acá.
 
-export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'COA', 'USUARIOS', 'ETIQUETAS'] as const
+export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'COA', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS'] as const
 export type Recurso = (typeof RECURSOS)[number]
 
 export const RECURSO_LABEL: Record<Recurso, string> = {
@@ -14,6 +14,7 @@ export const RECURSO_LABEL: Record<Recurso, string> = {
   COA: 'COA',
   USUARIOS: 'Usuarios',
   ETIQUETAS: 'Generar Etiquetas',
+  PEDIDOS: 'Pedidos',
 }
 
 export const ACCIONES = [

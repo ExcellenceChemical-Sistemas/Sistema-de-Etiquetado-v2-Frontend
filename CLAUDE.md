@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Nuxt 4 admin SPA for "Sistema de Etiquetado v2" (Excellence Chemical S.A.C.): manages
-fabricantes, productos, lotes (with COA upload), plantillas, usuarios/permisos, label
-generation, and a KPIs / Documentación ISO document module. It is the client for the NestJS
-backend that lives in the sibling repo `../backend` (own `CLAUDE.md` there).
+Nuxt 4 admin SPA for "Sistema de Gestión Excellence Chemical" (repo folder name still says
+"Etiquetado" for historical reasons — cosmetic only, the system covers more than labeling now):
+manages fabricantes, productos, lotes (with COA upload), plantillas, usuarios/permisos, label
+generation, a KPIs / Documentación ISO document module, and (planned) an order lead-time module.
+It is the client for the NestJS backend that lives in the sibling repo `../backend` (own
+`CLAUDE.md` there).
 
 Code and domain language are Spanish — keep new identifiers, comments, toasts, and error
 messages in Spanish to match.

@@ -1,9 +1,10 @@
-# Sistema de Etiquetado v2 — Frontend
+# Sistema de Gestión Excellence Chemical — Frontend
 
-Aplicación web (panel administrativo) construida con **Nuxt 4** para Excellence Chemical S.A.C. Cubre dos módulos:
+Aplicación web (panel administrativo) construida con **Nuxt 4** para Excellence Chemical S.A.C. (el nombre de carpeta sigue diciendo "Etiquetado" por motivos históricos; el sistema ya cubre más que eso). Cubre estos módulos:
 
 1. **Etiquetado** — fabricantes, productos (con ficha de seguridad y clasificación GHS), lotes (con carga de COA), plantillas, usuarios/permisos, impresión de etiquetas e historial de etiquetas generadas.
 2. **KPIs / Documentación ISO** — árbol de carpetas y documentos con control de acceso granular, visor propio de PDF y de Word.
+3. **Pedidos / tiempo de entrega** (en diseño) — reemplaza el registro manual en Excel del lead time de pedidos.
 
 Es el cliente de la API NestJS que vive en el repo hermano `../backend`.
 

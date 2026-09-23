@@ -22,6 +22,8 @@ import {
   ChartPie,
   Users,
   FolderKanban,
+  Truck,
+  Contact,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
@@ -43,6 +45,7 @@ const permisoProductos = usePermiso("PRODUCTOS");
 const permisoLotes = usePermiso("LOTES");
 const permisoEtiquetas = usePermiso("ETIQUETAS");
 const permisoUsuarios = usePermiso("USUARIOS");
+const permisoPedidos = usePermiso("PEDIDOS");
 
 const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
 
@@ -97,6 +100,18 @@ const items = computed(() =>
       visible: puedeVerAlgoKpisIso.value,
     },
     {
+      title: "Pedidos",
+      url: "/pedidos",
+      icon: Truck,
+      visible: permisoPedidos.puedeVer,
+    },
+    {
+      title: "Clientes",
+      url: "/clientes",
+      icon: Contact,
+      visible: permisoPedidos.puedeVer,
+    },
+    {
       title: "Usuarios",
       url: "/usuarios",
       icon: Users,
@@ -123,7 +138,7 @@ const route = useRoute();
         <span
           class="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
         >
-          Sistema de Etiquetado
+          Sistema de Gestión
         </span>
       </NuxtLink>
 
