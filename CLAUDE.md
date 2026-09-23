@@ -45,11 +45,10 @@ NUXT_PUBLIC_SUPABASE_ANON_KEY=
 ## KPIs / ISO
 
 Before touching anything in the KPIs / Documentación ISO module, read
-@contexto-fase3-kpis-iso.md — it is the source of truth for that module's decisions, its
-granular access model, and its open questions. Much of what it describes (notably the
-`esAdminKpis` role and the 5-boolean permission redesign) is **decided but not implemented**;
-the code currently on disk still uses the older `LECTURA`/`ESCRITURA` +
-`VISUALIZACION`/`EDICION_TOTAL` levels. Check the doc before assuming either model.
+@contexto-fase3-kpis-iso.md — it is the source of truth for that module's decisions and open
+questions. The 5-boolean permission redesign and the `esAdminKpis` role **are implemented** in
+both repos (the old `LECTURA`/`ESCRITURA` + `VISUALIZACION`/`EDICION_TOTAL` levels are gone).
+The context doc's own status notes can lag behind the code — when they disagree, trust the code.
 
 ## Architecture
 
@@ -66,20 +65,26 @@ rather than introducing a store.
 request interceptor calls `supabase.auth.getSession()` on every request and attaches
 `Authorization: Bearer <access_token>`. `middleware/auth.global.ts` redirects to `/login`
 unless the path is in `rutasPublicas` (`/login`, `/olvide-password`, `/restablecer-password`).
-Note `useUsuarioActual.reset()` exists but is not wired to logout — a cached `usuarioActual`
-can survive a user switch.
+`useAuth` calls `useUsuarioActual.reset()` on logout and on any session user change, so a cached
+`usuarioActual` does not survive a user switch.
 
 **Two parallel permission systems.** Do not conflate them:
 
 1. *CRUD permisos* — `utils/permisos.ts` holds `RECURSOS`
-   (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `COA`, `USUARIOS`, `ETIQUETAS`) × four
+   (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`) × four
    booleans (`puedeVer`/`puedeCrear`/`puedeEditar`/`puedeEliminar`). This file must mirror the
-   backend's `Recurso` enum (`usuarios.dto.ts`); adding a recurso there means adding it here.
+   backend's Zod enum in `usuarios.dto.ts`; adding a recurso there means adding it here.
+   `COA` is deliberately absent: it still exists in the Prisma enum but no guard reads it — COA
+   upload is controlled by `LOTES.puedeEditar`. `/clientes` shares `PEDIDOS` on purpose.
    `usePermiso('RECURSO')` returns a reactive object with `esAdmin` bypass baked in.
+   Generar Etiqueta needs `PLANTILLAS.puedeVer` too (its template selector calls
+   `GET /plantillas`); `Permisosgrid.vue` auto-ticks it when `ETIQUETAS.puedeCrear` is ticked.
 2. *KPIs/ISO accesos* — `useAccesoKpisIso()` resolves per-folder access from
-   `usuarioActual.accesosIndicador` (per `ProcesoIndicador`) and `accesoIso`. Hardcoded rules
-   mirror the backend: ISO `tipo === 'OBSOLETO'` folders need `EDICION_TOTAL`, and a non-admin
-   can never delete an ISO PDF.
+   `usuarioActual.accesosIndicador` (per `ProcesoIndicador`) and `accesoIso`, each with five
+   booleans (`puedeVer`/`puedeDescargar`/`puedeAdjuntar`/`puedeEditar`/`puedeEliminar`; ISO adds
+   `gestionaObsoleto`). Hardcoded rules mirror the backend: the Obsoleto branch is all-or-nothing
+   via `gestionaObsoleto`, in ISO Word/Excel/PowerPoint need `puedeEditar` on top of `puedeVer`,
+   and a non-admin can never delete an ISO PDF.
 
 Gating a new route means touching **three** places: the `RUTA_PERMISO` table in
 `middleware/permisos.global.ts` (route prefix → recurso + nivel; unlisted routes are free),
@@ -134,6 +139,13 @@ progress animation surfaced through `components/ui/ProgressBar.vue`.
 - Layouts: `default.vue` (sidebar shell, implicit) and `auth.vue`, opted into with
   `definePageMeta({ layout: 'auth' })` on the three public pages.
 - `cn()` from `lib/utils.ts` for class merging.
+- Scrolling: use shadcn's `ScrollArea` (needs a definite height from its ancestors — `min-h-0`
+  on flex/grid items). Where it can't work (dialogs that hug short content and only cap at a
+  `max-h`), use native overflow plus the `.scroll-tema` class from `tailwind.css`. `ui/table`
+  keeps native horizontal scroll (themed) so sticky headers keep working.
+- A `ScrollArea` inside a `DialogContent` (a grid) needs `min-w-0`; Reka's inner wrapper also
+  carries an inline `min-width: fit-content`, which `Crearusuario.vue` overrides so long text
+  wraps instead of pushing the form wider than the dialog.
 
 ## Repo hygiene
 

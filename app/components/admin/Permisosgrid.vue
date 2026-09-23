@@ -5,12 +5,23 @@ import {
   RECURSO_LABEL,
   ACCIONES,
   type PermisosState,
+  type Recurso,
 } from "~/utils/permisos";
 
-defineProps<{
+const props = defineProps<{
   modelValue: PermisosState;
   disabled?: boolean;
 }>();
+
+// Generar Etiqueta llena su selector con GET /plantillas, que exige
+// PLANTILLAS.puedeVer. Dar ETIQUETAS.puedeCrear sin eso deja la pantalla a
+// medias (selector vacío), así que se tilda solo. Se puede destildar a mano.
+function cambiar(recurso: Recurso, key: (typeof ACCIONES)[number]["key"], valor: boolean) {
+  props.modelValue[recurso][key] = valor;
+  if (valor && recurso === "ETIQUETAS" && key === "puedeCrear") {
+    props.modelValue.PLANTILLAS.puedeVer = true;
+  }
+}
 </script>
 
 <template>
@@ -42,9 +53,7 @@ defineProps<{
           <Checkbox
             :disabled="disabled"
             :model-value="modelValue[recurso][a.key]"
-            @update:model-value="
-              (v) => (modelValue[recurso][a.key] = v as boolean)
-            "
+            @update:model-value="(v) => cambiar(recurso, a.key, v as boolean)"
           />
         </div>
       </div>

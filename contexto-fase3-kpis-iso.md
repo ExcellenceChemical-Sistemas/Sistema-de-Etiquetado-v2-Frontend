@@ -1,5 +1,14 @@
 # Contexto — Fase 3: Módulo KPIs + Documentación ISO (estado de avance)
 
+> **⚠️ Nota de estado (actualizada después de la sesión 11):** las notas de estado de este archivo
+> quedaron atrasadas respecto del código. El rediseño de permisos (5 booleanos, `esAdminKpis`,
+> `gestionaObsoleto`) **ya está implementado en backend y frontend**: `utils/permisos.ts`,
+> `Accesoskpisiso.vue`, `Editarpermisos.vue`, `useAccesoKpisIso.ts`, `AppSidebar.vue` y
+> `middleware/permisos.global.ts` usan el modelo granular, y hay visor propio de PDF y de Word.
+> Donde las secciones 2-5 digan "pendiente" o "frontend con enums viejos", se refieren a un estado
+> ya superado. Las decisiones de diseño (secciones 1.1 y 1.2) siguen vigentes. Ante la duda, el
+> código manda; la copia del backend de este archivo es la más reciente.
+>
 > Continúa a `contexto-fase3-kpis-iso.md` (especificación funcional original, ya aprobada por Alice). Este documento es el estado de **implementación**: qué está hecho, qué falta, y qué archivos hacen falta para seguir en otro chat si es necesario.
 >
 > **Actualizado tras una novena sesión de chat** — reemplaza a la versión anterior. La séptima sesión definió el rediseño del modelo de permisos (sección 1.1). La octava dejó 6 recomendaciones de arquitectura (sección 1.2), de las cuales ya se cerró el punto 1 (tablas separadas). Esta novena sesión cerró la **duda #1 de la sección 1.1** (regla dura de PDFs en ISO) y arrancó la conexión de este contexto a **Claude Code** (backend ya enlazado vía `CLAUDE.md`; falta el frontend). **Sigue sin escribirse código real de este rediseño** — todo lo de esta y las sesiones anteriores es diseño/decisión, no implementación. Todo lo marcado como "resuelto/confirmado funcionando" en secciones anteriores sigue vigente tal cual.
