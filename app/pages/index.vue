@@ -28,29 +28,41 @@ const lotesPorVencer = computed(() => {
 // tres "resguardos" de datos, con el número tratado como lectura de
 // instrumento (tabular, monoespaciado) — el mismo lenguaje visual que
 // LOTE / PESO BRUTO en la etiqueta impresa
-const resguardos = computed(() => [
-  {
-    label: 'Productos',
-    value: totalProductos.value,
-    loading: cargandoProductos.value,
-    icon: Package,
-    to: '/productos',
-  },
-  {
-    label: 'Lotes',
-    value: totalLotes.value,
-    loading: cargandoLotes.value,
-    icon: Layers,
-    to: '/lotes',
-  },
-  {
-    label: 'Fabricantes',
-    value: totalFabricantes.value,
-    loading: cargandoFabricantes.value,
-    icon: Factory,
-    to: '/fabricantes',
-  },
-])
+// Misma regla que el sidebar y el middleware: sin puedeVer no se muestra la
+// tarjeta (si no, un usuario sin acceso veía "00" porque el backend le da 403).
+const permisoProductos = usePermiso('PRODUCTOS')
+const permisoLotes = usePermiso('LOTES')
+const permisoFabricantes = usePermiso('FABRICANTES')
+const permisoEtiquetas = usePermiso('ETIQUETAS')
+
+const resguardos = computed(() =>
+  [
+    {
+      label: 'Productos',
+      value: totalProductos.value,
+      loading: cargandoProductos.value,
+      icon: Package,
+      to: '/productos',
+      visible: permisoProductos.puedeVer,
+    },
+    {
+      label: 'Lotes',
+      value: totalLotes.value,
+      loading: cargandoLotes.value,
+      icon: Layers,
+      to: '/lotes',
+      visible: permisoLotes.puedeVer,
+    },
+    {
+      label: 'Fabricantes',
+      value: totalFabricantes.value,
+      loading: cargandoFabricantes.value,
+      icon: Factory,
+      to: '/fabricantes',
+      visible: permisoFabricantes.puedeVer,
+    },
+  ].filter((r) => r.visible),
+)
 
 const accesosRapidos = [
   { label: 'Nuevo producto', to: '/productos', icon: Package },
@@ -88,7 +100,7 @@ const accesosRapidos = [
     </div>
 
     <!-- hero: la acción que define el sistema, con la piel de una etiqueta real -->
-    <NuxtLink to="/generar-etiqueta" class="block group">
+    <NuxtLink v-if="permisoEtiquetas.puedeCrear" to="/generar-etiqueta" class="block group">
       <div
         class="label-card relative overflow-hidden rounded-lg border bg-card shadow-sm transition-shadow duration-200
                group-hover:shadow-md"
@@ -119,7 +131,7 @@ const accesosRapidos = [
 
     <!-- alerta de vencimiento: franja de riesgo, no una card llena de color -->
     <div
-      v-if="!cargandoLotes && lotesPorVencer > 0"
+      v-if="permisoLotes.puedeVer && !cargandoLotes && lotesPorVencer > 0"
       class="flex items-stretch gap-3 rounded-md border border-amber-200 bg-amber-50/60 overflow-hidden"
     >
       <div class="w-1.5 shrink-0 hazard-stripe" />
@@ -137,7 +149,7 @@ const accesosRapidos = [
     </div>
 
     <!-- resguardos: lectura de instrumento, números tabulares -->
-    <div>
+    <div v-if="resguardos.length">
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-3">
         Registrado en el sistema
       </p>

@@ -15,7 +15,7 @@ import {
 import Spinner from '@/components/ui/Spinner.vue'
 import { Check, X } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import type { Recurso } from '@/composables/usePermiso'
+import { RECURSOS, RECURSO_LABEL } from '~/utils/permisos'
 
 const { usuarioActual, esAdmin, cargar } = useUsuarioActual()
 
@@ -23,22 +23,16 @@ onMounted(() => {
   cargar()
 })
 
-const RECURSOS: { valor: Recurso; etiqueta: string }[] = [
-  { valor: 'LOTES', etiqueta: 'Lotes' },
-  { valor: 'PRODUCTOS', etiqueta: 'Productos' },
-  { valor: 'FABRICANTES', etiqueta: 'Fabricantes' },
-  { valor: 'PLANTILLAS', etiqueta: 'Plantillas' },
-  { valor: 'USUARIOS', etiqueta: 'Usuarios' },
-]
-
 // Misma lógica de fallback que usePermiso.ts: admin ve todo en verde
 // sin depender de que existan filas explícitas en usuarioActual.permisos.
+// Recorre RECURSOS de utils/permisos.ts (no una lista propia) para que un
+// recurso nuevo aparezca acá sin tocar esta página.
 const filasPermisos = computed(() =>
-  RECURSOS.map(({ valor, etiqueta }) => {
-    const p = usuarioActual.value?.permisos.find((permiso) => permiso.recurso === valor)
+  RECURSOS.map((recurso) => {
+    const p = usuarioActual.value?.permisos.find((permiso) => permiso.recurso === recurso)
     return {
-      recurso: valor,
-      etiqueta,
+      recurso,
+      etiqueta: RECURSO_LABEL[recurso],
       puedeVer: esAdmin.value || p?.puedeVer === true,
       puedeCrear: esAdmin.value || p?.puedeCrear === true,
       puedeEditar: esAdmin.value || p?.puedeEditar === true,
