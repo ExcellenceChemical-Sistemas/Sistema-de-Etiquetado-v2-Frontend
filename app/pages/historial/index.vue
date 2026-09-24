@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { Search, ExternalLink, Copy, Inbox, FileText, Download, ShieldAlert } from "@lucide/vue";
+import { Search, ExternalLink, Copy, Inbox, FileText, Download, ShieldAlert, ChartNoAxesCombined } from "@lucide/vue";
 import { toast } from "vue-sonner";
 import {
   useHistorialEtiquetas,
@@ -80,9 +80,12 @@ async function copiarQr(e: EtiquetaHistorial) {
           Etiquetas generadas, de la más reciente a la más antigua
         </p>
       </div>
-      <NuxtLink to="/estadisticas" class="shrink-0 text-sm font-medium text-primary hover:underline">
-        Ver estadísticas →
-      </NuxtLink>
+      <Button variant="outline" as-child class="shrink-0">
+        <NuxtLink to="/historial/indicadores">
+          <ChartNoAxesCombined class="mr-2 h-4 w-4" />
+          Indicadores
+        </NuxtLink>
+      </Button>
     </div>
 
     <div class="flex shrink-0 flex-wrap items-center gap-3">

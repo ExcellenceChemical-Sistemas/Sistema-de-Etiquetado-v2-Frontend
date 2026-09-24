@@ -60,7 +60,7 @@ app/
 │   └── permisos.global.ts   # aplica utils/rutasPermisos.ts al navegar
 ├── pages/
 │   ├── index.vue / login.vue / mi-cuenta.vue
-│   ├── generar-etiqueta.vue / historial.vue / estadisticas.vue   # historial: etiquetas generadas, filtros y enlace al QR
+│   ├── generar-etiqueta.vue / historial/index.vue · historial/indicadores.vue   # historial: etiquetas generadas, filtros y enlace al QR; indicadores: insumos más etiquetados por mes/año y uso del QR
 │   ├── pedidos/index.vue · pedidos/indicadores.vue · clientes/index.vue
 │   ├── e/[token].vue                          # página pública del QR (sin login)
 │   ├── fabricantes/index.vue · productos/index.vue · lotes/index.vue
@@ -241,7 +241,7 @@ El backend tiene que estar corriendo para que funcione cualquier cosa más allá
 - Layouts: `default.vue` (shell con sidebar, implícito) y `auth.vue`, elegido con `definePageMeta({ layout: 'auth' })` en las tres páginas públicas.
 - `cn()` de `lib/utils.ts` para el merge de clases.
 - **Scroll dentro de un contenedor con altura variable** (un diálogo que tiene que "abrazar" contenido corto y recién limitar su alto si crece, como los de `productos/index.vue` y `generar-etiqueta.vue`): usar `overflow-y-auto` nativo + la clase `.scroll-tema` (definida en `tailwind.css`), **no** el `ScrollArea` de shadcn. El viewport interno de `ScrollArea` es `height:100%`, y eso no se resuelve contra un ancestro con `max-height` (ni con `flex-1` ni con `grid`+`1fr` — ninguno le da una altura "definida" de la que partir ese 100%), así que el contenido se desborda sin recortar en vez de scrollear. `.scroll-tema` logra el mismo look (barra fina, color `--border`) sin ese problema, porque el scroll nativo no necesita que el contenedor tenga una altura fija.
-  Cuando el contenedor **sí** tiene una altura fija de antemano (como el `h-72`/`h-[28rem]` de las tarjetas y tablas en `estadisticas.vue`), `ScrollArea` funciona bien — ahí además hace falta `min-h-0` en el propio `ScrollArea` si es hijo de un `flex`/`grid` (por el mínimo implícito `min-height: auto` que por defecto le impide achicarse más que su contenido).
+  Cuando el contenedor **sí** tiene una altura fija de antemano (como el `h-72`/`h-[28rem]` de las tarjetas y tablas en `historial/indicadores.vue`), `ScrollArea` funciona bien — ahí además hace falta `min-h-0` en el propio `ScrollArea` si es hijo de un `flex`/`grid` (por el mínimo implícito `min-height: auto` que por defecto le impide achicarse más que su contenido).
 
 ## Notas
 

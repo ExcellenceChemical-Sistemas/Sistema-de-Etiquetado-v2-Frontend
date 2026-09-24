@@ -19,7 +19,6 @@ import {
   Boxes,
   Printer,
   History,
-  ChartPie,
   Users,
   FolderKanban,
   Truck,
@@ -85,12 +84,6 @@ const items = computed(() =>
       title: "Historial",
       url: "/historial",
       icon: History,
-      visible: permisoEtiquetas.puedeVer,
-    },
-    {
-      title: "Estadísticas",
-      url: "/estadisticas",
-      icon: ChartPie,
       visible: permisoEtiquetas.puedeVer,
     },
     {

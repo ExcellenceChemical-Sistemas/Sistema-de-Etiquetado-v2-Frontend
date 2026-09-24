@@ -10,7 +10,7 @@ const props = defineProps<{
 <template>
   <!-- scroll-tema (tailwind.css): el scroll horizontal de esta tabla es
        nativo a propósito (no ScrollArea de shadcn) porque este div puede
-       vivir anidado dentro de otro ScrollArea vertical (ver estadisticas.vue
+       vivir anidado dentro de otro ScrollArea vertical (ver historial/indicadores.vue
        y pedidos/indicadores.vue) — un segundo ScrollArea adentro rompería el
        sticky header. Se tematiza igual para que no se vea el scrollbar gris
        del sistema. -->

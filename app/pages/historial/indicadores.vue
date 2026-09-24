@@ -1,17 +1,46 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { ChartPie, QrCode, FileText, Download, ShieldAlert, Inbox } from "@lucide/vue";
+import { computed, ref } from "vue";
+import { ChartPie, QrCode, FileText, Download, ShieldAlert, Inbox, ArrowLeft, Tags } from "@lucide/vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useHistorialEtiquetas } from "~/composables/useHistorialEtiquetas";
 import DonutProductosEscaneados from "~/components/etiquetas/DonutProductosEscaneados.vue";
 import { agruparEscaneosPorProducto } from "~/utils/escaneos";
-import { agruparEstadisticasPorProducto, totalesEstadisticas } from "~/utils/estadisticas";
+import {
+  agruparEstadisticasPorProducto,
+  aniosConEtiquetas,
+  filtrarPorPeriodo,
+  rankingEtiquetasPorProducto,
+  totalesEstadisticas,
+} from "~/utils/estadisticas";
 
 const { data: etiquetas, isPending, isError, refetch } = useHistorialEtiquetas();
 
-const totales = computed(() => totalesEstadisticas(etiquetas.value));
-const productosMasEscaneados = computed(() => agruparEscaneosPorProducto(etiquetas.value));
-const porProducto = computed(() => agruparEstadisticasPorProducto(etiquetas.value));
+const MESES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+const filtroMes = ref("TODOS");
+const filtroAnio = ref("TODOS");
+const aniosDisponibles = computed(() => aniosConEtiquetas(etiquetas.value));
+
+// El período filtra por la fecha en que se generó la etiqueta. Los escaneos,
+// COA y FDS se cuentan de las etiquetas de ese período (aunque el cliente las
+// haya escaneado después).
+const etiquetasDelPeriodo = computed(() =>
+  filtrarPorPeriodo(
+    etiquetas.value,
+    filtroAnio.value === "TODOS" ? null : Number(filtroAnio.value),
+    filtroMes.value === "TODOS" ? null : Number(filtroMes.value),
+  ),
+);
+
+const totales = computed(() => totalesEstadisticas(etiquetasDelPeriodo.value));
+const productosMasEscaneados = computed(() => agruparEscaneosPorProducto(etiquetasDelPeriodo.value));
+const porProducto = computed(() => agruparEstadisticasPorProducto(etiquetasDelPeriodo.value));
+const productosMasEtiquetados = computed(() => rankingEtiquetasPorProducto(etiquetasDelPeriodo.value));
+const totalEtiquetas = computed(() =>
+  productosMasEtiquetados.value.reduce((suma, p) => suma + p.etiquetas, 0),
+);
 
 // Ranking de COA: qué producto es de quien se vio/descargó el certificado,
 // ordenado por actividad total (vistas + descargas). Solo los que tienen algo.
@@ -35,10 +64,12 @@ const rankingFds = computed(() =>
 const UMBRAL_SCROLL = 6;
 const UMBRAL_SCROLL_DETALLE = 10;
 const alturaCoa = computed(() => (rankingCoa.value.length > UMBRAL_SCROLL ? "h-72" : ""));
+const alturaEtiquetados = computed(() => (productosMasEtiquetados.value.length > UMBRAL_SCROLL ? "h-72" : ""));
 const alturaFds = computed(() => (rankingFds.value.length > UMBRAL_SCROLL ? "h-72" : ""));
 const detalleEsLargo = computed(() => porProducto.value.length > UMBRAL_SCROLL_DETALLE);
 
 const TARJETAS = computed(() => [
+  { label: "Etiquetas generadas", valor: totalEtiquetas.value, icon: Tags },
   { label: "Escaneos de QR", valor: totales.value.escaneos, icon: QrCode },
   { label: "COA vistos", valor: totales.value.coaVistas, icon: FileText },
   { label: "COA descargados", valor: totales.value.coaDescargas, icon: Download },
@@ -48,27 +79,56 @@ const TARJETAS = computed(() => [
 
 <template>
   <div class="flex h-full min-h-0 flex-col gap-6 overflow-auto p-4 lg:p-6">
-    <div class="shrink-0">
-      <h1 class="text-2xl font-semibold">Estadísticas</h1>
-      <p class="text-sm text-muted-foreground">
-        Uso de las etiquetas desde que se escanea el QR: aperturas, y vistas/descargas del COA
-        y la ficha de seguridad, por producto.
-      </p>
+    <div class="flex shrink-0 flex-wrap items-start justify-between gap-3">
+      <div>
+        <NuxtLink to="/historial" class="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+          <ArrowLeft class="h-3.5 w-3.5" />
+          Volver a Historial
+        </NuxtLink>
+        <h1 class="text-2xl font-semibold">Indicadores de etiquetas</h1>
+        <p class="text-sm text-muted-foreground">
+          Qué insumos se etiquetan más y cómo se usan las etiquetas desde que se escanea el QR:
+          aperturas, y vistas/descargas del COA y la ficha de seguridad, por producto.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <Select v-model="filtroMes">
+          <SelectTrigger class="w-40">
+            <SelectValue placeholder="Mes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODOS">Todos los meses</SelectItem>
+            <SelectItem v-for="(mes, i) in MESES" :key="i" :value="String(i)">{{ mes }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select v-model="filtroAnio">
+          <SelectTrigger class="w-28">
+            <SelectValue placeholder="Año" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODOS">Todos</SelectItem>
+            <SelectItem v-for="anio in aniosDisponibles" :key="anio" :value="String(anio)">
+              {{ anio }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
 
-    <div v-if="isPending" class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <Skeleton v-for="i in 4" :key="i" class="h-24 w-full rounded-lg" />
+    <div v-if="isPending" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <Skeleton v-for="i in 5" :key="i" class="h-24 w-full rounded-lg" />
     </div>
     <div
       v-else-if="isError"
       class="rounded-md border border-border p-8 text-center"
     >
-      <p class="mb-2 text-sm text-destructive">No se pudieron cargar las estadísticas</p>
+      <p class="mb-2 text-sm text-destructive">No se pudieron cargar los indicadores</p>
       <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
     </div>
 
     <template v-else>
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <div
           v-for="t in TARJETAS"
           :key="t.label"
@@ -80,6 +140,37 @@ const TARJETAS = computed(() => [
           </div>
           <p class="mt-2 font-mono text-2xl font-semibold tabular-nums">{{ t.valor }}</p>
         </div>
+      </div>
+
+      <div class="rounded-md border border-border p-4">
+        <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
+          <Tags class="h-4 w-4 text-muted-foreground" />
+          Insumos más etiquetados
+        </h2>
+        <div v-if="productosMasEtiquetados.length === 0" class="py-8 text-center text-sm text-muted-foreground">
+          <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
+          No se generaron etiquetas en este período.
+        </div>
+        <ScrollArea v-else :class="alturaEtiquetados">
+          <Table>
+            <TableHeader class="sticky top-0 z-10 bg-background">
+              <TableRow>
+                <TableHead>Producto</TableHead>
+                <TableHead class="text-center">Etiquetas</TableHead>
+                <TableHead class="text-center">% del total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="p in productosMasEtiquetados" :key="p.nombre">
+                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
+                <TableCell class="text-center tabular-nums">{{ p.etiquetas }}</TableCell>
+                <TableCell class="text-center tabular-nums">
+                  {{ Math.round((p.etiquetas / totalEtiquetas) * 100) }}%
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
 
       <div class="rounded-md border border-border p-4">
