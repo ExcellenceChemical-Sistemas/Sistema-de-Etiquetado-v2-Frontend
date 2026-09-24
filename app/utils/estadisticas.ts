@@ -93,3 +93,40 @@ export function rankingEtiquetasPorProducto(
     .map(([nombre, etiquetas]) => ({ nombre, etiquetas }))
     .sort((a, b) => b.etiquetas - a.etiquetas || a.nombre.localeCompare(b.nombre))
 }
+
+export interface EtiquetasPorMes {
+  /** 0-11 */
+  mes: number
+  anio: number
+  etiquetas: number
+}
+
+// Etiquetas generadas (sin las que dieron error) por mes. Con `anio`, los 12 meses de
+// ese año; con null, los últimos 12 meses hasta el mes de la etiqueta más reciente.
+export function etiquetasPorMes(
+  etiquetas: EtiquetaHistorial[] | undefined,
+  anio: number | null,
+): EtiquetasPorMes[] {
+  const validas = (etiquetas ?? []).filter((e) => e.estado !== 'ERROR')
+  const clave = (a: number, m: number) => a * 12 + m
+
+  let fin: number
+  if (anio !== null) {
+    fin = clave(anio, 11)
+  } else {
+    const fechas = validas.map((e) => new Date(e.createdAt))
+    const ultima = fechas.length ? new Date(Math.max(...fechas.map((f) => f.getTime()))) : new Date()
+    fin = clave(ultima.getFullYear(), ultima.getMonth())
+  }
+
+  const meses: EtiquetasPorMes[] = []
+  for (let k = fin - 11; k <= fin; k++) {
+    meses.push({ anio: Math.floor(k / 12), mes: k % 12, etiquetas: 0 })
+  }
+  for (const e of validas) {
+    const f = new Date(e.createdAt)
+    const fila = meses.find((m) => m.anio === f.getFullYear() && m.mes === f.getMonth())
+    if (fila) fila.etiquetas++
+  }
+  return meses
+}

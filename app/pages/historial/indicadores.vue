@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ChartPie, QrCode, FileText, Download, ShieldAlert, Inbox, ArrowLeft, Tags } from "@lucide/vue";
+import { ChartPie, QrCode, FileText, Download, ShieldAlert, Inbox, ArrowLeft, Tags, ChartColumn } from "@lucide/vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useHistorialEtiquetas } from "~/composables/useHistorialEtiquetas";
+import BarrasInsumosEtiquetados from "~/components/etiquetas/BarrasInsumosEtiquetados.vue";
+import ColumnasEtiquetasPorMes from "~/components/etiquetas/ColumnasEtiquetasPorMes.vue";
 import DonutProductosEscaneados from "~/components/etiquetas/DonutProductosEscaneados.vue";
 import { agruparEscaneosPorProducto } from "~/utils/escaneos";
 import {
   agruparEstadisticasPorProducto,
   aniosConEtiquetas,
+  etiquetasPorMes,
   filtrarPorPeriodo,
   rankingEtiquetasPorProducto,
   totalesEstadisticas,
@@ -38,6 +41,12 @@ const totales = computed(() => totalesEstadisticas(etiquetasDelPeriodo.value));
 const productosMasEscaneados = computed(() => agruparEscaneosPorProducto(etiquetasDelPeriodo.value));
 const porProducto = computed(() => agruparEstadisticasPorProducto(etiquetasDelPeriodo.value));
 const productosMasEtiquetados = computed(() => rankingEtiquetasPorProducto(etiquetasDelPeriodo.value));
+// La serie mensual respeta el año pero no el mes: sirve justamente para comparar
+// meses entre sí; el mes elegido queda resaltado.
+const serieMensual = computed(() =>
+  etiquetasPorMes(etiquetas.value, filtroAnio.value === "TODOS" ? null : Number(filtroAnio.value)),
+);
+const mesResaltado = computed(() => (filtroMes.value === "TODOS" ? null : Number(filtroMes.value)));
 const totalEtiquetas = computed(() =>
   productosMasEtiquetados.value.reduce((suma, p) => suma + p.etiquetas, 0),
 );
@@ -64,7 +73,6 @@ const rankingFds = computed(() =>
 const UMBRAL_SCROLL = 6;
 const UMBRAL_SCROLL_DETALLE = 10;
 const alturaCoa = computed(() => (rankingCoa.value.length > UMBRAL_SCROLL ? "h-72" : ""));
-const alturaEtiquetados = computed(() => (productosMasEtiquetados.value.length > UMBRAL_SCROLL ? "h-72" : ""));
 const alturaFds = computed(() => (rankingFds.value.length > UMBRAL_SCROLL ? "h-72" : ""));
 const detalleEsLargo = computed(() => porProducto.value.length > UMBRAL_SCROLL_DETALLE);
 
@@ -142,35 +150,25 @@ const TARJETAS = computed(() => [
         </div>
       </div>
 
-      <div class="rounded-md border border-border p-4">
-        <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
-          <Tags class="h-4 w-4 text-muted-foreground" />
-          Insumos más etiquetados
-        </h2>
-        <div v-if="productosMasEtiquetados.length === 0" class="py-8 text-center text-sm text-muted-foreground">
-          <Inbox class="mx-auto mb-2 h-8 w-8 opacity-50" />
-          No se generaron etiquetas en este período.
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-md border border-border p-4">
+          <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
+            <Tags class="h-4 w-4 text-muted-foreground" />
+            Insumos más etiquetados
+          </h2>
+          <BarrasInsumosEtiquetados :datos="productosMasEtiquetados" />
         </div>
-        <ScrollArea v-else :class="alturaEtiquetados">
-          <Table>
-            <TableHeader class="sticky top-0 z-10 bg-background">
-              <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead class="text-center">Etiquetas</TableHead>
-                <TableHead class="text-center">% del total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="p in productosMasEtiquetados" :key="p.nombre">
-                <TableCell class="font-medium">{{ p.nombre }}</TableCell>
-                <TableCell class="text-center tabular-nums">{{ p.etiquetas }}</TableCell>
-                <TableCell class="text-center tabular-nums">
-                  {{ Math.round((p.etiquetas / totalEtiquetas) * 100) }}%
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </ScrollArea>
+
+        <div class="rounded-md border border-border p-4">
+          <h2 class="mb-3 flex items-center gap-1.5 text-sm font-medium">
+            <ChartColumn class="h-4 w-4 text-muted-foreground" />
+            Etiquetas por mes
+            <span class="font-normal text-muted-foreground">
+              ({{ filtroAnio === "TODOS" ? "últimos 12 meses" : filtroAnio }})
+            </span>
+          </h2>
+          <ColumnasEtiquetasPorMes :datos="serieMensual" :mes-resaltado="mesResaltado" />
+        </div>
       </div>
 
       <div class="rounded-md border border-border p-4">

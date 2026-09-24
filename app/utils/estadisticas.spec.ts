@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { EtiquetaHistorial } from '~/composables/useHistorialEtiquetas'
-import { aniosConEtiquetas, filtrarPorPeriodo, rankingEtiquetasPorProducto } from './estadisticas'
+import { aniosConEtiquetas, etiquetasPorMes, filtrarPorPeriodo, rankingEtiquetasPorProducto } from './estadisticas'
 
 function etiqueta(producto: string, createdAt: string, estado: EtiquetaHistorial['estado'] = 'IMPRESO') {
   return { estado, createdAt, lote: { producto: { nombre: producto } } } as EtiquetaHistorial
@@ -37,5 +37,18 @@ describe('estadísticas de etiquetas', () => {
       nombre: 'Soda cáustica',
       etiquetas: 2,
     })
+  })
+
+  it('arma la serie mensual: 12 meses del año elegido, o los últimos 12 con datos', () => {
+    const delAnio = etiquetasPorMes(lista, 2026)
+    expect(delAnio).toHaveLength(12)
+    expect(delAnio[2]!.etiquetas).toBe(3) // marzo
+    expect(delAnio[3]!.etiquetas).toBe(1) // abril
+
+    const ultimos = etiquetasPorMes(lista, null)
+    expect(ultimos).toHaveLength(12)
+    expect(ultimos[11]!).toMatchObject({ anio: 2026, mes: 3, etiquetas: 1 }) // termina en abril 2026
+    expect(ultimos[10]!).toMatchObject({ anio: 2026, mes: 2, etiquetas: 3 })
+    expect(etiquetasPorMes(undefined, 2026).every((m) => m.etiquetas === 0)).toBe(true)
   })
 })
