@@ -17,6 +17,17 @@ export function useApi() {
     // varios requests en vuelo fallan a la vez.
     let cerrandoSesion = false
     instance.interceptors.response.use(undefined, async (error) => {
+      // Segundo factor: el backend lo exige aunque el frontend no lo haya pedido
+      // (sesión de otra pestaña, factor activado desde otro dispositivo...).
+      const codigo403 = error?.response?.status === 403 ? error.response.data?.code : undefined
+      const ruta = typeof window !== 'undefined' ? window.location.pathname : ''
+      if (codigo403 === 'MFA_REQUERIDO' && ruta !== '/verificar-mfa') {
+        await navigateTo('/verificar-mfa')
+      } else if (codigo403 === 'MFA_ENROLAR' && ruta !== '/mi-cuenta') {
+        toast.error(error.response.data.message ?? 'Activa la verificación en dos pasos')
+        await navigateTo('/mi-cuenta?mfa=obligatorio')
+      }
+
       if (error?.response?.status === 403 && error.response.data?.code === 'CUENTA_DESACTIVADA' && !cerrandoSesion) {
         cerrandoSesion = true
         try {

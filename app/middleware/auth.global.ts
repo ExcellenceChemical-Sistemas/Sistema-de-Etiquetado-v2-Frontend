@@ -17,6 +17,20 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo('/login')
   }
 
+  // Segundo factor: con el factor activado, la contraseña sola (sesión aal1) no
+  // da acceso a la app; hay que pasar por /verificar-mfa. Esto es comodidad de
+  // navegación: quien de verdad lo exige es el backend en cada request.
+  if (session.value && !esRutaPublica) {
+    let falta = false
+    try {
+      falta = await useMfa().faltaVerificar()
+    } catch {
+      // Si no se puede saber, no se bloquea acá: el backend responde MFA_REQUERIDO igual.
+    }
+    if (falta && to.path !== '/verificar-mfa') return navigateTo('/verificar-mfa')
+    if (!falta && to.path === '/verificar-mfa') return navigateTo('/')
+  }
+
   if (session.value && to.path === '/login') {
     return navigateTo('/')
   }

@@ -74,6 +74,12 @@ unless the path is in `rutasPublicas` (`/login`, `/olvide-password`, `/restablec
 current password with `signInWithPassword`, updates it, then signs out the other devices
 (`scope: 'others'`); the new-password rule is `utils/password.ts` (shared with `/restablecer-password`).
 
+**Second factor (TOTP).** `useMfa` talks to `supabase.auth.mfa` directly; `components/mi-cuenta/DosPasos.vue` (Mi cuenta)
+enrolls/removes it and `pages/verificar-mfa.vue` asks for the code. `auth.global.ts` sends a session that has the factor
+but is still `aal1` to `/verificar-mfa` (navigation convenience only — the backend is what enforces it). `useApi`'s response
+interceptor handles the backend's 403 codes `MFA_REQUERIDO` (→ `/verificar-mfa`) and `MFA_ENROLAR` (→ `/mi-cuenta?mfa=obligatorio`).
+Pure logic (levels, code normalisation, error messages) is in `utils/mfa.ts`.
+
 **Session stays in sync.** `plugins/refrescar-permisos.client.ts` re-fetches `/usuarios/me` when the tab
 regains focus and every 5 min (`useUsuarioActual().refrescar()`); on a change it toasts and, if the current
 route is no longer allowed, sends the user home. `useApi`'s response interceptor signs the user out on a 403

@@ -61,6 +61,23 @@ describe('interceptor de useApi', () => {
     expect(logout).toHaveBeenCalledTimes(1)
   })
 
+  it('un 403 MFA_REQUERIDO manda a verificar el código, sin cerrar la sesión', async () => {
+    const api = responder(403, { code: 'MFA_REQUERIDO', message: 'Falta verificar el código.' })
+
+    await expect(api.get('/lotes')).rejects.toBeDefined()
+    expect(navigateTo).toHaveBeenCalledWith('/verificar-mfa')
+    expect(logout).not.toHaveBeenCalled()
+  })
+
+  it('un 403 MFA_ENROLAR avisa y lleva a Mi cuenta a activarlo', async () => {
+    const api = responder(403, { code: 'MFA_ENROLAR', message: 'Activa la verificación en dos pasos.' })
+
+    await expect(api.get('/lotes')).rejects.toBeDefined()
+    expect(toastError).toHaveBeenCalledWith('Activa la verificación en dos pasos.')
+    expect(navigateTo).toHaveBeenCalledWith('/mi-cuenta?mfa=obligatorio')
+    expect(logout).not.toHaveBeenCalled()
+  })
+
   it('las respuestas correctas pasan sin tocar nada', async () => {
     const api = responder(200, { ok: true })
 

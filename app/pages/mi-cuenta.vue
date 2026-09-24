@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AvatarUploader from '@/components/mi-cuenta/AvatarUploader.vue'
 import CambiarPassword from '@/components/mi-cuenta/CambiarPassword.vue'
+import DosPasos from '@/components/mi-cuenta/DosPasos.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -19,6 +20,7 @@ import { toast } from 'vue-sonner'
 import { RECURSOS, RECURSO_LABEL } from '~/utils/permisos'
 
 const { usuarioActual, esAdmin, cargar } = useUsuarioActual()
+const route = useRoute()
 
 onMounted(() => {
   cargar()
@@ -125,6 +127,15 @@ function onAvatarActualizado(url: string) {
           </CardHeader>
           <CardContent>
             <CambiarPassword />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">Verificación en dos pasos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DosPasos :obligatorio="route.query.mfa === 'obligatorio'" />
           </CardContent>
         </Card>
       </div>
