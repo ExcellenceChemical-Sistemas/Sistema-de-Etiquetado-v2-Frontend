@@ -72,7 +72,8 @@ unless the path is in `rutasPublicas` (`/login`, `/olvide-password`, `/restablec
 `useAuth` calls `useUsuarioActual.reset()` on logout and on any session user change, so a cached
 `usuarioActual` does not survive a user switch. `useAuth().cambiarPassword` (Mi cuenta) re-checks the
 current password with `signInWithPassword`, updates it, then signs out the other devices
-(`scope: 'others'`); the new-password rule is `utils/password.ts` (shared with `/restablecer-password`).
+(`scope: 'others'`); the new-password rule is `utils/password.ts` (shared with `/restablecer-password` and the create-user form
+`Crearusuario.vue`; the backend mirrors it in `passwordNuevaSchema`, `usuario/dto/usuarios.dto.ts` — keep both in sync).
 
 **Second factor (TOTP).** `useMfa` talks to `supabase.auth.mfa` directly; `components/mi-cuenta/DosPasos.vue` (Mi cuenta)
 enrolls/removes it and `pages/verificar-mfa.vue` asks for the code. `auth.global.ts` sends a session that has the factor

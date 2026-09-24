@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'vue-sonner'
 import { crearPermisosStateVacio, permisosStateAArray, type Usuario } from '~/utils/permisos'
+import { PASSWORD_MIN, validarPasswordNueva } from '~/utils/password'
 
 const open = defineModel<boolean>('open', { default: false })
 
@@ -55,8 +56,9 @@ async function guardar() {
     error.value = 'Nombre y email son obligatorios'
     return
   }
-  if (password.value.length < 8) {
-    error.value = 'La contraseña debe tener al menos 8 caracteres'
+  const problemaPassword = validarPasswordNueva(password.value)
+  if (problemaPassword) {
+    error.value = problemaPassword
     return
   }
 
@@ -131,7 +133,7 @@ async function guardar() {
                 :type="mostrarPassword ? 'text' : 'password'"
                 name="nuevo-usuario-password"
                 autocomplete="new-password"
-                placeholder="Mínimo 8 caracteres"
+                :placeholder="`Mínimo ${PASSWORD_MIN} caracteres, con letras y números`"
                 class="pr-10"
               />
               <button
