@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AvatarUploader from '@/components/mi-cuenta/AvatarUploader.vue'
+import CambiarPassword from '@/components/mi-cuenta/CambiarPassword.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -79,7 +80,7 @@ function onAvatarActualizado(url: string) {
     <div>
       <h1 class="text-2xl font-semibold">Mi cuenta</h1>
       <p class="text-sm text-muted-foreground">
-        Actualiza tu foto de perfil y tu nombre.
+        Actualiza tu foto de perfil, tu nombre y tu contraseña.
       </p>
     </div>
 
@@ -115,6 +116,15 @@ function onAvatarActualizado(url: string) {
               <Spinner v-if="guardando" class="mr-2 size-4" />
               Guardar cambios
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">Contraseña</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CambiarPassword />
           </CardContent>
         </Card>
       </div>

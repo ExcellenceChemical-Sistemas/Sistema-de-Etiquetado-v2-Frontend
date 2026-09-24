@@ -68,6 +68,22 @@ export function useAuth() {
     if (error) throw error;
   };
 
+  // Cambio desde una sesión abierta. Se vuelve a comprobar la contraseña actual
+  // (signInWithPassword) para que una sesión olvidada abierta no baste para
+  // cambiarla, y luego se cierran las sesiones de otros dispositivos: esta sigue.
+  const cambiarPassword = async (passwordActual: string, nuevaPassword: string) => {
+    const email = session.value?.user.email;
+    if (!email) throw new Error("No hay una sesión activa");
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: passwordActual,
+    });
+    if (error) throw error;
+    await actualizarPassword(nuevaPassword);
+    // La contraseña ya cambió: si esto falla no se deshace nada ni se avisa error.
+    await supabase.auth.signOut({ scope: "others" }).catch(() => {});
+  };
+
   return {
     session,
     isAuthenticated: computed(() => !!session.value),
@@ -76,5 +92,6 @@ export function useAuth() {
     logout,
     solicitarResetPassword,
     actualizarPassword,
+    cambiarPassword,
   };
 }

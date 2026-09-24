@@ -38,7 +38,7 @@ app/
 │   ├── documentos/      # VisorWord.vue (docx-preview)
 │   ├── fabricantes/     # FabricanteForm.vue, FabricantesFiltroBar.vue
 │   ├── lotes/           # LoteForm.vue, Lotesfiltrobar.vue, Vencimientobadge.vue
-│   ├── mi-cuenta/       # AvatarUploader.vue
+│   ├── mi-cuenta/       # AvatarUploader.vue, CambiarPassword.vue
 │   ├── pdf/             # VisorPdf.vue (pdfjs-dist)
 │   ├── productos/       # ProductoForm.vue, ProductosFiltroBar.vue, NfpaBadge.vue
 │   └── ui/              # librería shadcn-nuxt (Reka UI) + ProgressBar.vue, Spinner.vue
@@ -248,6 +248,7 @@ El backend tiene que estar corriendo para que funcione cualquier cosa más allá
 - El frontend corre fijo en el puerto **3001**; el backend habilita CORS para `http://localhost:3000` y `http://localhost:3001`.
 - **La forma de las respuestas es inconsistente**: la mayoría de los endpoints devuelven el payload directo (`const { data } = await api.get<Producto[]>(...)`), pero `/usuarios/me` viene envuelto — `useUsuarioActual` lee `data.data`. Conviene verificar en el backend antes de asumir.
 - La vista "Mi cuenta" (`pages/mi-cuenta.vue`, composable `useAvatar`) permite subir/cambiar la foto de perfil. La imagen se envía al backend (`POST /usuarios/me/avatar`); **no se sube directo a Supabase Storage** (el bucket no permite escritura desde el navegador).
+- Mi cuenta también permite **cambiar la contraseña** (`components/mi-cuenta/CambiarPassword.vue`, `useAuth().cambiarPassword`): pide la contraseña actual y la vuelve a comprobar contra Supabase antes de cambiarla, y al terminar cierra las sesiones de los demás dispositivos (`signOut({ scope: 'others' })`; la actual sigue abierta). La regla de la contraseña nueva vive en `utils/password.ts` (mínimo 10 caracteres, con letras y números, distinta de la actual) y la comparte la pantalla de recuperación (`/restablecer-password`). Es una validación de cara al usuario: el mínimo que Supabase realmente exige se configura en su panel.
 - Los botones de COA en `LoteForm.vue` se gatean con el recurso `LOTES` (no hay recurso `COA`).
 - `contexto-fase3-kpis-iso.md` en la raíz es el documento de diseño del módulo KPIs/ISO. Está **parcialmente desactualizado**: describe el rediseño de permisos como "decidido pero no implementado", cuando en realidad ya está implementado en backend y frontend. Sirve para entender el *porqué* de las reglas, no como estado de avance.
 - `4000/` en la raíz es un directorio suelto creado por un comando mal tipeado (contiene solo un `node_modules` vacío) — no es parte del build.

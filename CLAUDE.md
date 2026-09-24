@@ -70,7 +70,9 @@ request interceptor calls `supabase.auth.getSession()` on every request and atta
 `Authorization: Bearer <access_token>`. `middleware/auth.global.ts` redirects to `/login`
 unless the path is in `rutasPublicas` (`/login`, `/olvide-password`, `/restablecer-password`).
 `useAuth` calls `useUsuarioActual.reset()` on logout and on any session user change, so a cached
-`usuarioActual` does not survive a user switch.
+`usuarioActual` does not survive a user switch. `useAuth().cambiarPassword` (Mi cuenta) re-checks the
+current password with `signInWithPassword`, updates it, then signs out the other devices
+(`scope: 'others'`); the new-password rule is `utils/password.ts` (shared with `/restablecer-password`).
 
 **Session stays in sync.** `plugins/refrescar-permisos.client.ts` re-fetches `/usuarios/me` when the tab
 regains focus and every 5 min (`useUsuarioActual().refrescar()`); on a change it toasts and, if the current

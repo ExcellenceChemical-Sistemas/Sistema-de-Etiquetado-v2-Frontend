@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { validarPasswordNueva } from "~/utils/password";
+
 definePageMeta({ layout: "auth" });
 
 const nuevaPassword = ref("");
@@ -15,8 +17,9 @@ const onSubmit = async () => {
     error.value = "Las contraseñas no coinciden";
     return;
   }
-  if (nuevaPassword.value.length < 8) {
-    error.value = "Mínimo 8 caracteres";
+  const problema = validarPasswordNueva(nuevaPassword.value);
+  if (problema) {
+    error.value = problema;
     return;
   }
 
