@@ -95,7 +95,7 @@ async function copiarQr(e: EtiquetaHistorial) {
         />
         <Input
           v-model="search"
-          placeholder="Buscar por producto, lote, fabricante o proforma..."
+          placeholder="Buscar por producto, lote, fabricante o proforma..." aria-label="Buscar por producto, lote, fabricante o proforma"
           class="pl-8 pr-24"
         />
         <span
@@ -214,10 +214,10 @@ async function copiarQr(e: EtiquetaHistorial) {
               </TableCell>
               <TableCell class="text-right">
                 <template v-if="e.token">
-                  <Button variant="ghost" size="icon" title="Abrir página del QR" @click="abrirQr(e)">
+                  <Button variant="ghost" size="icon" title="Abrir página del QR" aria-label="Abrir página del QR" @click="abrirQr(e)">
                     <ExternalLink class="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" title="Copiar enlace del QR" @click="copiarQr(e)">
+                  <Button variant="ghost" size="icon" title="Copiar enlace del QR" aria-label="Copiar enlace del QR" @click="copiarQr(e)">
                     <Copy class="h-4 w-4" />
                   </Button>
                 </template>

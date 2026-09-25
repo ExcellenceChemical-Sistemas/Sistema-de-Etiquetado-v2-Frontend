@@ -59,7 +59,7 @@ async function guardar() {
         <div class="space-y-2">
           <Label>Categoría</Label>
           <Select v-model="categoria">
-            <SelectTrigger class="w-full">
+            <SelectTrigger class="w-full" aria-label="Categoría de la observación">
               <SelectValue placeholder="Sin observación" />
             </SelectTrigger>
             <SelectContent>

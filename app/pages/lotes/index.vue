@@ -270,7 +270,7 @@ function abrirCoaEnPestana() {
                   v-if="l.coaUrl"
                   type="button"
                   class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  title="Ver COA"
+                  title="Ver COA" aria-label="Ver COA"
                   @click="abrirCoa(l)"
                 >
                   <FileText class="h-4 w-4" />
@@ -288,7 +288,7 @@ function abrirCoaEnPestana() {
                   v-if="permiso.puedeVer"
                   variant="ghost"
                   size="icon"
-                  title="Ver detalle"
+                  title="Ver detalle" aria-label="Ver detalle"
                   @click="abrirDetalle(l)"
                 >
                   <Eye class="h-4 w-4" />
@@ -297,7 +297,7 @@ function abrirCoaEnPestana() {
                   v-if="permiso.puedeEditar"
                   variant="ghost"
                   size="icon"
-                  title="Editar"
+                  title="Editar" aria-label="Editar"
                   @click="abrirEditar(l)"
                 >
                   <Pencil class="h-4 w-4" />
@@ -306,7 +306,7 @@ function abrirCoaEnPestana() {
                   v-if="permiso.puedeEliminar"
                   variant="ghost"
                   size="icon"
-                  title="Eliminar"
+                  title="Eliminar" aria-label="Eliminar"
                   @click="pedirEliminar(l)"
                 >
                   <Trash2 class="h-4 w-4 text-destructive" />
@@ -441,7 +441,7 @@ function abrirCoaEnPestana() {
               <FileText class="h-4 w-4" />
               Ver COA
             </button>
-            <p v-else class="font-medium text-muted-foreground/70">Sin COA</p>
+            <p v-else class="font-medium text-muted-foreground">Sin COA</p>
           </div>
           <div>
             <p class="text-muted-foreground">Creado</p>

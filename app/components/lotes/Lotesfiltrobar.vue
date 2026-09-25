@@ -20,7 +20,7 @@ defineProps<{
       <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         v-model="search"
-        placeholder="Buscar por lote, producto o fabricante..."
+        placeholder="Buscar por lote, producto o fabricante..." aria-label="Buscar por lote, producto o fabricante"
         class="pl-8"
         :class="resultCount !== undefined ? 'pr-24' : ''"
       />

@@ -10,6 +10,9 @@ export interface Cliente {
   celular: string | null
   // Correo para los avisos del pedido (salió / entregado). Opcional.
   email: string | null
+  // Fecha en que el personal registró que el cliente fue informado y autorizó el uso de sus
+  // datos de contacto. Null = sin registro (p. ej. clientes cargados antes de este campo).
+  autorizaContactoEn: string | null
   createdAt: string
 }
 
@@ -20,6 +23,8 @@ export interface ClienteInput {
   direccion?: string
   celular?: string
   email?: string
+  // Confirmación del personal; el backend guarda la fecha en `autorizaContactoEn`.
+  autorizaContacto?: boolean
 }
 
 export type ActualizarClienteInput = Partial<ClienteInput>

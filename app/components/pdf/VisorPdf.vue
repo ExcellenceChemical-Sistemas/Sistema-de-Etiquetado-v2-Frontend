@@ -60,20 +60,20 @@ onBeforeUnmount(() => {
        contenido tampoco se pueda seleccionar y copiar -->
   <div class="flex h-full w-full select-none flex-col">
     <div class="flex shrink-0 items-center justify-center gap-2 border-b border-border pb-2">
-      <Button variant="ghost" size="icon" :disabled="paginaActual <= 1" @click="anterior">
+      <Button variant="ghost" size="icon" aria-label="Página anterior" title="Página anterior" :disabled="paginaActual <= 1" @click="anterior">
         <ChevronLeft class="h-4 w-4" />
       </Button>
       <span class="text-sm tabular-nums text-muted-foreground">
         {{ paginaActual }} / {{ totalPaginas || 1 }}
       </span>
-      <Button variant="ghost" size="icon" :disabled="paginaActual >= totalPaginas" @click="siguiente">
+      <Button variant="ghost" size="icon" aria-label="Página siguiente" title="Página siguiente" :disabled="paginaActual >= totalPaginas" @click="siguiente">
         <ChevronRight class="h-4 w-4" />
       </Button>
       <Separator orientation="vertical" class="mx-2 h-4" />
-      <Button variant="ghost" size="icon" @click="alejar">
+      <Button variant="ghost" size="icon" aria-label="Alejar" title="Alejar" @click="alejar">
         <ZoomOut class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" @click="acercar">
+      <Button variant="ghost" size="icon" aria-label="Acercar" title="Acercar" @click="acercar">
         <ZoomIn class="h-4 w-4" />
       </Button>
     </div>

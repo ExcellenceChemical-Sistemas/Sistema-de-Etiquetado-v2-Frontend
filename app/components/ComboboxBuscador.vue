@@ -83,6 +83,7 @@ onBeforeUnmount(() =>
   <div ref="wrapperRef" class="relative">
     <div class="relative">
       <Input
+        :aria-label="placeholder ?? 'Buscar'"
         v-model="search"
         :placeholder="
           loading

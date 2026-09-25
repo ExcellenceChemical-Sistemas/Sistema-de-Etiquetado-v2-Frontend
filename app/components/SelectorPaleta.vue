@@ -17,7 +17,7 @@ const { paletaActual, paletas } = useTemaColor()
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="icon" title="Color de fondo">
+      <Button variant="ghost" size="icon" title="Color de fondo" aria-label="Color de fondo">
         <Palette class="size-4" />
         <span class="sr-only">Color de fondo</span>
       </Button>

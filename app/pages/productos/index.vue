@@ -300,7 +300,7 @@ function abrirFichaEnPestana() {
                     v-if="p.fichaSeguridadUrl && permiso.puedeVer"
                     type="button"
                     class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    title="Ver ficha de seguridad"
+                    title="Ver ficha de seguridad" aria-label="Ver ficha de seguridad"
                     @click="abrirFicha(p, 'seguridad')"
                   >
                     <FileText class="h-4 w-4" />
@@ -316,7 +316,7 @@ function abrirFichaEnPestana() {
                     v-if="p.fichaTecnicaUrl && permiso.puedeVer"
                     type="button"
                     class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    title="Ver ficha técnica"
+                    title="Ver ficha técnica" aria-label="Ver ficha técnica"
                     @click="abrirFicha(p, 'tecnica')"
                   >
                     <FileSpreadsheet class="h-4 w-4" />
@@ -335,7 +335,7 @@ function abrirFichaEnPestana() {
                   v-if="permiso.puedeVer"
                   variant="ghost"
                   size="icon"
-                  title="Ver detalle"
+                  title="Ver detalle" aria-label="Ver detalle"
                   @click="abrirDetalle(p)"
                 >
                   <Eye class="h-4 w-4" />
@@ -344,7 +344,7 @@ function abrirFichaEnPestana() {
                   v-if="permiso.puedeEditar"
                   variant="ghost"
                   size="icon"
-                  title="Editar"
+                  title="Editar" aria-label="Editar"
                   @click="abrirEditar(p)"
                 >
                   <Pencil class="h-4 w-4" />
@@ -450,7 +450,7 @@ function abrirFichaEnPestana() {
               <FileText class="h-4 w-4" />
               Ver ficha de seguridad
             </button>
-            <p v-else class="font-medium text-muted-foreground/70">
+            <p v-else class="font-medium text-muted-foreground">
               Sin ficha de seguridad
             </p>
           </div>
@@ -465,7 +465,7 @@ function abrirFichaEnPestana() {
               <FileSpreadsheet class="h-4 w-4" />
               Ver ficha técnica
             </button>
-            <p v-else class="font-medium text-muted-foreground/70">
+            <p v-else class="font-medium text-muted-foreground">
               Sin ficha técnica
             </p>
           </div>

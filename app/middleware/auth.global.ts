@@ -8,7 +8,15 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { session, init } = useAuth()
   await init()
 
-  const rutasPublicas = ['/login', '/olvide-password', '/restablecer-password']
+  // /privacidad, /seguridad y /cookies: textos legales, deben poder leerse sin iniciar sesión.
+  const rutasPublicas = [
+    '/login',
+    '/olvide-password',
+    '/restablecer-password',
+    '/privacidad',
+    '/seguridad',
+    '/cookies',
+  ]
   // /e/<token>: página de trazabilidad que abre quien escanea el QR de la
   // etiqueta; no tiene sesión y no la necesita.
   // /p/<token>: seguimiento de un pedido, que abre el cliente con el enlace que le manda la empresa.

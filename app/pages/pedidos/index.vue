@@ -262,10 +262,10 @@ async function confirmarEliminar() {
     <div class="flex shrink-0 flex-wrap items-center gap-2">
       <div class="relative w-full max-w-sm">
         <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input v-model="busqueda" placeholder="Buscar por cliente o proforma..." class="pl-8" />
+        <Input v-model="busqueda" placeholder="Buscar por cliente o proforma..." aria-label="Buscar por cliente o proforma" class="pl-8" />
       </div>
       <Select v-model="filtroMes">
-        <SelectTrigger class="w-40">
+        <SelectTrigger class="w-40" aria-label="Filtrar por mes">
           <SelectValue placeholder="Mes" />
         </SelectTrigger>
         <SelectContent>
@@ -274,7 +274,7 @@ async function confirmarEliminar() {
         </SelectContent>
       </Select>
       <Select v-model="filtroAnio">
-        <SelectTrigger class="w-28">
+        <SelectTrigger class="w-28" aria-label="Filtrar por año">
           <SelectValue placeholder="Año" />
         </SelectTrigger>
         <SelectContent>
@@ -341,14 +341,14 @@ async function confirmarEliminar() {
               </TableCell>
               <TableCell class="text-right">
                 <div class="flex items-center justify-end gap-1">
-                  <Button variant="ghost" size="icon" class="h-8 w-8" title="Ver detalle" @click="abrirDetalle(p)">
+                  <Button variant="ghost" size="icon" class="h-8 w-8" title="Ver detalle" aria-label="Ver detalle" @click="abrirDetalle(p)">
                     <Eye class="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     class="h-8 w-8"
-                    title="Copiar enlace de seguimiento para el cliente"
+                    title="Copiar enlace de seguimiento para el cliente" aria-label="Copiar enlace de seguimiento para el cliente"
                     @click="copiarEnlace(p)"
                   >
                     <Link2 class="h-4 w-4" />
@@ -357,7 +357,7 @@ async function confirmarEliminar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    class="h-8 gap-1 px-2 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
+                    class="h-8 gap-1 px-2 text-[#0f7a3d] hover:bg-[#25D366]/15 hover:text-[#0f7a3d] dark:text-[#25D366] dark:hover:text-[#25D366]"
                     :disabled="!normalizarCelular(p.cliente.celular)"
                     :title="
                       normalizarCelular(p.cliente.celular)
@@ -504,7 +504,7 @@ async function confirmarEliminar() {
                 — {{ detallePedido.detalleObservacion }}
               </span>
             </p>
-            <p v-else class="font-medium text-muted-foreground/70">Sin observación</p>
+            <p v-else class="font-medium text-muted-foreground">Sin observación</p>
           </div>
           <div class="col-span-2">
             <p class="text-muted-foreground">Correo del cliente</p>

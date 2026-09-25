@@ -145,7 +145,7 @@ watch(
 <template>
   <div class="flex h-full min-h-0 flex-col gap-3 p-4 lg:p-6">
     <div class="flex shrink-0 items-center gap-3">
-      <Button variant="ghost" size="icon" title="Volver" as-child>
+      <Button variant="ghost" size="icon" title="Volver" aria-label="Volver" as-child>
         <NuxtLink :to="volverA">
           <ArrowLeft class="h-4 w-4" />
         </NuxtLink>

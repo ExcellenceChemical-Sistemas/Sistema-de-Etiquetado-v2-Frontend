@@ -102,7 +102,7 @@ const TARJETAS = computed(() => [
 
       <div class="flex items-center gap-2">
         <Select v-model="filtroMes">
-          <SelectTrigger class="w-40">
+          <SelectTrigger class="w-40" aria-label="Filtrar por mes">
             <SelectValue placeholder="Mes" />
           </SelectTrigger>
           <SelectContent>
@@ -111,7 +111,7 @@ const TARJETAS = computed(() => [
           </SelectContent>
         </Select>
         <Select v-model="filtroAnio">
-          <SelectTrigger class="w-28">
+          <SelectTrigger class="w-28" aria-label="Filtrar por año">
             <SelectValue placeholder="Año" />
           </SelectTrigger>
           <SelectContent>

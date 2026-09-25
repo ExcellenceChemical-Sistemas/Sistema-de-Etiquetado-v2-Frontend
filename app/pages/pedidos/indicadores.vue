@@ -182,7 +182,7 @@ function exportarXlsx() {
 
       <div class="flex items-center gap-2">
         <Select v-model="filtroMes">
-          <SelectTrigger class="w-40">
+          <SelectTrigger class="w-40" aria-label="Filtrar por mes">
             <SelectValue placeholder="Mes" />
           </SelectTrigger>
           <SelectContent>
@@ -191,7 +191,7 @@ function exportarXlsx() {
           </SelectContent>
         </Select>
         <Select v-model="filtroAnio">
-          <SelectTrigger class="w-28">
+          <SelectTrigger class="w-28" aria-label="Filtrar por año">
             <SelectValue placeholder="Año" />
           </SelectTrigger>
           <SelectContent>
@@ -228,9 +228,9 @@ function exportarXlsx() {
               <TableCell>Mensual</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell class="font-medium text-muted-foreground/60">Errores de despacho</TableCell>
-              <TableCell class="text-muted-foreground/60">&lt;5%</TableCell>
-              <TableCell class="text-muted-foreground/60" colspan="2">
+              <TableCell class="font-medium text-muted-foreground">Errores de despacho</TableCell>
+              <TableCell class="text-muted-foreground">&lt;5%</TableCell>
+              <TableCell class="text-muted-foreground" colspan="2">
                 No disponible todavía — el sistema no registra despachos errados
               </TableCell>
             </TableRow>

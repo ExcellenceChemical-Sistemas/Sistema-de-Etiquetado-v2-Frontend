@@ -30,6 +30,7 @@ const { handleSubmit, defineField, errors, isSubmitting, setValues } = useForm({
     direccion: props.cliente?.direccion ?? "",
     celular: props.cliente?.celular ?? "",
     email: props.cliente?.email ?? "",
+    autorizaContacto: !!props.cliente?.autorizaContactoEn,
   },
 });
 
@@ -39,6 +40,18 @@ const [numeroDocumento, numeroDocumentoAttrs] = defineField("numeroDocumento");
 const [direccion, direccionAttrs] = defineField("direccion");
 const [celular, celularAttrs] = defineField("celular");
 const [email, emailAttrs] = defineField("email");
+const [autorizaContacto] = defineField("autorizaContacto");
+
+// Fecha con la que ya quedó registrada la autorización (solo al editar).
+const autorizacionRegistrada = computed(() =>
+  props.cliente?.autorizaContactoEn
+    ? new Date(props.cliente.autorizaContactoEn).toLocaleDateString("es-PE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : null,
+);
 
 const nombreInputRef = ref<{ $el: HTMLInputElement } | null>(null);
 onMounted(() => nombreInputRef.value?.$el?.focus());
@@ -53,6 +66,7 @@ watch(
       direccion: c?.direccion ?? "",
       celular: c?.celular ?? "",
       email: c?.email ?? "",
+      autorizaContacto: !!c?.autorizaContactoEn,
     });
   },
 );
@@ -69,6 +83,7 @@ const onSubmit = handleSubmit(async (values) => {
     celular: values.celular || undefined,
     // Al editar, vacío = quitar el correo (el backend lo entiende como cadena vacía).
     email: values.email || (isEditing.value ? "" : undefined),
+    autorizaContacto: values.autorizaContacto === true,
   };
   try {
     if (isEditing.value && props.cliente) {
@@ -156,6 +171,33 @@ const onSubmit = handleSubmit(async (values) => {
       </p>
       <p v-else class="text-xs text-muted-foreground">
         Si lo dejas vacío, no se le envían avisos automáticos por correo.
+      </p>
+    </div>
+
+    <div class="space-y-1.5 rounded-md border border-border p-3">
+      <div class="flex items-start gap-2">
+        <Checkbox
+          id="autorizaContacto"
+          class="mt-0.5"
+          :model-value="autorizaContacto === true"
+          :aria-invalid="!!errors.autorizaContacto"
+          aria-describedby="autorizaContacto-ayuda"
+          @update:model-value="(v: boolean | 'indeterminate') => (autorizaContacto = v === true)"
+        />
+        <Label for="autorizaContacto" class="text-sm font-normal leading-snug">
+          Informé al cliente cómo usaremos sus datos y autoriza que Excellence Chemical use su
+          celular y correo para avisarle de sus pedidos.
+        </Label>
+      </div>
+      <p id="autorizaContacto-ayuda" class="text-xs text-muted-foreground">
+        Solo pedimos los datos necesarios. Detalle en la
+        <NuxtLink to="/privacidad" target="_blank" class="underline underline-offset-2 hover:text-foreground">
+          política de privacidad
+        </NuxtLink>.
+        <span v-if="autorizacionRegistrada"> Autorización registrada el {{ autorizacionRegistrada }}.</span>
+      </p>
+      <p v-if="errors.autorizaContacto" role="alert" class="text-sm text-destructive">
+        {{ errors.autorizaContacto }}
       </p>
     </div>
 

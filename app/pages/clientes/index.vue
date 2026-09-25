@@ -173,7 +173,7 @@ async function confirmarEliminar() {
                   v-if="permiso.puedeEditar"
                   variant="ghost"
                   size="icon"
-                  title="Editar"
+                  title="Editar" aria-label="Editar"
                   @click="abrirEditar(c)"
                 >
                   <Pencil class="h-4 w-4" />
@@ -182,7 +182,7 @@ async function confirmarEliminar() {
                   v-if="permiso.puedeEliminar"
                   variant="ghost"
                   size="icon"
-                  title="Eliminar"
+                  title="Eliminar" aria-label="Eliminar"
                   @click="pedirEliminar(c)"
                 >
                   <Trash2 class="h-4 w-4 text-destructive" />

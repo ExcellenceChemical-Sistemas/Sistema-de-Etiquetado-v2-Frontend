@@ -145,7 +145,7 @@ function onFormSuccess() {
                   v-if="permiso.puedeEditar"
                  variant="ghost"
                   size="icon"
-                  title="Editar"
+                  title="Editar" aria-label="Editar"
                   @click="openEdit(f)"
                 >
                 <Pencil class="h-4 w-4" />

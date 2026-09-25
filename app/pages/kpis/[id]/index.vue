@@ -431,7 +431,7 @@ async function eliminarArchivo(archivoId: number) {
                   v-if="puedeEliminarArchivo(archivo, contenido.carpeta, ruta)"
                   variant="ghost"
                   size="icon"
-                  title="Eliminar"
+                  title="Eliminar" aria-label="Eliminar"
                   class="text-destructive hover:text-destructive"
                   @click="eliminarArchivo(archivo.id)"
                 >

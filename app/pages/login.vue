@@ -61,7 +61,7 @@ async function onSubmit() {
           />
         </div>
 
-        <p v-if="error" class="text-sm text-destructive">
+        <p v-if="error" role="alert" class="text-sm text-destructive">
           {{ error }}
         </p>
 

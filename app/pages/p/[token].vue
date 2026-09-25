@@ -115,14 +115,14 @@ const fmtFecha = (iso: string | null) =>
             </span>
             <p
               class="text-sm font-semibold"
-              :class="e.situacion === 'pendiente' ? 'text-muted-foreground/70' : ''"
+              :class="e.situacion === 'pendiente' ? 'text-muted-foreground' : ''"
             >
               {{ e.titulo }}
             </p>
             <p v-if="fmtFecha(e.fecha)" class="text-sm text-muted-foreground">
               {{ fmtFecha(e.fecha) }}
             </p>
-            <p v-else-if="e.situacion === 'pendiente'" class="text-sm text-muted-foreground/60">
+            <p v-else-if="e.situacion === 'pendiente'" class="text-sm text-muted-foreground">
               Pendiente
             </p>
           </li>

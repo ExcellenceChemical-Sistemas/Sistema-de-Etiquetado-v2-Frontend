@@ -172,6 +172,18 @@ progress animation surfaced through `components/ui/ProgressBar.vue`.
   carries an inline `min-width: fit-content`, which `Crearusuario.vue` overrides so long text
   wraps instead of pushing the form wider than the dialog.
 
+## Legal pages, consent and accessibility
+
+Public legal pages `/privacidad`, `/seguridad`, `/cookies` (layout `legal.vue`, `PieLegal.vue` footer in every
+layout) are listed in `rutasPublicas` in `auth.global.ts`. Their text describes what the system really does
+(Ley 29733, Peru) — **update them whenever data collection, providers or storage change** (a new analytics tool
+needs consent first). Company data (RUC, domicilio, correo de privacidad) lives in `app/config/empresa.ts`; empty
+fields are simply not shown, so fill them in before relying on the pages. The client form records the
+authorization to use contact data (`Cliente.autorizaContactoEn`, required in the schema when celular/correo is
+filled). No cookies are set and no third-party assets are loaded (fonts are NOT fetched from Google); keep it so.
+Icon-only buttons need `aria-label`, search inputs/selects without a visible label need `aria-label`, and text
+colors must keep >= 4.5:1 (`--muted-foreground` was darkened for this; avoid `text-muted-foreground/NN` on text).
+
 ## Repo hygiene
 
 `4000/` at the repo root is a stray directory created by a mistyped command (it contains only
