@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useProductos, useVerFichaSeguridad } from "~/composables/useProductos";
+import {
+  useProductos,
+  useVerFichaSeguridad,
+  useVerFichaTecnica,
+} from "~/composables/useProductos";
 import { useProductosListado } from "~/composables/useProductosListado";
 import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
 import ProductoForm from "~/components/productos/ProductoForm.vue";
@@ -15,6 +19,7 @@ import {
   Eye,
   FileText,
   FileX,
+  FileSpreadsheet,
   ExternalLink,
 } from "@lucide/vue";
 import { toast } from "vue-sonner";
@@ -68,6 +73,10 @@ const xlsxColumns: XlsxColumn<Producto>[] = [
     key: (p: Producto) => (p.fichaSeguridadUrl ? "Sí" : "No"),
     label: "Ficha de seguridad",
   },
+  {
+    key: (p: Producto) => (p.fichaTecnicaUrl ? "Sí" : "No"),
+    label: "Ficha técnica",
+  },
 ];
 
 function exportarCsv() {
@@ -116,24 +125,40 @@ function formatFecha(fecha?: string | null): string {
   });
 }
 
-// --- Ficha de seguridad ---
+// --- Fichas (seguridad y técnica) ---
 // La signed URL vence a los 5 minutos, así que se pide recién al hacer clic,
 // nunca al renderizar la lista.
-const { mutateAsync: obtenerFichaUrl, isPending: cargandoFicha } =
+type TipoFicha = "seguridad" | "tecnica";
+const { mutateAsync: obtenerFichaSeguridadUrl, isPending: cargandoSeguridad } =
   useVerFichaSeguridad();
+const { mutateAsync: obtenerFichaTecnicaUrl, isPending: cargandoTecnica } =
+  useVerFichaTecnica();
+const cargandoFicha = computed(() => cargandoSeguridad.value || cargandoTecnica.value);
 const fichaDialogOpen = ref(false);
 const fichaPreviewUrl = ref<string | null>(null);
 const fichaProducto = ref<Producto | null>(null);
+const fichaTipo = ref<TipoFicha>("seguridad");
 
-async function abrirFicha(producto: Producto) {
-  if (!producto.fichaSeguridadUrl) return;
+const NOMBRE_FICHA: Record<TipoFicha, string> = {
+  seguridad: "Ficha de seguridad",
+  tecnica: "Ficha técnica",
+};
+
+async function abrirFicha(producto: Producto, tipo: TipoFicha = "seguridad") {
+  const tiene =
+    tipo === "seguridad" ? producto.fichaSeguridadUrl : producto.fichaTecnicaUrl;
+  if (!tiene) return;
   fichaProducto.value = producto;
+  fichaTipo.value = tipo;
   fichaPreviewUrl.value = null;
   fichaDialogOpen.value = true;
   try {
-    fichaPreviewUrl.value = await obtenerFichaUrl(producto.id);
+    fichaPreviewUrl.value =
+      tipo === "seguridad"
+        ? await obtenerFichaSeguridadUrl(producto.id)
+        : await obtenerFichaTecnicaUrl(producto.id);
   } catch {
-    toast.error("No se pudo cargar la ficha de seguridad");
+    toast.error(`No se pudo cargar la ${NOMBRE_FICHA[tipo].toLowerCase()}`);
     fichaDialogOpen.value = false;
   }
 }
@@ -197,7 +222,7 @@ function abrirFichaEnPestana() {
             <TableHead>Nombre</TableHead>
             <TableHead>NFPA</TableHead>
             <TableHead class="w-28 text-center">GHS</TableHead>
-            <TableHead class="w-24 text-center">Ficha</TableHead>
+            <TableHead class="w-28 text-center">Fichas</TableHead>
             <TableHead class="w-24 text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -270,22 +295,40 @@ function abrirFichaEnPestana() {
                 <span v-else class="text-xs text-muted-foreground">—</span>
               </TableCell>
               <TableCell class="text-center">
-                <button
-                  v-if="p.fichaSeguridadUrl && permiso.puedeVer"
-                  type="button"
-                  class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  title="Ver ficha de seguridad"
-                  @click="abrirFicha(p)"
-                >
-                  <FileText class="h-4 w-4" />
-                </button>
-                <span
-                  v-else
-                  class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground/40"
-                  title="Sin ficha de seguridad"
-                >
-                  <FileX class="h-4 w-4" />
-                </span>
+                <div class="inline-flex items-center justify-center gap-0.5">
+                  <button
+                    v-if="p.fichaSeguridadUrl && permiso.puedeVer"
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    title="Ver ficha de seguridad"
+                    @click="abrirFicha(p, 'seguridad')"
+                  >
+                    <FileText class="h-4 w-4" />
+                  </button>
+                  <span
+                    v-else
+                    class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground/40"
+                    title="Sin ficha de seguridad"
+                  >
+                    <FileX class="h-4 w-4" />
+                  </span>
+                  <button
+                    v-if="p.fichaTecnicaUrl && permiso.puedeVer"
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    title="Ver ficha técnica"
+                    @click="abrirFicha(p, 'tecnica')"
+                  >
+                    <FileSpreadsheet class="h-4 w-4" />
+                  </button>
+                  <span
+                    v-else
+                    class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground/40"
+                    title="Sin ficha técnica"
+                  >
+                    <FileX class="h-4 w-4" />
+                  </span>
+                </div>
               </TableCell>
               <TableCell class="text-right">
                 <Button
@@ -402,13 +445,28 @@ function abrirFichaEnPestana() {
               v-if="detalleProducto.fichaSeguridadUrl && permiso.puedeVer"
               type="button"
               class="mt-1 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-secondary"
-              @click="abrirFicha(detalleProducto)"
+              @click="abrirFicha(detalleProducto, 'seguridad')"
             >
               <FileText class="h-4 w-4" />
               Ver ficha de seguridad
             </button>
             <p v-else class="font-medium text-muted-foreground/70">
               Sin ficha de seguridad
+            </p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-muted-foreground">Ficha técnica</p>
+            <button
+              v-if="detalleProducto.fichaTecnicaUrl && permiso.puedeVer"
+              type="button"
+              class="mt-1 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-secondary"
+              @click="abrirFicha(detalleProducto, 'tecnica')"
+            >
+              <FileSpreadsheet class="h-4 w-4" />
+              Ver ficha técnica
+            </button>
+            <p v-else class="font-medium text-muted-foreground/70">
+              Sin ficha técnica
             </p>
           </div>
           <div>
@@ -431,7 +489,7 @@ function abrirFichaEnPestana() {
       <DialogContent class="max-w-3xl overflow-hidden">
         <DialogTitle class="flex min-w-0 items-center justify-between gap-2 pr-6">
           <span class="min-w-0 truncate">
-            Ficha de seguridad · {{ fichaProducto?.nombre }}
+            {{ NOMBRE_FICHA[fichaTipo] }} · {{ fichaProducto?.nombre }}
           </span>
           <Button
             v-if="fichaPreviewUrl"

@@ -74,6 +74,62 @@ export function useVerFichaSeguridad() {
   })
 }
 
+export function useEliminarFichaSeguridad() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.delete<Producto>(`/productos/${id}/ficha-seguridad`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productos'] })
+    },
+  })
+}
+
+// --- Ficha técnica: mismo flujo que la de seguridad, sin lectura de GHS ---
+export function useUploadFichaTecnica() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const { data } = await api.post<Producto>(`/productos/${id}/ficha-tecnica`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productos'] })
+    },
+  })
+}
+
+export function useVerFichaTecnica() {
+  const api = useApi()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.get<{ url: string }>(`/productos/${id}/ficha-tecnica`)
+      return data.url
+    },
+  })
+}
+
+export function useEliminarFichaTecnica() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.delete<Producto>(`/productos/${id}/ficha-tecnica`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productos'] })
+    },
+  })
+}
 
 export interface ClasificacionFds {
   pictogramasGhs: string[]

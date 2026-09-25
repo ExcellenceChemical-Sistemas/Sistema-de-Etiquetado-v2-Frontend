@@ -13,6 +13,7 @@ export interface Producto {
   frasesH?: string[]
   frasesP?: string[]
   fichaSeguridadUrl?: string | null
+  fichaTecnicaUrl?: string | null
 }
 
 export interface CreateProductoDto {
