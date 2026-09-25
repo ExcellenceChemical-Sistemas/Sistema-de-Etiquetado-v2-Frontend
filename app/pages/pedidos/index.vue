@@ -356,8 +356,8 @@ async function confirmarEliminar() {
                   </Button>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    class="h-8 w-8"
+                    size="sm"
+                    class="h-8 gap-1 px-2 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
                     :disabled="!normalizarCelular(p.cliente.celular)"
                     :title="
                       normalizarCelular(p.cliente.celular)
@@ -367,7 +367,7 @@ async function confirmarEliminar() {
                     @click="abrirWhatsapp(p)"
                   >
                     <MessageCircle class="h-4 w-4" />
-                    <span class="sr-only">Avisar por WhatsApp</span>
+                    <span class="text-xs">WhatsApp</span>
                   </Button>
                   <Button
                     v-if="permiso.puedeEditar && SIGUIENTE_CAMPO[p.estado]"
