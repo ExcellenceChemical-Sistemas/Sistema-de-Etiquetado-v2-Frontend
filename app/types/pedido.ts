@@ -46,6 +46,9 @@ export interface Pedido {
   preparadoEn: string | null
   salioEn: string | null
   entregadoEn: string | null
+  // Cuándo se le avisó al cliente por correo (null = no se envió, p. ej. sin correo)
+  avisoSalioEnviadoEn: string | null
+  avisoEntregadoEnviadoEn: string | null
   categoriaObservacion: CategoriaObservacionPedido | null
   detalleObservacion: string | null
   creadoPorId: number

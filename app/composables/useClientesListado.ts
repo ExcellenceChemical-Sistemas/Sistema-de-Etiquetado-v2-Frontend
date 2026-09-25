@@ -14,7 +14,8 @@ export function useClientesListado(clientes: Ref<Cliente[] | undefined>) {
       (c) =>
         c.nombre.toLowerCase().includes(q) ||
         c.numeroDocumento?.toLowerCase().includes(q) ||
-        c.celular?.toLowerCase().includes(q),
+        c.celular?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q),
     )
   })
 

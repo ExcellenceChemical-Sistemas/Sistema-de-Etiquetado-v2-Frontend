@@ -8,6 +8,8 @@ export interface Cliente {
   numeroDocumento: string | null
   direccion: string | null
   celular: string | null
+  // Correo para los avisos del pedido (salió / entregado). Opcional.
+  email: string | null
   createdAt: string
 }
 
@@ -17,6 +19,7 @@ export interface ClienteInput {
   numeroDocumento?: string
   direccion?: string
   celular?: string
+  email?: string
 }
 
 export type ActualizarClienteInput = Partial<ClienteInput>

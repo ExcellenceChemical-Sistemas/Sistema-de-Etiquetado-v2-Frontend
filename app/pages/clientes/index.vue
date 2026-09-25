@@ -30,6 +30,7 @@ const xlsxColumns: XlsxColumn<Cliente>[] = [
   { key: (c: Cliente) => c.numeroDocumento ?? "", label: "N° de documento" },
   { key: (c: Cliente) => c.direccion ?? "", label: "Dirección" },
   { key: (c: Cliente) => c.celular ?? "", label: "Celular" },
+  { key: (c: Cliente) => c.email ?? "", label: "Correo" },
 ];
 
 function exportarXlsx() {
@@ -125,6 +126,7 @@ async function confirmarEliminar() {
             <TableHead>Documento</TableHead>
             <TableHead class="w-64">Dirección</TableHead>
             <TableHead>Celular</TableHead>
+            <TableHead>Correo</TableHead>
             <TableHead class="w-24 text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -136,7 +138,7 @@ async function confirmarEliminar() {
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="5" class="text-center py-8">
+              <TableCell colspan="6" class="text-center py-8">
                 <p class="text-sm text-destructive mb-2">No se pudieron cargar los clientes</p>
                 <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
               </TableCell>
@@ -144,7 +146,7 @@ async function confirmarEliminar() {
           </template>
           <template v-else-if="filtrados.length === 0">
             <TableRow>
-              <TableCell colspan="5" class="text-center text-muted-foreground py-8">
+              <TableCell colspan="6" class="text-center text-muted-foreground py-8">
                 No hay clientes {{ search ? "que coincidan con la búsqueda" : "registrados" }}
               </TableCell>
             </TableRow>
@@ -165,6 +167,7 @@ async function confirmarEliminar() {
                 {{ c.direccion || "—" }}
               </TableCell>
               <TableCell>{{ c.celular || "—" }}</TableCell>
+              <TableCell class="max-w-56 truncate" :title="c.email ?? undefined">{{ c.email || "—" }}</TableCell>
               <TableCell class="text-right">
                 <Button
                   v-if="permiso.puedeEditar"

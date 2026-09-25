@@ -40,8 +40,25 @@ async function guardar() {
     const input: ActualizarPedidoInput = {
       [props.campo]: datetimeLocalAIso(valor.value),
     };
-    await actualizar({ id: props.pedido.id, input });
-    toast.success("Pedido actualizado");
+    // Solo cuenta como "marcar la etapa" (y por eso avisa al cliente) si antes no tenía fecha;
+    // corregir una fecha ya puesta no reenvía nada.
+    const eraMarcar = !props.pedido[props.campo];
+    const actualizado = await actualizar({ id: props.pedido.id, input });
+    if (props.campo === "salioEn" || props.campo === "entregadoEn") {
+      const avisado =
+        props.campo === "salioEn" ? actualizado.avisoSalioEnviadoEn : actualizado.avisoEntregadoEnviadoEn;
+      if (avisado) {
+        toast.success("Pedido actualizado", { description: "Se le avisó al cliente por correo." });
+      } else if (eraMarcar && !actualizado.cliente.email) {
+        toast.success("Pedido actualizado", {
+          description: "El cliente no tiene correo, así que no se le avisó. Puedes avisarle por WhatsApp.",
+        });
+      } else {
+        toast.success("Pedido actualizado");
+      }
+    } else {
+      toast.success("Pedido actualizado");
+    }
     emit("update:open", false);
   } catch {
     toast.error("No se pudo guardar la fecha");

@@ -29,6 +29,7 @@ const { handleSubmit, defineField, errors, isSubmitting, setValues } = useForm({
     numeroDocumento: props.cliente?.numeroDocumento ?? "",
     direccion: props.cliente?.direccion ?? "",
     celular: props.cliente?.celular ?? "",
+    email: props.cliente?.email ?? "",
   },
 });
 
@@ -37,6 +38,7 @@ const [tipoDocumento] = defineField("tipoDocumento", { validateOnModelUpdate: fa
 const [numeroDocumento, numeroDocumentoAttrs] = defineField("numeroDocumento");
 const [direccion, direccionAttrs] = defineField("direccion");
 const [celular, celularAttrs] = defineField("celular");
+const [email, emailAttrs] = defineField("email");
 
 const nombreInputRef = ref<{ $el: HTMLInputElement } | null>(null);
 onMounted(() => nombreInputRef.value?.$el?.focus());
@@ -50,6 +52,7 @@ watch(
       numeroDocumento: c?.numeroDocumento ?? "",
       direccion: c?.direccion ?? "",
       celular: c?.celular ?? "",
+      email: c?.email ?? "",
     });
   },
 );
@@ -64,6 +67,8 @@ const onSubmit = handleSubmit(async (values) => {
     numeroDocumento: values.numeroDocumento || undefined,
     direccion: values.direccion || undefined,
     celular: values.celular || undefined,
+    // Al editar, vacío = quitar el correo (el backend lo entiende como cadena vacía).
+    email: values.email || (isEditing.value ? "" : undefined),
   };
   try {
     if (isEditing.value && props.cliente) {
@@ -140,6 +145,17 @@ const onSubmit = handleSubmit(async (values) => {
       <Input id="celular" v-model="celular" v-bind="celularAttrs" />
       <p v-if="errors.celular" class="text-sm text-destructive">
         {{ errors.celular }}
+      </p>
+    </div>
+
+    <div class="space-y-1.5">
+      <Label for="email">Correo (para avisarle de sus pedidos)</Label>
+      <Input id="email" v-model="email" v-bind="emailAttrs" type="email" placeholder="opcional" />
+      <p v-if="errors.email" class="text-sm text-destructive">
+        {{ errors.email }}
+      </p>
+      <p v-else class="text-xs text-muted-foreground">
+        Si lo dejas vacío, no se le envían avisos automáticos por correo.
       </p>
     </div>
 

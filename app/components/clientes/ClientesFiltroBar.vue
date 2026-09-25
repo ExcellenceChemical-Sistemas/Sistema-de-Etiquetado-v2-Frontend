@@ -14,7 +14,7 @@ defineProps<{
     <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
     <Input
       v-model="search"
-      placeholder="Buscar por nombre, documento o celular..."
+      placeholder="Buscar por nombre, documento, celular o correo..."
       class="pl-8"
       :class="resultCount !== undefined ? 'pr-24' : ''"
     />

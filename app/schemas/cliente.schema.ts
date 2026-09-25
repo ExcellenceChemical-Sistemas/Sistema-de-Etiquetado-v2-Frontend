@@ -10,6 +10,7 @@ export const clienteSchema = z.object({
   numeroDocumento: z.string().max(30).optional().or(z.literal('')),
   direccion: z.string().max(300).optional().or(z.literal('')),
   celular: z.string().max(30).optional().or(z.literal('')),
+  email: z.string().trim().email('Ingresa un correo válido').max(254).optional().or(z.literal('')),
 })
 
 export type ClienteFormValues = z.infer<typeof clienteSchema>

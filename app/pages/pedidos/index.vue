@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2 } from "@lucide/vue";
+import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2, MessageCircle } from "@lucide/vue";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
+import { mensajeWhatsapp, normalizarCelular, urlWhatsapp } from "~/utils/whatsappPedido";
 import { usePedidosQuery, useDeletePedido } from "~/composables/usePedidos";
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
@@ -145,6 +146,28 @@ function onSuccessCrear() {
 // la tabla, ve el detalle.
 const detalleOpen = ref(false);
 const detallePedido = ref<Pedido | null>(null);
+
+// WhatsApp semi-manual: abre el chat del cliente con el mensaje y el enlace ya escritos;
+// una persona pulsa enviar. Nada se manda solo.
+function abrirWhatsapp(pedido: Pedido) {
+  const enlace = urlSeguimiento(window.location.origin, pedido.tokenSeguimiento);
+  const url = urlWhatsapp(pedido.cliente.celular, mensajeWhatsapp(pedido.estado, pedido.numeroProforma, enlace));
+  if (!url) {
+    toast.error("El cliente no tiene un celular válido", {
+      description: "Corrígelo en Clientes (9 dígitos, por ejemplo 987654321).",
+    });
+    return;
+  }
+  window.open(url, "_blank", "noopener");
+}
+
+// Qué pasó con el aviso automático por correo de una etapa (para el detalle del pedido).
+function textoAviso(enviadoEn: string | null, etapaLograda: string | null, cliente: Pedido["cliente"]) {
+  if (enviadoEn) return `Enviado por correo el ${formatFechaHora(enviadoEn)}`;
+  if (!etapaLograda) return "Aún no corresponde";
+  if (!cliente.email) return "No se avisó: el cliente no tiene correo";
+  return "No se envió (revisa que el correo esté bien o avisa por WhatsApp)";
+}
 
 // Enlace público de seguimiento: el cliente lo abre sin cuenta (/p/<token>).
 async function copiarEnlace(pedido: Pedido) {
@@ -332,6 +355,21 @@ async function confirmarEliminar() {
                     <span class="sr-only">Copiar enlace de seguimiento</span>
                   </Button>
                   <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8"
+                    :disabled="!normalizarCelular(p.cliente.celular)"
+                    :title="
+                      normalizarCelular(p.cliente.celular)
+                        ? 'Avisar por WhatsApp (abre el chat con el mensaje listo)'
+                        : 'El cliente no tiene un celular válido'
+                    "
+                    @click="abrirWhatsapp(p)"
+                  >
+                    <MessageCircle class="h-4 w-4" />
+                    <span class="sr-only">Avisar por WhatsApp</span>
+                  </Button>
+                  <Button
                     v-if="permiso.puedeEditar && SIGUIENTE_CAMPO[p.estado]"
                     size="sm"
                     variant="outline"
@@ -467,6 +505,22 @@ async function confirmarEliminar() {
               </span>
             </p>
             <p v-else class="font-medium text-muted-foreground/70">Sin observación</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-muted-foreground">Correo del cliente</p>
+            <p class="font-medium">{{ detallePedido.cliente.email || "— (sin correo: no recibe avisos automáticos)" }}</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-muted-foreground">Aviso automático: salió de almacén</p>
+            <p class="font-medium">
+              {{ textoAviso(detallePedido.avisoSalioEnviadoEn, detallePedido.salioEn, detallePedido.cliente) }}
+            </p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-muted-foreground">Aviso automático: entregado</p>
+            <p class="font-medium">
+              {{ textoAviso(detallePedido.avisoEntregadoEnviadoEn, detallePedido.entregadoEn, detallePedido.cliente) }}
+            </p>
           </div>
           <div>
             <p class="text-muted-foreground">Creado por</p>
