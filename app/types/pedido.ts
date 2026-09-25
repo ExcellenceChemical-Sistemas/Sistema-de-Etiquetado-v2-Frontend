@@ -39,6 +39,8 @@ export interface Pedido {
   clienteId: number
   cliente: Cliente
   numeroProforma: string
+  // Llave del enlace público de seguimiento (/p/<token>)
+  tokenSeguimiento: string
   recibidoEn: string
   inicioPreparacionEn: string | null
   preparadoEn: string | null

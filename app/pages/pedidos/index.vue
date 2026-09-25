@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined } from "@lucide/vue";
+import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2 } from "@lucide/vue";
+import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import { usePedidosQuery, useDeletePedido } from "~/composables/usePedidos";
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
@@ -144,6 +145,20 @@ function onSuccessCrear() {
 // la tabla, ve el detalle.
 const detalleOpen = ref(false);
 const detallePedido = ref<Pedido | null>(null);
+
+// Enlace público de seguimiento: el cliente lo abre sin cuenta (/p/<token>).
+async function copiarEnlace(pedido: Pedido) {
+  const url = urlSeguimiento(window.location.origin, pedido.tokenSeguimiento);
+  try {
+    await navigator.clipboard.writeText(url);
+    toast.success("Enlace de seguimiento copiado", {
+      description: `Proforma ${pedido.numeroProforma}. Envíaselo al cliente.`,
+    });
+  } catch {
+    // Sin permiso de portapapeles (o sin https): se muestra para copiarlo a mano.
+    window.prompt("Copia este enlace y envíaselo al cliente:", url);
+  }
+}
 
 function abrirDetalle(pedido: Pedido) {
   detallePedido.value = pedido;
@@ -305,6 +320,16 @@ async function confirmarEliminar() {
                 <div class="flex items-center justify-end gap-1">
                   <Button variant="ghost" size="icon" class="h-8 w-8" title="Ver detalle" @click="abrirDetalle(p)">
                     <Eye class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8"
+                    title="Copiar enlace de seguimiento para el cliente"
+                    @click="copiarEnlace(p)"
+                  >
+                    <Link2 class="h-4 w-4" />
+                    <span class="sr-only">Copiar enlace de seguimiento</span>
                   </Button>
                   <Button
                     v-if="permiso.puedeEditar && SIGUIENTE_CAMPO[p.estado]"
