@@ -9,6 +9,7 @@ const base: PedidoPublicoFechas = {
   salioEn: null,
   entregadoEn: null,
   estado: 'RECIBIDO',
+  recojeEnAlmacen: false,
 }
 const situaciones = (p: PedidoPublicoFechas) => construirLineaTiempo(p).map((e) => e.situacion)
 
@@ -56,6 +57,24 @@ describe('construirLineaTiempo', () => {
     expect(t[0]!.fecha).toBe(F)
     expect(t[1]!.fecha).toBe(F)
     expect(t[2]!.fecha).toBeNull()
+  })
+
+  it('recojo en almacén: se omite "En camino" y quedan 4 etapas', () => {
+    const p = { ...base, recojeEnAlmacen: true, preparadoEn: F, estado: 'PREPARADO' as const }
+    const t = construirLineaTiempo(p)
+    expect(t.map((e) => e.estado)).toEqual(['RECIBIDO', 'EN_PREPARACION', 'PREPARADO', 'ENTREGADO'])
+  })
+
+  it('recojo en almacén: de "preparado" pasa directo a "entregado" sin pasar por salió', () => {
+    const p = {
+      ...base,
+      recojeEnAlmacen: true,
+      inicioPreparacionEn: F,
+      preparadoEn: F,
+      entregadoEn: F,
+      estado: 'ENTREGADO' as const,
+    }
+    expect(situaciones(p)).toEqual(['hecha', 'hecha', 'hecha', 'hecha'])
   })
 })
 

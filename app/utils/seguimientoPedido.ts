@@ -10,6 +10,9 @@ export interface PedidoPublicoFechas {
   salioEn: string | null
   entregadoEn: string | null
   estado: EstadoPedido
+  // true cuando el pedido es de recojo en almacén (no se le hace entrega). La línea de
+  // tiempo pública se salta el paso "En camino" en ese caso, porque no aplica.
+  recojeEnAlmacen: boolean
 }
 
 export type SituacionEtapa = 'hecha' | 'actual' | 'pendiente'
@@ -42,10 +45,17 @@ const ORDEN: EstadoPedido[] = ETAPAS.map((e) => e.estado)
  * Línea de tiempo del pedido. El estado lo decide el backend (la etapa más avanzada
  * gana, aunque falten fechas de las anteriores porque se cargan a mano), así que acá
  * todo lo que está hasta esa etapa cuenta como hecho, tenga fecha o no.
+ *
+ * Si el pedido es de recojo en almacén, el paso "En camino" (SALIO) no aplica —
+ * nadie lo "envía" a ningún lado, el cliente lo recoge directo del almacén — así que
+ * se omite de la lista. La comparación de "hecha"/"actual" sigue usando el índice
+ * dentro de las 5 etapas originales, para que no se descuadre si el pedido igual
+ * llegara a tener `salioEn` seteado (ej. una corrección manual).
  */
 export function construirLineaTiempo(p: PedidoPublicoFechas): EtapaSeguimiento[] {
   const indiceActual = ORDEN.indexOf(p.estado)
-  return ETAPAS.map((e, i) => {
+  return ETAPAS.filter((e) => !(p.recojeEnAlmacen && e.estado === 'SALIO')).map((e) => {
+    const i = ORDEN.indexOf(e.estado)
     let situacion: SituacionEtapa = 'pendiente'
     // Entregado es el final: no queda nada "en curso", queda hecho.
     if (i < indiceActual || (i === indiceActual && e.estado === 'ENTREGADO')) situacion = 'hecha'
