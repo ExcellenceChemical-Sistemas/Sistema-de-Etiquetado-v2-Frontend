@@ -64,13 +64,7 @@ useHead({ title: 'Política de privacidad — Excellence Chemical' })
       <li>No elaboramos perfiles de las personas ni tomamos decisiones automatizadas sobre ellas.</li>
     </ul>
 
-    <h2>5. Comunicaciones a clientes</h2>
-    <ul>
-      <li>Correo: si el cliente tiene un correo registrado, el sistema envía un aviso automático cuando el pedido sale y cuando se entrega.</li>
-      <li>WhatsApp: el envío es manual. El personal abre una conversación con el mensaje ya redactado y lo envía desde su propio WhatsApp; el sistema no envía mensajes de WhatsApp por su cuenta. WhatsApp trata esos mensajes según sus propias políticas.</li>
-    </ul>
-
-    <h2>6. Con quién compartimos los datos</h2>
+    <h2>5. Con quién compartimos los datos</h2>
     <p>
       Usamos proveedores que tratan datos por nuestra cuenta para que el sistema funcione, y solo para
       ese fin:
@@ -79,7 +73,6 @@ useHead({ title: 'Política de privacidad — Excellence Chemical' })
       <li>Supabase: autenticación, base de datos y almacenamiento de archivos.</li>
       <li>Render: servidor donde funciona la API del sistema.</li>
       <li>Vercel: alojamiento de la aplicación web.</li>
-      <li>Resend: envío de los correos de aviso de pedidos.</li>
     </ul>
     <p>
       Estos proveedores pueden tener sus servidores fuera del Perú, incluidos los Estados Unidos, por lo
@@ -87,7 +80,7 @@ useHead({ title: 'Política de privacidad — Excellence Chemical' })
       salvo obligación legal o requerimiento de una autoridad competente.
     </p>
 
-    <h2>7. Cuánto tiempo los conservamos</h2>
+    <h2>6. Cuánto tiempo los conservamos</h2>
     <ul>
       <li>Cuentas de personal: mientras estén activas. Al desactivar una cuenta se conserva su historial de acciones.</li>
       <li>Clientes y pedidos: mientras dure la relación comercial y durante los plazos que exijan las normas aplicables.</li>
@@ -96,7 +89,7 @@ useHead({ title: 'Política de privacidad — Excellence Chemical' })
       <li>Hacemos copias de respaldo periódicas de la base de datos; contienen los mismos datos que el sistema.</li>
     </ul>
 
-    <h2>8. Tus derechos</h2>
+    <h2>7. Tus derechos</h2>
     <p>
       Puedes solicitar información, acceso, rectificación, cancelación u oposición sobre tus datos
       personales, así como revocar tu consentimiento cuando este sea la base del tratamiento.
@@ -115,16 +108,16 @@ useHead({ title: 'Política de privacidad — Excellence Chemical' })
       Nacional de Protección de Datos Personales (Ministerio de Justicia y Derechos Humanos).
     </p>
 
-    <h2>9. Seguridad</h2>
+    <h2>8. Seguridad</h2>
     <p>
       Aplicamos medidas técnicas y organizativas para proteger los datos. Están descritas en la
       <NuxtLink to="/seguridad">política de seguridad</NuxtLink>.
     </p>
 
-    <h2>10. Menores de edad</h2>
+    <h2>9. Menores de edad</h2>
     <p>El sistema es de uso empresarial y no está dirigido a menores de edad.</p>
 
-    <h2>11. Cambios en esta política</h2>
+    <h2>10. Cambios en esta política</h2>
     <p>
       Si cambiamos esta política, publicaremos la nueva versión en esta página con su fecha de
       actualización.
