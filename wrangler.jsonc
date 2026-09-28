@@ -1,0 +1,13 @@
+{
+  // Despliegue como sitio estático en Cloudflare Workers (reemplaza al producto "Pages" clásico).
+  // El SPA se genera con `npm run generate` (Nuxt con ssr:false) en .output/public; Wrangler solo
+  // sirve esos archivos, no hay Worker script propio.
+  "name": "gestion-excellencechemical",
+  "compatibility_date": "2026-08-20",
+  "assets": {
+    "directory": "./.output/public",
+    // El enrutamiento vive en el cliente (vue-router); cualquier ruta que no matchee un archivo
+    // real (ej. /productos al refrescar) tiene que devolver el index.html del SPA, no un 404.
+    "not_found_handling": "single-page-application"
+  }
+}
