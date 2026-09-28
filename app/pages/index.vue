@@ -1,22 +1,26 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight, Truck } from '@lucide/vue'
 import { useProductos } from '~/composables/useProductos'
 import { useLotes } from '~/composables/useLotes'
+import { usePedidosQuery } from '~/composables/usePedidos'
 
 // Misma regla que el sidebar y el middleware: sin puedeVer no se consulta ni se muestra.
 const permisoProductos = usePermiso('PRODUCTOS')
 const permisoLotes = usePermiso('LOTES')
 const permisoFabricantes = usePermiso('FABRICANTES')
 const permisoEtiquetas = usePermiso('ETIQUETAS')
+const permisoPedidos = usePermiso('PEDIDOS')
 
 const { data: productos, isPending: cargandoProductos } = useProductos({ enabled: () => permisoProductos.puedeVer })
 const { data: lotes, isPending: cargandoLotes } = useLotes({ enabled: () => permisoLotes.puedeVer })
 const { data: fabricantes, isPending: cargandoFabricantes } = useFabricantesQuery({ enabled: () => permisoFabricantes.puedeVer })
+const { data: pedidos, isPending: cargandoPedidos } = usePedidosQuery(ref('TODOS'), { enabled: () => permisoPedidos.puedeVer })
 
 const totalProductos = computed(() => productos.value?.length ?? 0)
 const totalLotes = computed(() => lotes.value?.length ?? 0)
 const totalFabricantes = computed(() => fabricantes.value?.length ?? 0)
+const totalPedidos = computed(() => pedidos.value?.length ?? 0)
 
 // lotes que vencen en los próximos 30 días — ajusta el campo si tu
 // tipo Lote usa otro nombre para la fecha de vencimiento
@@ -61,8 +65,20 @@ const resguardos = computed(() =>
       to: '/fabricantes',
       visible: permisoFabricantes.puedeVer,
     },
+    {
+      label: 'Pedidos',
+      value: totalPedidos.value,
+      loading: cargandoPedidos.value,
+      icon: Truck,
+      to: '/pedidos',
+      visible: permisoPedidos.puedeVer,
+    },
   ].filter((r) => r.visible),
 )
+
+// Si no ve ni el hero de etiquetas ni ningún resguardo, el panel quedaría vacío
+// (ej. un usuario que solo tiene permiso en Pedidos, sin puedeVer ahí tampoco).
+const panelVacio = computed(() => !permisoEtiquetas.puedeCrear && resguardos.value.length === 0)
 
 const accesosRapidos = [
   { label: 'Nuevo producto', to: '/productos', icon: Package },
@@ -174,6 +190,12 @@ const accesosRapidos = [
         </NuxtLink>
       </div>
     </div>
+
+    <!-- respaldo: usuario sin ningún resguardo visible (ni permiso para generar etiquetas) -->
+    <p v-if="panelVacio" class="text-sm text-muted-foreground">
+      No tenés accesos configurados para ver un resumen acá. Usa el menú de la izquierda para ir
+      directo a la sección que necesites.
+    </p>
 
   </div>
 </template>

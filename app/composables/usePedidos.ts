@@ -1,9 +1,12 @@
+import type { MaybeRefOrGetter } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import type { ActualizarPedidoInput, CrearPedidoInput, EstadoPedido, Pedido } from '~/types/pedido'
 
-export function usePedidosQuery(estado: Ref<EstadoPedido | 'TODOS'>) {
+// `enabled` permite no disparar la consulta si el usuario no tiene puedeVer (evita un 403 inútil).
+export function usePedidosQuery(estado: Ref<EstadoPedido | 'TODOS'>, options: { enabled?: MaybeRefOrGetter<boolean> } = {}) {
   const api = useApi()
   return useQuery({
+    enabled: options.enabled,
     queryKey: ['pedidos', estado],
     queryFn: async () => {
       const { data } = await api.get<Pedido[]>('/pedidos', {
