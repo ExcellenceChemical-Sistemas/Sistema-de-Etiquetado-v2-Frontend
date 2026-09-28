@@ -34,7 +34,7 @@ const ETAPAS: {
 }[] = [
   { estado: 'RECIBIDO', titulo: 'Pedido recibido', descripcion: 'Recibimos tu pedido.', campo: 'recibidoEn' },
   { estado: 'EN_PREPARACION', titulo: 'En preparación', descripcion: 'Estamos preparando tus productos.', campo: 'inicioPreparacionEn' },
-  { estado: 'PREPARADO', titulo: 'Preparado', descripcion: 'Tu pedido está listo.', campo: 'preparadoEn' },
+  { estado: 'PREPARADO', titulo: 'Pedido listo', descripcion: 'Tu pedido está listo.', campo: 'preparadoEn' },
   { estado: 'SALIO', titulo: 'En camino', descripcion: 'Tu pedido salió de nuestro almacén.', campo: 'salioEn' },
   { estado: 'ENTREGADO', titulo: 'Entregado', descripcion: 'Tu pedido fue entregado.', campo: 'entregadoEn' },
 ]
