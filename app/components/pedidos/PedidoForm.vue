@@ -39,8 +39,8 @@ const onSubmit = handleSubmit(async (values) => {
     await crearPedido(values);
     toast.success("Pedido registrado");
     emit("success");
-  } catch {
-    toast.error("Ocurrió un error al registrar el pedido");
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? "Ocurrió un error al registrar el pedido");
   }
 });
 </script>
