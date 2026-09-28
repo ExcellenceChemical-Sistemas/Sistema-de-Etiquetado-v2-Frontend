@@ -2,7 +2,7 @@
   // Despliegue como sitio estático en Cloudflare Workers (reemplaza al producto "Pages" clásico).
   // El SPA se genera con `npm run generate` (Nuxt con ssr:false) en .output/public; Wrangler solo
   // sirve esos archivos, no hay Worker script propio.
-  "name": "gestion-excellencechemical",
+  "name": "gestion",
   "compatibility_date": "2026-08-20",
   // Sin "main": este Worker no ejecuta código propio, solo sirve los archivos estáticos de
   // "assets". Si Cloudflare llega a generar un entrypoint de servidor por su cuenta (Nitro), no
