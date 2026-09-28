@@ -57,3 +57,18 @@ export function useDeletePedido() {
     },
   })
 }
+
+// Invalida el enlace público actual (/p/<token>) y emite uno nuevo, p. ej. si el cliente lo perdió.
+export function useRegenerarTokenPedido() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await api.post<Pedido>(`/pedidos/${id}/regenerar-token`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pedidos'] })
+    },
+  })
+}

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2 } from "@lucide/vue";
+import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2, RefreshCw } from "@lucide/vue";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
-import { usePedidosQuery, useDeletePedido } from "~/composables/usePedidos";
+import { usePedidosQuery, useDeletePedido, useRegenerarTokenPedido } from "~/composables/usePedidos";
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
 import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
@@ -183,6 +183,38 @@ async function confirmarEliminar() {
     eliminarOpen.value = false;
   } catch (e: any) {
     toast.error(e?.response?.data?.message ?? "No se pudo eliminar el pedido");
+  }
+}
+
+// --- Regenerar enlace de seguimiento ---
+// El enlace viejo deja de funcionar apenas se emite el nuevo, por eso pide confirmación
+// como eliminar (no es tan grave, pero sigue siendo una acción que no se puede deshacer).
+const { mutateAsync: regenerarToken, isPending: regenerando } = useRegenerarTokenPedido();
+const regenerarOpen = ref(false);
+const pedidoARegenerar = ref<Pedido | null>(null);
+
+function pedirRegenerar(pedido: Pedido) {
+  pedidoARegenerar.value = pedido;
+  regenerarOpen.value = true;
+}
+
+async function confirmarRegenerar() {
+  if (!pedidoARegenerar.value) return;
+  try {
+    const actualizado = await regenerarToken(pedidoARegenerar.value.id);
+    regenerarOpen.value = false;
+    const url = urlSeguimiento(window.location.origin, actualizado.tokenSeguimiento);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Enlace regenerado y copiado", {
+        description: `El enlace anterior ya no funciona. Envíaselo al cliente.`,
+      });
+    } catch {
+      toast.success("Enlace regenerado");
+      window.prompt("El enlace anterior ya no funciona. Copia el nuevo y envíaselo al cliente:", url);
+    }
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? "No se pudo regenerar el enlace");
   }
 }
 </script>
@@ -387,6 +419,10 @@ async function confirmarEliminar() {
                           <MessageSquare class="mr-2 h-3.5 w-3.5" />
                           {{ p.categoriaObservacion ? "Editar observación" : "Agregar observación" }}
                         </DropdownMenuItem>
+                        <DropdownMenuItem @click="pedirRegenerar(p)">
+                          <RefreshCw class="mr-2 h-3.5 w-3.5" />
+                          Regenerar enlace de seguimiento
+                        </DropdownMenuItem>
                       </template>
                       <template v-if="permiso.puedeEliminar">
                         <DropdownMenuSeparator v-if="permiso.puedeEditar" />
@@ -476,6 +512,29 @@ async function confirmarEliminar() {
             <p class="text-muted-foreground">Última edición</p>
             <p class="font-medium">{{ detallePedido.ultimoEditadoPor?.nombre ?? "—" }}</p>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="regenerarOpen">
+      <DialogContent class="max-w-md">
+        <DialogTitle>Regenerar enlace de seguimiento</DialogTitle>
+        <p class="text-sm text-muted-foreground">
+          Se va a crear un enlace nuevo para el pedido de
+          <span class="font-medium text-foreground">{{ pedidoARegenerar?.cliente.nombre }}</span>
+          (proforma {{ pedidoARegenerar?.numeroProforma }}). El enlace anterior dejará de funcionar de inmediato.
+        </p>
+        <div class="flex justify-end gap-2">
+          <Button variant="outline" :disabled="regenerando" @click="regenerarOpen = false">
+            Cancelar
+          </Button>
+          <Button :disabled="regenerando" @click="confirmarRegenerar">
+            <span
+              v-if="regenerando"
+              class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            />
+            Regenerar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
