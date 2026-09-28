@@ -4,6 +4,10 @@
   // sirve esos archivos, no hay Worker script propio.
   "name": "gestion-excellencechemical",
   "compatibility_date": "2026-08-20",
+  // Sin "main": este Worker no ejecuta código propio, solo sirve los archivos estáticos de
+  // "assets". Si Cloudflare llega a generar un entrypoint de servidor por su cuenta (Nitro), no
+  // debe usarse: el runtime del SPA requiere las variables NUXT_PUBLIC_* en tiempo de BUILD, no
+  // como variables de un Worker en ejecución.
   "assets": {
     "directory": "./.output/public",
     // El enrutamiento vive en el cliente (vue-router); cualquier ruta que no matchee un archivo
