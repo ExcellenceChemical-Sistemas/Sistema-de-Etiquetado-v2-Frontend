@@ -11,6 +11,7 @@ const RUTA_PERMISO: [string, Recurso, Nivel][] = [
   ['/usuarios', 'USUARIOS', 'puedeVer'],
   ['/pedidos', 'PEDIDOS', 'puedeVer'],
   ['/clientes', 'PEDIDOS', 'puedeVer'],
+  ['/cotizaciones', 'PEDIDOS', 'puedeVer'],
 ]
 
 /**

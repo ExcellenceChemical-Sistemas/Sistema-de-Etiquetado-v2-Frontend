@@ -23,6 +23,7 @@ import {
   FolderKanban,
   Truck,
   Contact,
+  ClipboardList,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
@@ -102,6 +103,12 @@ const items = computed(() =>
       title: "Clientes",
       url: "/clientes",
       icon: Contact,
+      visible: permisoPedidos.puedeVer,
+    },
+    {
+      title: "Cotizaciones",
+      url: "/cotizaciones",
+      icon: ClipboardList,
       visible: permisoPedidos.puedeVer,
     },
     {
