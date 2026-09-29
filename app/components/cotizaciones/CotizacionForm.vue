@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { cotizacionSchema } from "~/schemas/cotizacion.schema";
@@ -13,11 +14,20 @@ const { data: clientes, isLoading: cargandoClientes } = useClientesQuery();
 
 const { handleSubmit, defineField, errors, isSubmitting } = useForm({
   validationSchema: toTypedSchema(cotizacionSchema),
+  initialValues: { numeroProforma: "PF01-" },
 });
 
 const [clienteId] = defineField("clienteId", { validateOnModelUpdate: false });
 const [numeroProforma, numeroProformaAttrs] = defineField("numeroProforma");
 const [notas, notasAttrs] = defineField("notas");
+
+const numeroProformaRef = ref<{ $el: HTMLInputElement } | null>(null);
+onMounted(() => {
+  const input = numeroProformaRef.value?.$el;
+  input?.focus();
+  // deja el cursor al final del prefijo "PF01-" para que solo escriba el número
+  input?.setSelectionRange(input.value.length, input.value.length);
+});
 
 function clienteLabel(c: Cliente) {
   return c.nombre;
@@ -60,7 +70,12 @@ const onSubmit = handleSubmit(async (values) => {
 
     <div class="space-y-2">
       <Label for="numeroProforma">N° de proforma (KEYFACIL)</Label>
-      <Input id="numeroProforma" v-model="numeroProforma" v-bind="numeroProformaAttrs" />
+      <Input
+        id="numeroProforma"
+        ref="numeroProformaRef"
+        v-model="numeroProforma"
+        v-bind="numeroProformaAttrs"
+      />
       <p v-if="errors.numeroProforma" class="text-sm text-destructive">
         {{ errors.numeroProforma }}
       </p>
