@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { cotizacionSchema } from "~/schemas/cotizacion.schema";
 import { useClientesQuery } from "~/composables/useClientes";
 import { useCreateCotizacion } from "~/composables/useCotizaciones";
+import { datetimeLocalAhora, datetimeLocalAIso } from "~/utils/fechaHora";
 import type { Cliente } from "~/types/cliente";
 import { toast } from "vue-sonner";
 
@@ -14,20 +14,12 @@ const { data: clientes, isLoading: cargandoClientes } = useClientesQuery();
 
 const { handleSubmit, defineField, errors, isSubmitting } = useForm({
   validationSchema: toTypedSchema(cotizacionSchema),
-  initialValues: { numeroProforma: "PF01-" },
+  initialValues: { requerimientoEn: datetimeLocalAhora() },
 });
 
 const [clienteId] = defineField("clienteId", { validateOnModelUpdate: false });
-const [numeroProforma, numeroProformaAttrs] = defineField("numeroProforma");
+const [requerimientoEn, requerimientoEnAttrs] = defineField("requerimientoEn");
 const [notas, notasAttrs] = defineField("notas");
-
-const numeroProformaRef = ref<{ $el: HTMLInputElement } | null>(null);
-onMounted(() => {
-  const input = numeroProformaRef.value?.$el;
-  input?.focus();
-  // deja el cursor al final del prefijo "PF01-" para que solo escriba el número
-  input?.setSelectionRange(input.value.length, input.value.length);
-});
 
 function clienteLabel(c: Cliente) {
   return c.nombre;
@@ -37,11 +29,15 @@ const { mutateAsync: crearCotizacion } = useCreateCotizacion();
 
 const onSubmit = handleSubmit(async (values) => {
   try {
-    await crearCotizacion(values);
-    toast.success("Aviso registrado, ya aparece como pendiente de enviar a almacén");
+    await crearCotizacion({
+      clienteId: values.clienteId,
+      notas: values.notas,
+      requerimientoEn: datetimeLocalAIso(values.requerimientoEn),
+    });
+    toast.success("Cotización registrada como recibida");
     emit("success");
   } catch (e: any) {
-    toast.error(e?.response?.data?.message ?? "Ocurrió un error al registrar el aviso");
+    toast.error(e?.response?.data?.message ?? "Ocurrió un error al registrar la cotización");
   }
 });
 </script>
@@ -69,15 +65,20 @@ const onSubmit = handleSubmit(async (values) => {
     </div>
 
     <div class="space-y-2">
-      <Label for="numeroProforma">N° de proforma (KEYFACIL)</Label>
+      <Label for="requerimientoEn">Fecha y hora en que el cliente pidió la cotización</Label>
       <Input
-        id="numeroProforma"
-        ref="numeroProformaRef"
-        v-model="numeroProforma"
-        v-bind="numeroProformaAttrs"
+        id="requerimientoEn"
+        v-model="requerimientoEn"
+        v-bind="requerimientoEnAttrs"
+        type="datetime-local"
+        step="1"
       />
-      <p v-if="errors.numeroProforma" class="text-sm text-destructive">
-        {{ errors.numeroProforma }}
+      <p class="text-xs text-muted-foreground">
+        La del SMS o chat en que llegó el pedido, no necesariamente ahora — corregila si cargás
+        esto más tarde.
+      </p>
+      <p v-if="errors.requerimientoEn" class="text-sm text-destructive">
+        {{ errors.requerimientoEn }}
       </p>
     </div>
 
@@ -90,8 +91,8 @@ const onSubmit = handleSubmit(async (values) => {
     </div>
 
     <p class="text-xs text-muted-foreground">
-      Los insumos y cantidades ya quedaron en la cotización de KEYFACIL. Esto es solo el aviso
-      para que almacén no se pierda el pedido.
+      El número de proforma todavía no existe — se carga cuando Joel cotiza en KEYFACIL y se
+      marque "cotización enviada".
     </p>
 
     <Button type="submit" class="w-full" :disabled="isSubmitting">
@@ -99,7 +100,7 @@ const onSubmit = handleSubmit(async (values) => {
         v-if="isSubmitting"
         class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
       />
-      Registrar aviso
+      Registrar cotización
     </Button>
   </form>
 </template>

@@ -44,20 +44,6 @@ export function useUpdateCotizacion() {
   })
 }
 
-export function useMarcarCotizacionEnviada() {
-  const api = useApi()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: number) => {
-      const { data } = await api.post<Cotizacion>(`/cotizaciones/${id}/marcar-enviada`)
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cotizaciones'] })
-    },
-  })
-}
-
 export function useDeleteCotizacion() {
   const api = useApi()
   const queryClient = useQueryClient()

@@ -4,6 +4,7 @@ import { ArrowLeft, Download, Clock, AlertTriangle, PackageCheck, Timer } from "
 import { usePedidosQuery } from "~/composables/usePedidos";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import { horasHabilesEntre } from "~/utils/horasHabiles";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { CATEGORIA_OBSERVACION_LABEL, type EstadoPedido, type Pedido } from "~/types/pedido";
 
@@ -13,7 +14,7 @@ const estadoEntregado = ref<EstadoPedido | "TODOS">("ENTREGADO");
 const { data: pedidos, isPending, isError, refetch } = usePedidosQuery(estadoEntregado);
 
 // Umbral fijo igual al Excel actual (meta: ≥80% de pedidos entregados dentro
-// de 48h / 2 días).
+// de 48h / 2 días hábiles).
 const UMBRAL_HORAS = 48;
 
 const filtroMes = ref("TODOS");
@@ -29,12 +30,14 @@ interface PedidoConTiempo extends Pedido {
   dias: number;
 }
 
-// Tiempo de entrega = Recepción → Entrega al cliente, igual que el Excel.
+// Tiempo de entrega = Recepción → Entrega al cliente, en horas hábiles (lunes
+// a viernes, 7:30-17:30, sin feriados) — igual criterio que el Excel, que no
+// contaba noches ni fines de semana como demora real.
 const pedidosConTiempo = computed<PedidoConTiempo[]>(() =>
   (pedidos.value ?? [])
     .filter((p): p is Pedido & { entregadoEn: string } => !!p.entregadoEn)
     .map((p) => {
-      const horas = (new Date(p.entregadoEn).getTime() - new Date(p.recibidoEn).getTime()) / 3_600_000;
+      const horas = horasHabilesEntre(p.recibidoEn, p.entregadoEn);
       return { ...p, horas, dias: horas / 24 };
     }),
 );
@@ -95,8 +98,7 @@ interface EtapaProm {
 
 function horasEntre(a: string | null, b: string | null): number | null {
   if (!a || !b) return null;
-  const h = (new Date(b).getTime() - new Date(a).getTime()) / 3_600_000;
-  return h >= 0 ? h : null;
+  return horasHabilesEntre(a, b);
 }
 
 function promedioEtapa(lista: PedidoConTiempo[], fn: (p: PedidoConTiempo) => number | null): number {
