@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Download } from "@lucide/vue";
+import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Download, Truck } from "@lucide/vue";
 import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
@@ -10,6 +10,7 @@ import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { FILL_AMBER, FILL_GREEN, useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
 import { COLOR_AMBAR, COLOR_VERDE, graficoColumnas } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo, type SeccionReporte } from "~/utils/reporteIndicadores";
+import { urlSeguimiento } from "~/utils/seguimientoPedido";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
 // indicador comercial (DS-TIEMPO DE RESP-JOEL): tiempo de respuesta de
@@ -153,6 +154,49 @@ const tendenciaAviso = computed(() =>
   ),
 );
 
+// --- Bloque 3: trazabilidad de punta a punta con el Pedido (requerimiento -> entrega real) ---
+// Cruza por numeroProforma (ver CLAUDE.md del backend). Solo entra a este bloque lo que ya tiene
+// un Pedido con entregadoEn: es el único punto donde el ciclo completo está cerrado.
+interface ConTiempoTotal extends Cotizacion {
+  horasTotal: number;
+}
+
+const cotizacionesConEntrega = computed<ConTiempoTotal[]>(() =>
+  cotizacionesFiltradas.value
+    .filter((c): c is Cotizacion & { pedidoRelacionado: NonNullable<Cotizacion["pedidoRelacionado"]> & { entregadoEn: string } } =>
+      !!c.pedidoRelacionado?.entregadoEn,
+    )
+    .map((c) => ({ ...c, horasTotal: horasHabilesEntre(c.requerimientoEn, c.pedidoRelacionado!.entregadoEn!) })),
+);
+
+// Cotizaciones ya aprobadas (el cliente dijo que sí) pero que todavía no tienen un Pedido
+// registrado en el módulo de Pedidos — no es un error, solo informa que el ciclo sigue abierto.
+const cotizacionesAprobadasSinPedido = computed(() =>
+  cotizacionesFiltradas.value.filter(
+    (c) => (c.estado === "APROBADO" || c.estado === "AVISADO_ALMACEN") && !c.pedidoRelacionado,
+  ),
+);
+
+const resumenTrazabilidad = computed(() => {
+  const lista = cotizacionesConEntrega.value;
+  const total = lista.length;
+  const promedio = total ? lista.reduce((s, c) => s + c.horasTotal, 0) / total : 0;
+  const varianza = total ? lista.reduce((s, c) => s + (c.horasTotal - promedio) ** 2, 0) / total : 0;
+  return {
+    total,
+    promedio,
+    desviacion: Math.sqrt(varianza),
+    maximo: total ? Math.max(...lista.map((c) => c.horasTotal)) : 0,
+  };
+});
+
+const peoresTrazabilidad = computed(() => [...cotizacionesConEntrega.value].sort((a, b) => b.horasTotal - a.horasTotal).slice(0, 15));
+
+function urlSeguimientoDe(c: ConTiempoTotal) {
+  if (typeof window === "undefined") return "";
+  return urlSeguimiento(window.location.origin, c.pedidoRelacionado!.tokenSeguimiento);
+}
+
 // --- Exportar el reporte completo (mismos filtros que la pantalla) ---
 const { progress, isExporting, exportarLibro } = useXlsxExport();
 
@@ -217,6 +261,15 @@ function columnasTiempo(umbral: number, desde: string, hasta: string, campoDesde
   ];
 }
 
+const columnasTrazabilidad: XlsxColumn<ConTiempoTotal>[] = [
+  { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
+  { key: (c) => c.numeroProforma ?? "", label: "N° Proforma" },
+  { key: (c) => formatFechaHora(c.requerimientoEn), label: "Requerimiento", width: 22 },
+  { key: (c) => formatFechaHora(c.pedidoRelacionado!.entregadoEn!), label: "Entregado al cliente", width: 22 },
+  { key: (c) => Number(c.horasTotal.toFixed(1)), label: "Horas hábiles totales" },
+  { key: (c) => Number((c.horasTotal / 24).toFixed(2)), label: "Días totales" },
+];
+
 const columnasAlertas: XlsxColumn<Cotizacion>[] = [
   { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
   { key: (c) => c.numeroProforma ?? "", label: "N° Proforma" },
@@ -245,6 +298,17 @@ function exportarReporte() {
           },
           seccionIndicador("Tiempo de respuesta de cotización", resumenCotizacion.value, UMBRAL_COTIZACION_HORAS, tendenciaCotizacion.value),
           seccionIndicador("Tiempo de aviso a almacén", resumenAviso.value, UMBRAL_AVISO_HORAS, tendenciaAviso.value),
+          {
+            titulo: "Trazabilidad con el pedido (requerimiento → entrega real)",
+            kpis: [
+              ["Cotizaciones con pedido entregado", resumenTrazabilidad.value.total],
+              ["Aprobadas sin pedido registrado todavía", cotizacionesAprobadasSinPedido.value.length],
+              ["Tiempo total promedio (horas hábiles)", Number(resumenTrazabilidad.value.promedio.toFixed(1))],
+              ["Tiempo total promedio (días)", Number((resumenTrazabilidad.value.promedio / 24).toFixed(2))],
+              ["Desviación estándar (h)", Number(resumenTrazabilidad.value.desviacion.toFixed(1))],
+              ["Tiempo total máximo (h)", Number(resumenTrazabilidad.value.maximo.toFixed(1))],
+            ],
+          },
         ],
         hojas: [
           {
@@ -256,6 +320,11 @@ function exportarReporte() {
             nombre: "Aviso a almacén",
             filas: [...avisadasConTiempo.value].sort((a, b) => b.horas - a.horas),
             columnas: columnasTiempo(UMBRAL_AVISO_HORAS, "Pedido aprobado", "Avisado a almacén", "pedidoAprobadoEn", "avisoAlmacenEn"),
+          },
+          {
+            nombre: "Trazabilidad con pedido",
+            filas: [...cotizacionesConEntrega.value].sort((a, b) => b.horasTotal - a.horasTotal),
+            columnas: columnasTrazabilidad,
           },
           { nombre: "Alertas de integridad", filas: cotizacionesConAlertas.value, columnas: columnasAlertas },
         ],
@@ -548,6 +617,87 @@ function exportarReporte() {
                 </Table>
               </CardContent>
             </Card>
+          </section>
+
+          <!-- Bloque 3: trazabilidad de punta a punta con el pedido -->
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold">Trazabilidad con el pedido</h2>
+            <p class="text-sm text-muted-foreground">
+              Del requerimiento del cliente a la entrega real, cruzando con el módulo de Pedidos por N° de proforma.
+            </p>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Card>
+                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle class="text-sm font-medium text-muted-foreground">Con pedido entregado</CardTitle>
+                  <Truck class="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p class="text-2xl font-semibold">{{ resumenTrazabilidad.total }}</p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ cotizacionesAprobadasSinPedido.length }} aprobada(s) sin pedido registrado todavía
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle class="text-sm font-medium text-muted-foreground">Tiempo total promedio</CardTitle>
+                  <Timer class="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p class="text-2xl font-semibold">{{ formatNumero(resumenTrazabilidad.promedio) }}h</p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ formatNumero(resumenTrazabilidad.promedio / 24, 2) }} días · desv. estándar {{ formatNumero(resumenTrazabilidad.desviacion) }}h
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle class="text-sm font-medium text-muted-foreground">Tiempo total máximo</CardTitle>
+                  <AlertTriangle class="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p class="text-2xl font-semibold">{{ formatNumero(resumenTrazabilidad.maximo) }}h</p>
+                  <p class="text-xs text-muted-foreground">El ciclo completo más demorado del período</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card v-if="peoresTrazabilidad.length > 0">
+              <CardHeader class="pb-2">
+                <CardTitle class="text-sm font-medium text-muted-foreground">
+                  Ciclo completo más lento (top {{ peoresTrazabilidad.length }})
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Proforma</TableHead>
+                      <TableHead>Requerimiento</TableHead>
+                      <TableHead>Entregado</TableHead>
+                      <TableHead class="text-right">Horas totales</TableHead>
+                      <TableHead>Seguimiento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow v-for="c in peoresTrazabilidad" :key="c.id">
+                      <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
+                      <TableCell>{{ c.numeroProforma }}</TableCell>
+                      <TableCell>{{ formatFechaHora(c.requerimientoEn) }}</TableCell>
+                      <TableCell>{{ formatFechaHora(c.pedidoRelacionado!.entregadoEn!) }}</TableCell>
+                      <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(c.horasTotal) }}</TableCell>
+                      <TableCell>
+                        <a :href="urlSeguimientoDe(c)" target="_blank" class="text-xs text-primary hover:underline">Ver enlace</a>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            <p v-else class="text-sm text-muted-foreground">
+              Ninguna cotización del período tiene todavía un pedido entregado.
+            </p>
           </section>
         </div>
       </ScrollArea>

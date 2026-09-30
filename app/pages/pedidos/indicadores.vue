@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ArrowLeft, Download, Clock, AlertTriangle, PackageCheck, Timer } from "@lucide/vue";
+import { ArrowLeft, Download, Clock, AlertTriangle, PackageCheck, Timer, FileClock } from "@lucide/vue";
 import { usePedidosQuery } from "~/composables/usePedidos";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { FILL_GREEN, FILL_RED, useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
@@ -140,6 +140,36 @@ const etapaCuello = computed(() =>
   etapas.value.reduce((max, e) => (e.horas > max.horas ? e : max), etapas.value[0]!),
 );
 
+// --- Trazabilidad con la cotización: cuánto del tiempo total lo tiene el cliente esperando desde
+// que pidió la cotización (no solo desde que almacén recibió el pedido). Cruza por numeroProforma
+// (ver CLAUDE.md del backend) — solo entra acá lo que tiene una Cotizacion vinculada.
+interface PedidoConTiempoTotal extends PedidoConTiempo {
+  cotizacionRelacionada: NonNullable<PedidoConTiempo["cotizacionRelacionada"]>;
+  horasCotizacion: number;
+  horasTotal: number;
+}
+
+const pedidosConCotizacion = computed<PedidoConTiempoTotal[]>(() =>
+  pedidosFiltrados.value
+    .filter((p): p is PedidoConTiempo & { cotizacionRelacionada: NonNullable<PedidoConTiempo["cotizacionRelacionada"]> } =>
+      !!p.cotizacionRelacionada,
+    )
+    .map((p) => {
+      const horasCotizacion = horasHabilesEntre(p.cotizacionRelacionada.requerimientoEn, p.recibidoEn);
+      return { ...p, horasCotizacion, horasTotal: horasCotizacion + p.horas };
+    }),
+);
+
+const resumenTotal = computed(() => {
+  const lista = pedidosConCotizacion.value;
+  const total = lista.length;
+  const promedioCotizacion = total ? lista.reduce((s, p) => s + p.horasCotizacion, 0) / total : 0;
+  const promedioTotal = total ? lista.reduce((s, p) => s + p.horasTotal, 0) / total : 0;
+  return { total, promedioCotizacion, promedioTotal };
+});
+
+const peoresTotal = computed(() => [...pedidosConCotizacion.value].sort((a, b) => b.horasTotal - a.horasTotal).slice(0, 15));
+
 function formatNumero(n: number, decimales = 1) {
   return n.toLocaleString("es-PE", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
 }
@@ -194,6 +224,17 @@ const columnasEntregados: XlsxColumn<PedidoConTiempo>[] = [
     width: 24,
   },
   { key: (p) => p.detalleObservacion ?? "", label: "Detalle observación", width: 40 },
+];
+
+const columnasTrazabilidad: XlsxColumn<PedidoConTiempoTotal>[] = [
+  { key: (p) => p.cliente.nombre, label: "Cliente", width: 36 },
+  { key: "numeroProforma", label: "N° Proforma" },
+  { key: (p) => formatFechaHora(p.cotizacionRelacionada.requerimientoEn), label: "Requerimiento (cotización)", width: 22 },
+  { key: (p) => formatFechaHora(p.recibidoEn), label: "Recibido en almacén", width: 22 },
+  { key: (p) => formatFechaHora(p.entregadoEn), label: "Entregado al cliente", width: 22 },
+  { key: (p) => Number(p.horasCotizacion.toFixed(1)), label: "h Cotización (requerimiento→recepción)", width: 20 },
+  { key: (p) => Number(p.horas.toFixed(1)), label: "h Almacén (recepción→entrega)", width: 18 },
+  { key: (p) => Number(p.horasTotal.toFixed(1)), label: "h Totales (requerimiento→entrega)", width: 20 },
 ];
 
 function exportarReporte() {
@@ -258,6 +299,15 @@ function exportarReporte() {
               },
             ],
           },
+          {
+            titulo: "Trazabilidad con la cotización (requerimiento del cliente → entrega real)",
+            kpis: [
+              ["Pedidos con cotización vinculada", resumenTotal.value.total],
+              ["Promedio en etapa Cotización (requerimiento→recepción)", Number(resumenTotal.value.promedioCotizacion.toFixed(1))],
+              ["Promedio en etapa Almacén (recepción→entrega)", Number(r.promedioHoras.toFixed(1))],
+              ["Promedio total (requerimiento→entrega)", Number(resumenTotal.value.promedioTotal.toFixed(1))],
+            ],
+          },
         ],
         hojas: [
           {
@@ -266,6 +316,11 @@ function exportarReporte() {
             columnas: columnasEntregados,
           },
           { nombre: "Cuello de botella", filas: cuellosDeBotella.value, columnas: columnasCuello },
+          {
+            nombre: "Trazabilidad con cotización",
+            filas: [...pedidosConCotizacion.value].sort((a, b) => b.horasTotal - a.horasTotal),
+            columnas: columnasTrazabilidad,
+          },
         ],
       }),
     `indicadores-pedidos-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
@@ -492,6 +547,62 @@ function exportarReporte() {
           </CardContent>
         </Card>
       </div>
+
+      <Card v-if="resumenTotal.total > 0" class="shrink-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+            <FileClock class="h-4 w-4" />
+            Trazabilidad con la cotización — desde el requerimiento del cliente
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3">
+          <p class="text-xs text-muted-foreground">
+            {{ resumenTotal.total }} pedido(s) con cotización vinculada (mismo N° de proforma). Reparte el tiempo total
+            entre lo que tarda Cotizaciones en aprobar y lo que tarda Almacén en entregar.
+          </p>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="rounded-md border border-border p-3">
+              <p class="text-xs text-muted-foreground">Etapa Cotización (requerimiento → recepción)</p>
+              <p class="text-xl font-semibold">{{ formatNumero(resumenTotal.promedioCotizacion) }}h</p>
+            </div>
+            <div class="rounded-md border border-border p-3">
+              <p class="text-xs text-muted-foreground">Etapa Almacén (recepción → entrega)</p>
+              <p class="text-xl font-semibold">{{ formatNumero(resumen.promedioHoras) }}h</p>
+            </div>
+            <div class="rounded-md border border-primary/30 bg-primary/5 p-3">
+              <p class="text-xs text-muted-foreground">Total (requerimiento → entrega)</p>
+              <p class="text-xl font-semibold text-primary">{{ formatNumero(resumenTotal.promedioTotal) }}h</p>
+            </div>
+          </div>
+
+          <div v-if="peoresTotal.length > 0" class="overflow-hidden rounded-md border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Proforma</TableHead>
+                  <TableHead>Requerimiento</TableHead>
+                  <TableHead>Entregado</TableHead>
+                  <TableHead class="text-right">h Cotización</TableHead>
+                  <TableHead class="text-right">h Almacén</TableHead>
+                  <TableHead class="text-right">h Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="p in peoresTotal" :key="p.id">
+                  <TableCell class="max-w-40 truncate">{{ p.cliente.nombre }}</TableCell>
+                  <TableCell>{{ p.numeroProforma }}</TableCell>
+                  <TableCell>{{ formatFechaHora(p.cotizacionRelacionada.requerimientoEn) }}</TableCell>
+                  <TableCell>{{ formatFechaHora(p.entregadoEn) }}</TableCell>
+                  <TableCell class="text-right">{{ formatNumero(p.horasCotizacion) }}</TableCell>
+                  <TableCell class="text-right">{{ formatNumero(p.horas) }}</TableCell>
+                  <TableCell class="text-right font-medium text-primary">{{ formatNumero(p.horasTotal) }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <div class="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h2 class="text-lg font-semibold">

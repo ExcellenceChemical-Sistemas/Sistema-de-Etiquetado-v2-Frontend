@@ -46,10 +46,11 @@ export interface HistorialCotizacionItem {
 }
 
 // Pedido con el mismo numeroProforma que la cotización (única llave que las cruza hoy, no hay
-// relación formal en el schema — ver CLAUDE.md del backend). Solo viene en GET /cotizaciones/:id,
-// no en el listado.
+// relación formal en el schema — ver CLAUDE.md del backend). Viene tanto en GET /cotizaciones (para
+// el indicador de trazabilidad) como en GET /cotizaciones/:id.
 export interface PedidoRelacionado {
   id: number
+  numeroProforma: string
   recibidoEn: string
   inicioPreparacionEn: string | null
   preparadoEn: string | null
@@ -81,8 +82,8 @@ export interface Cotizacion {
   estado: EstadoCotizacion
   alertas: AlertaCotizacion[]
   historial: HistorialCotizacionItem[]
-  // Solo presente cuando la cotización se pidió por GET /cotizaciones/:id (detalle) — el listado
-  // (GET /cotizaciones) no lo trae, para no pagar un lookup extra por fila.
+  // Presente en GET /cotizaciones y GET /cotizaciones/:id; ausente en la respuesta de crear/actualizar
+  // (esas rutas no hacen el lookup bulk — ver adjuntarPedidosRelacionados en el backend).
   pedidoRelacionado?: PedidoRelacionado | null
 }
 

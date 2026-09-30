@@ -40,7 +40,12 @@ const COLOR_SECCION = 'FF1F2937'
 const COLOR_SUAVE = 'FF64748B'
 const FILL_KPI = 'FFF1F5F9'
 const FILL_HEADER = 'FF1F2937'
+const FILL_BANNER_TITULO = 'FF0F172A'
+const FILL_BANNER_SECCION = 'FFE2E8F0'
 const BORDE = 'FFD1D5DB'
+// Ancho de la última columna que se fusiona en los banners de título/sección del Resumen —
+// igual a la cantidad de columnas declaradas en `hoja.columns` más abajo.
+const COLUMNAS_RESUMEN = 6
 // Alto por defecto de una fila de Excel (15 pt) expresado en píxeles, para calcular cuántas
 // filas ocupa cada imagen y seguir escribiendo debajo sin superponer.
 const PX_POR_FILA = 20
@@ -57,14 +62,29 @@ export function construirReporte(reporte: Reporte): ExcelJS.Workbook {
   workbook.creator = 'Sistema de Gestión Excellence Chemical'
   workbook.created = new Date()
 
-  const hoja = workbook.addWorksheet('Resumen', { views: [{ showGridLines: false }] })
+  const hoja = workbook.addWorksheet('Resumen', {
+    views: [{ showGridLines: false }],
+    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    properties: { defaultRowHeight: 18 },
+  })
   hoja.columns = [{ width: 50 },{ width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }]
 
   let fila = 1
   const celda = (f: number, c: number) => hoja.getCell(f, c)
+  // Banner de ancho completo (fusiona A:F de esa fila) — se usa para el título del reporte y
+  // para cada título de sección, en vez de solo texto en negrita, para que se note más "hecho a
+  // propósito" al abrir el Excel en vez de una hoja de texto plano.
+  function banner(f: number, texto: string, opts: { fill: string; fontColor: string; size?: number; altura?: number }) {
+    hoja.mergeCells(f, 1, f, COLUMNAS_RESUMEN)
+    const c = celda(f, 1)
+    c.value = texto
+    c.font = { bold: true, size: opts.size ?? 13, color: { argb: opts.fontColor } }
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } }
+    c.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
+    hoja.getRow(f).height = opts.altura ?? 22
+  }
 
-  celda(fila, 1).value = reporte.titulo
-  celda(fila, 1).font = { bold: true, size: 16, color: { argb: COLOR_TITULO } }
+  banner(fila, reporte.titulo, { fill: FILL_BANNER_TITULO, fontColor: 'FFFFFFFF', size: 16, altura: 30 })
   fila++
   if (reporte.descripcion) {
     celda(fila, 1).value = reporte.descripcion
@@ -91,9 +111,7 @@ export function construirReporte(reporte: Reporte): ExcelJS.Workbook {
   fila++
 
   for (const seccion of reporte.secciones) {
-    celda(fila, 1).value = seccion.titulo
-    celda(fila, 1).font = { bold: true, size: 13, color: { argb: COLOR_SECCION } }
-    hoja.getRow(fila).height = 22
+    banner(fila, seccion.titulo, { fill: FILL_BANNER_SECCION, fontColor: COLOR_SECCION, size: 13 })
     fila++
 
     for (const [nombre, valor] of seccion.kpis ?? []) {

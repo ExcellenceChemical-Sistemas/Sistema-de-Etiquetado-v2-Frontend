@@ -42,6 +42,7 @@ export function agregarHojaTabla<T>(
 ) {
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ state: 'frozen', ySplit: 1 }],
+    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   })
 
   sheet.columns = columns.map((c) => ({
@@ -62,6 +63,11 @@ export function agregarHojaTabla<T>(
       right: { style: 'thin', color: { argb: BORDER_COLOR } },
     }
   })
+  // Filtro automático en el header — deja filtrar/ordenar cada hoja de detalle directo en Excel
+  // sin que el usuario tenga que seleccionar el rango a mano.
+  if (rows.length > 0) {
+    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } }
+  }
 
   rows.forEach((row, i) => {
     const values = columns.map(

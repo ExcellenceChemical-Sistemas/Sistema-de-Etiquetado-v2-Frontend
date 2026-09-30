@@ -34,6 +34,15 @@ interface UsuarioResumen {
   nombre: string
 }
 
+// Cotización con el mismo numeroProforma que el pedido (misma llave natural que del lado de
+// Cotización — ver CLAUDE.md del backend). Trae requerimientoEn para poder mostrar el tiempo total
+// real desde que el cliente pidió la cotización, no solo desde que almacén recibió el pedido.
+export interface CotizacionRelacionada {
+  id: number
+  numeroProforma: string | null
+  requerimientoEn: string
+}
+
 export interface Pedido {
   id: number
   clienteId: number
@@ -58,6 +67,9 @@ export interface Pedido {
   createdAt: string
   updatedAt: string
   estado: EstadoPedido
+  // Presente en GET /pedidos y GET /pedidos/:id; ausente en la respuesta de crear/actualizar (esas
+  // rutas no hacen el lookup bulk — ver adjuntarCotizacionesRelacionadas en el backend).
+  cotizacionRelacionada?: CotizacionRelacionada | null
 }
 
 export interface CrearPedidoInput {
