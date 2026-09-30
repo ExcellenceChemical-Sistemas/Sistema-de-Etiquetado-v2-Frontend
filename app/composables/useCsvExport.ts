@@ -30,6 +30,81 @@ const ROMBO_OK_FILL = FILL_GREEN
 const ROMBO_FALTA_FILL = FILL_AMBER
 
 /**
+ * Agrega a `workbook` una hoja con los estilos estándar del sistema (header oscuro, bordes,
+ * zebra, `colorFill` por columna). La usan tanto el export de una sola tabla como los reportes
+ * de indicadores, que suman varias hojas de detalle al mismo libro.
+ */
+export function agregarHojaTabla<T>(
+  workbook: ExcelJS.Workbook,
+  rows: T[],
+  columns: XlsxColumn<T>[],
+  sheetName = 'Datos',
+) {
+  const sheet = workbook.addWorksheet(sheetName, {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  })
+
+  sheet.columns = columns.map((c) => ({
+    header: c.label,
+    width: c.width ?? Math.max(c.label.length + 4, 14),
+  }))
+
+  const headerRow = sheet.getRow(1)
+  headerRow.height = 20
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: HEADER_FONT } }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_FILL } }
+    cell.alignment = { vertical: 'middle', horizontal: 'center' }
+    cell.border = {
+      top: { style: 'thin', color: { argb: BORDER_COLOR } },
+      bottom: { style: 'thin', color: { argb: BORDER_COLOR } },
+      left: { style: 'thin', color: { argb: BORDER_COLOR } },
+      right: { style: 'thin', color: { argb: BORDER_COLOR } },
+    }
+  })
+
+  rows.forEach((row, i) => {
+    const values = columns.map(
+      (c) => (typeof c.key === 'function' ? c.key(row) : row[c.key]) ?? '',
+    )
+    const excelRow = sheet.addRow(values)
+
+    excelRow.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: BORDER_COLOR } },
+        bottom: { style: 'thin', color: { argb: BORDER_COLOR } },
+        left: { style: 'thin', color: { argb: BORDER_COLOR } },
+        right: { style: 'thin', color: { argb: BORDER_COLOR } },
+      }
+      if (i % 2 === 1) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA_FILL } }
+      }
+
+      const col = columns[colNumber - 1]
+      const colLabel = col?.label
+
+      if (col?.colorFill) {
+        const fill = col.colorFill(cell.value as string | number, row)
+        if (fill) {
+          cell.alignment = { horizontal: 'center' }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } }
+        }
+      } else if (colLabel === 'Estado rombo') {
+        // legacy: compat con Productos, que no pasa colorFill explícito
+        cell.alignment = { horizontal: 'center' }
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: cell.value === 'Con rombo' ? ROMBO_OK_FILL : ROMBO_FALTA_FILL },
+        }
+      }
+    })
+  })
+
+  return sheet
+}
+
+/**
  * Export genérico a XLSX con estilos (header en negrita, bordes, zebra
  * striping, resaltado opcional por columna vía `colorFill`) y barra de
  * progreso animada (1% -> 100%) vía requestAnimationFrame. La construcción
@@ -42,80 +117,31 @@ export function useXlsxExport() {
   function animateProgress(durationMs: number): Promise<void> {
     return new Promise((resolve) => {
       const start = performance.now()
+      let terminado = false
+      const terminar = () => {
+        if (terminado) return
+        terminado = true
+        progress.value = 100
+        resolve()
+      }
       function tick(now: number) {
+        if (terminado) return
         const elapsed = now - start
         const pct = Math.min(100, Math.round((elapsed / durationMs) * 100))
         progress.value = Math.max(1, pct)
         if (pct < 100) requestAnimationFrame(tick)
-        else resolve()
+        else terminar()
       }
       requestAnimationFrame(tick)
+      // requestAnimationFrame no corre con la pestaña en segundo plano: sin este respaldo, si el
+      // usuario cambia de pestaña mientras exporta, la descarga queda esperando a que vuelva.
+      setTimeout(terminar, durationMs + 100)
     })
   }
 
   function buildWorkbook<T>(rows: T[], columns: XlsxColumn<T>[], sheetName = 'Datos') {
     const workbook = new ExcelJS.Workbook()
-    const sheet = workbook.addWorksheet(sheetName, {
-      views: [{ state: 'frozen', ySplit: 1 }],
-    })
-
-    sheet.columns = columns.map((c) => ({
-      header: c.label,
-      width: c.width ?? Math.max(c.label.length + 4, 14),
-    }))
-
-    const headerRow = sheet.getRow(1)
-    headerRow.height = 20
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: HEADER_FONT } }
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_FILL } }
-      cell.alignment = { vertical: 'middle', horizontal: 'center' }
-      cell.border = {
-        top: { style: 'thin', color: { argb: BORDER_COLOR } },
-        bottom: { style: 'thin', color: { argb: BORDER_COLOR } },
-        left: { style: 'thin', color: { argb: BORDER_COLOR } },
-        right: { style: 'thin', color: { argb: BORDER_COLOR } },
-      }
-    })
-
-    rows.forEach((row, i) => {
-      const values = columns.map(
-        (c) => (typeof c.key === 'function' ? c.key(row) : row[c.key]) ?? '',
-      )
-      const excelRow = sheet.addRow(values)
-
-      excelRow.eachCell((cell, colNumber) => {
-        cell.border = {
-          top: { style: 'thin', color: { argb: BORDER_COLOR } },
-          bottom: { style: 'thin', color: { argb: BORDER_COLOR } },
-          left: { style: 'thin', color: { argb: BORDER_COLOR } },
-          right: { style: 'thin', color: { argb: BORDER_COLOR } },
-        }
-        if (i % 2 === 1) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA_FILL } }
-        }
-
-        const col = columns[colNumber - 1]
-        const colLabel = col?.label
-
-        if (col?.colorFill) {
-          const fill = col.colorFill(cell.value as string | number, row)
-          if (fill) {
-            cell.alignment = { horizontal: 'center' }
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } }
-          }
-        } else if (colLabel === 'Estado rombo') {
-          // legacy: compat con Productos, que no pasa colorFill explícito
-          cell.alignment = { horizontal: 'center' }
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: cell.value === 'Con rombo' ? ROMBO_OK_FILL : ROMBO_FALTA_FILL },
-          }
-        }
-      })
-    })
-
+    agregarHojaTabla(workbook, rows, columns, sheetName)
     return workbook
   }
 
@@ -140,12 +166,22 @@ export function useXlsxExport() {
     filename: string,
     durationMs = 900,
   ) {
-    if (isExporting.value || rows.length === 0) return
+    if (rows.length === 0) return
+    await exportarLibro(() => buildWorkbook(rows, columns), filename, durationMs)
+  }
+
+  /** Igual que `exportar`, pero para un libro armado por el caller (varias hojas, imágenes). */
+  async function exportarLibro(
+    construir: () => ExcelJS.Workbook | Promise<ExcelJS.Workbook>,
+    filename: string,
+    durationMs = 900,
+  ) {
+    if (isExporting.value) return
     isExporting.value = true
     progress.value = 1
     try {
       const [workbook] = await Promise.all([
-        Promise.resolve(buildWorkbook(rows, columns)),
+        Promise.resolve().then(construir),
         animateProgress(durationMs),
       ])
       await downloadWorkbook(workbook, filename)
@@ -157,5 +193,5 @@ export function useXlsxExport() {
     }
   }
 
-  return { progress, isExporting, exportar }
+  return { progress, isExporting, exportar, exportarLibro }
 }

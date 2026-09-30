@@ -3,7 +3,9 @@ import { ref, computed } from "vue";
 import { ArrowLeft, Download, Clock, AlertTriangle, PackageCheck, Timer } from "@lucide/vue";
 import { usePedidosQuery } from "~/composables/usePedidos";
 import { formatFechaHora } from "~/utils/fechaHora";
-import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import { FILL_GREEN, FILL_RED, useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import { COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoDona } from "~/utils/graficosReporte";
+import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporteIndicadores";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { CATEGORIA_OBSERVACION_LABEL, type EstadoPedido, type Pedido } from "~/types/pedido";
@@ -142,28 +144,131 @@ function formatNumero(n: number, decimales = 1) {
   return n.toLocaleString("es-PE", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
 }
 
-const { progress, isExporting, exportar } = useXlsxExport();
+const { progress, isExporting, exportarLibro } = useXlsxExport();
 
-const xlsxColumns: XlsxColumn<PedidoConTiempo>[] = [
-  { key: (p) => p.cliente.nombre, label: "Cliente" },
+const columnasCuello: XlsxColumn<PedidoConTiempo>[] = [
+  { key: (p) => p.cliente.nombre, label: "Cliente", width: 36 },
   { key: "numeroProforma", label: "N° Proforma" },
-  { key: (p) => formatFechaHora(p.recibidoEn), label: "Recibido de almacén" },
-  { key: (p) => formatFechaHora(p.salioEn), label: "Salió de almacén" },
-  { key: (p) => formatFechaHora(p.entregadoEn), label: "Entregado al cliente" },
+  { key: (p) => formatFechaHora(p.recibidoEn), label: "Recibido de almacén", width: 22 },
+  { key: (p) => formatFechaHora(p.salioEn), label: "Salió de almacén", width: 22 },
+  { key: (p) => formatFechaHora(p.entregadoEn), label: "Entregado al cliente", width: 22 },
   { key: (p) => Number(p.horas.toFixed(1)), label: "Horas" },
   { key: (p) => Number(p.dias.toFixed(2)), label: "Días" },
   {
     key: (p) => (p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : ""),
     label: "Observación",
+    width: 24,
   },
 ];
 
-function exportarXlsx() {
-  // Exporta el cuello de botella tal como se ve: mismo mes/año filtrado
-  exportar(
-    cuellosDeBotella.value,
-    xlsxColumns,
-    `pedidos-cuello-de-botella-${new Date().toISOString().slice(0, 10)}.xlsx`,
+function horasCelda(a: string | null, b: string | null) {
+  const h = horasEntre(a, b);
+  return h === null ? "" : Number(h.toFixed(1));
+}
+
+// Detalle completo del período (no solo los fuera de plazo), con las horas de cada etapa para
+// poder rehacer el desglose por etapa en Excel.
+const columnasEntregados: XlsxColumn<PedidoConTiempo>[] = [
+  { key: (p) => p.cliente.nombre, label: "Cliente", width: 36 },
+  { key: "numeroProforma", label: "N° Proforma" },
+  { key: (p) => formatFechaHora(p.recibidoEn), label: "Recibido de almacén", width: 22 },
+  { key: (p) => formatFechaHora(p.inicioPreparacionEn), label: "Inicio de preparación", width: 22 },
+  { key: (p) => formatFechaHora(p.preparadoEn), label: "Fin de preparación", width: 22 },
+  { key: (p) => formatFechaHora(p.salioEn), label: "Salió de almacén", width: 22 },
+  { key: (p) => formatFechaHora(p.entregadoEn), label: "Entregado al cliente", width: 22 },
+  { key: (p) => horasCelda(p.recibidoEn, p.inicioPreparacionEn), label: "h Recepción→Inicio", width: 18 },
+  { key: (p) => horasCelda(p.inicioPreparacionEn, p.preparadoEn), label: "h Preparación", width: 16 },
+  { key: (p) => horasCelda(p.preparadoEn, p.salioEn), label: "h Preparado→Salida", width: 18 },
+  { key: (p) => horasCelda(p.salioEn, p.entregadoEn), label: "h Salida→Entrega", width: 18 },
+  { key: (p) => Number(p.horas.toFixed(1)), label: "Horas totales", width: 14 },
+  { key: (p) => Number(p.dias.toFixed(2)), label: "Días" },
+  {
+    key: (p) => (p.horas <= UMBRAL_HORAS ? "Dentro de plazo" : "Fuera de plazo"),
+    label: `Meta ≤${UMBRAL_HORAS}h`,
+    width: 18,
+    colorFill: (v) => (v === "Dentro de plazo" ? FILL_GREEN : FILL_RED),
+  },
+  {
+    key: (p) => (p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : ""),
+    label: "Observación",
+    width: 24,
+  },
+  { key: (p) => p.detalleObservacion ?? "", label: "Detalle observación", width: 40 },
+];
+
+function exportarReporte() {
+  const r = resumen.value;
+  const hayEntregados = pedidosFiltrados.value.length > 0;
+  exportarLibro(
+    () =>
+      construirReporte({
+        titulo: "Indicador de tiempo de entrega — Pedidos",
+        descripcion: `Recepción → entrega al cliente, en horas hábiles (lun-vie 7:30-17:30, sin feriados). Meta: ≥80% de pedidos entregados dentro de ${UMBRAL_HORAS}h.`,
+        filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
+        secciones: [
+          {
+            titulo: "Tiempo de entrega de pedidos",
+            kpis: [
+              ["Entregados en el período", r.total],
+              [`Dentro de ${UMBRAL_HORAS}h`, r.dentro],
+              ["Fuera de plazo", r.fuera],
+              [`% dentro de ${UMBRAL_HORAS}h (meta ≥80%)`, `${formatNumero(r.pctDentro, 0)}%`],
+              ["Cumple la meta", r.total ? (r.pctDentro >= 80 ? "Sí" : "No") : "—"],
+              ["Promedio de entrega (h)", Number(r.promedioHoras.toFixed(1))],
+              ["Promedio de entrega (días)", Number(r.promedioDias.toFixed(2))],
+              ["Desviación estándar (h)", Number(r.desviacionHoras.toFixed(1))],
+              ["Tiempo máximo (días)", Number(r.maximoDias.toFixed(2))],
+            ],
+            graficos: [
+              {
+                titulo: `Cumplimiento de plazo (≤${UMBRAL_HORAS}h)`,
+                imagen: hayEntregados
+                  ? graficoDona([
+                      { etiqueta: "Dentro de plazo", valor: r.dentro, color: COLOR_VERDE },
+                      { etiqueta: "Fuera de plazo", valor: r.fuera, color: COLOR_ROJO },
+                    ])
+                  : null,
+                datos: {
+                  columnas: ["Resultado", "Pedidos", "%"],
+                  filas: [
+                    ["Dentro de plazo", r.dentro, `${formatNumero(r.pctDentro, 0)}%`],
+                    ["Fuera de plazo", r.fuera, `${formatNumero(r.pctFuera, 0)}%`],
+                  ],
+                },
+              },
+              {
+                titulo: "Tiempo promedio por etapa",
+                nota: hayEntregados
+                  ? `Cuello de botella: ${etapaCuello.value.label} (${formatNumero(etapaCuello.value.horas)}h en promedio).`
+                  : undefined,
+                imagen: hayEntregados
+                  ? graficoBarras(
+                      etapas.value.map((e) => ({
+                        etiqueta: e.label,
+                        valor: e.horas,
+                        texto: `${formatNumero(e.horas)}h`,
+                        color: e.key === etapaCuello.value.key ? COLOR_ROJO : COLOR_BASE,
+                      })),
+                    )
+                  : null,
+                datos: {
+                  columnas: ["Etapa", "Horas promedio"],
+                  filas: etapas.value.map((e) => [e.label, Number(e.horas.toFixed(1))]),
+                },
+              },
+            ],
+          },
+        ],
+        hojas: [
+          {
+            nombre: "Pedidos entregados",
+            filas: [...pedidosFiltrados.value].sort((a, b) => b.horas - a.horas),
+            columnas: columnasEntregados,
+          },
+          { nombre: "Cuello de botella", filas: cuellosDeBotella.value, columnas: columnasCuello },
+        ],
+      }),
+    `indicadores-pedidos-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
   );
 }
 </script>
@@ -182,7 +287,7 @@ function exportarXlsx() {
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Select v-model="filtroMes">
           <SelectTrigger class="w-40" aria-label="Filtrar por mes">
             <SelectValue placeholder="Mes" />
@@ -203,6 +308,21 @@ function exportarXlsx() {
             </SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          :disabled="isPending || isExporting || pedidosFiltrados.length === 0"
+          class="min-w-[168px] justify-center"
+          @click="exportarReporte"
+        >
+          <template v-if="isExporting">
+            <ProgressBar :value="progress" compact class="w-20" />
+            <span class="ml-2 text-xs tabular-nums text-muted-foreground">{{ Math.round(progress) }}%</span>
+          </template>
+          <template v-else>
+            <Download class="h-4 w-4 mr-2" />
+            Exportar Excel
+          </template>
+        </Button>
       </div>
     </div>
 
@@ -380,22 +500,6 @@ function exportarXlsx() {
             — pedidos que superaron {{ UMBRAL_HORAS }}h ({{ cuellosDeBotella.length }})
           </span>
         </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="isExporting || cuellosDeBotella.length === 0"
-          class="min-w-[168px] justify-center"
-          @click="exportarXlsx"
-        >
-          <template v-if="isExporting">
-            <ProgressBar :value="progress" compact class="w-20" />
-            <span class="ml-2 text-xs tabular-nums text-muted-foreground">{{ Math.round(progress) }}%</span>
-          </template>
-          <template v-else>
-            <Download class="h-4 w-4 mr-2" />
-            Exportar Excel
-          </template>
-        </Button>
       </div>
 
       <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">

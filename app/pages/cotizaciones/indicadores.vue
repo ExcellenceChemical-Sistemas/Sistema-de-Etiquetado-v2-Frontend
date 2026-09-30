@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle } from "@lucide/vue";
+import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Download } from "@lucide/vue";
 import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
 import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChart.vue";
+import ProgressBar from "~/components/ui/ProgressBar.vue";
+import { FILL_AMBER, FILL_GREEN, useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import { COLOR_AMBAR, COLOR_VERDE, graficoColumnas } from "~/utils/graficosReporte";
+import { construirReporte, filtrosMesAnio, sufijoPeriodo, type SeccionReporte } from "~/utils/reporteIndicadores";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
 // indicador comercial (DS-TIEMPO DE RESP-JOEL): tiempo de respuesta de
@@ -148,6 +152,117 @@ const tendenciaAviso = computed(() =>
     UMBRAL_AVISO_HORAS,
   ),
 );
+
+// --- Exportar el reporte completo (mismos filtros que la pantalla) ---
+const { progress, isExporting, exportarLibro } = useXlsxExport();
+
+type Resumen = ReturnType<typeof resumenDe>;
+type Tendencia = typeof tendenciaCotizacion.value;
+
+function seccionIndicador(titulo: string, resumen: Resumen, umbral: number, tendencia: Tendencia): SeccionReporte {
+  return {
+    titulo,
+    kpis: [
+      ["Registros en el período", resumen.total],
+      [`Dentro de ${umbral}h`, resumen.dentro],
+      ["Fuera de plazo", resumen.fuera],
+      [`% dentro de ${umbral}h (meta ≥80%)`, `${formatNumero(resumen.pctDentro, 0)}%`],
+      ["Cumple la meta", resumen.total ? (resumen.pctDentro >= 80 ? "Sí" : "No") : "—"],
+      ["Promedio (horas hábiles)", Number(resumen.promedio.toFixed(1))],
+      ["Desviación estándar (h)", Number(resumen.desviacion.toFixed(1))],
+      ["Tiempo máximo (h)", Number(resumen.maximo.toFixed(1))],
+    ],
+    graficos: [
+      {
+        titulo: "Cumplimiento mensual",
+        nota:
+          filtroAnio.value === "TODOS"
+            ? undefined
+            : `Año ${filtroAnio.value} completo (el gráfico no aplica el filtro de mes, igual que en pantalla).`,
+        vacio: "Elegí un año en el filtro para incluir la tendencia mensual.",
+        imagen: tendencia.length
+          ? graficoColumnas(
+              tendencia.map((m) => ({
+                etiqueta: m.mes,
+                valor: m.pct,
+                texto: `${Math.round(m.pct)}%`,
+                color: m.pct >= 80 ? COLOR_VERDE : COLOR_AMBAR,
+              })),
+              { maximo: 100, meta: 80, etiquetaMeta: "Meta 80%" },
+            )
+          : null,
+        datos: {
+          columnas: ["Mes", "Total", `Dentro de ${umbral}h`, "% cumplimiento"],
+          filas: tendencia.map((m) => [m.mes, m.total, m.dentro, `${Math.round(m.pct)}%`]),
+        },
+      },
+    ],
+  };
+}
+
+function columnasTiempo(umbral: number, desde: string, hasta: string, campoDesde: keyof Cotizacion, campoHasta: keyof Cotizacion): XlsxColumn<ConHoras>[] {
+  return [
+    { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
+    { key: (c) => c.numeroProforma ?? "", label: "N° Proforma" },
+    { key: (c) => formatFechaHora(c[campoDesde] as string), label: desde, width: 22 },
+    { key: (c) => formatFechaHora(c[campoHasta] as string), label: hasta, width: 22 },
+    { key: (c) => Number(c.horas.toFixed(1)), label: "Horas hábiles" },
+    {
+      key: (c) => (c.horas <= umbral ? "Dentro de plazo" : "Fuera de plazo"),
+      label: `Meta ≤${umbral}h`,
+      width: 18,
+      colorFill: (v) => (v === "Dentro de plazo" ? FILL_GREEN : FILL_AMBER),
+    },
+    { key: (c) => (c.alertas.length ? "Sí" : ""), label: "Con alerta" },
+  ];
+}
+
+const columnasAlertas: XlsxColumn<Cotizacion>[] = [
+  { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
+  { key: (c) => c.numeroProforma ?? "", label: "N° Proforma" },
+  {
+    key: (c) => c.alertas.map((a) => `${CAMPO_COTIZACION_LABEL[a.campo]}: ${ALERTA_COTIZACION_LABEL[a.tipo]}`).join(" | "),
+    label: "Motivo",
+    width: 90,
+  },
+];
+
+const hayDatos = computed(() => cotizacionesFiltradas.value.length > 0);
+
+function exportarReporte() {
+  exportarLibro(
+    () =>
+      construirReporte({
+        titulo: "Indicador de tiempo de respuesta — Cotizaciones",
+        descripcion: `Horas hábiles (lun-vie 7:30-17:30, sin feriados). Metas: cotización ≤${UMBRAL_COTIZACION_HORAS}h y aviso a almacén ≤${UMBRAL_AVISO_HORAS}h, en ≥80% de los casos.`,
+        filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
+        secciones: [
+          {
+            titulo: "Alertas de integridad",
+            kpis: [
+              ["Registros con alerta (revisar antes de confiar en el promedio)", cotizacionesConAlertas.value.length],
+            ],
+          },
+          seccionIndicador("Tiempo de respuesta de cotización", resumenCotizacion.value, UMBRAL_COTIZACION_HORAS, tendenciaCotizacion.value),
+          seccionIndicador("Tiempo de aviso a almacén", resumenAviso.value, UMBRAL_AVISO_HORAS, tendenciaAviso.value),
+        ],
+        hojas: [
+          {
+            nombre: "Respuesta de cotización",
+            filas: [...cotizadasConTiempo.value].sort((a, b) => b.horas - a.horas),
+            columnas: columnasTiempo(UMBRAL_COTIZACION_HORAS, "Requerimiento", "Cotización enviada", "requerimientoEn", "cotizacionEnviadaEn"),
+          },
+          {
+            nombre: "Aviso a almacén",
+            filas: [...avisadasConTiempo.value].sort((a, b) => b.horas - a.horas),
+            columnas: columnasTiempo(UMBRAL_AVISO_HORAS, "Pedido aprobado", "Avisado a almacén", "pedidoAprobadoEn", "avisoAlmacenEn"),
+          },
+          { nombre: "Alertas de integridad", filas: cotizacionesConAlertas.value, columnas: columnasAlertas },
+        ],
+      }),
+    `indicadores-cotizaciones-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
+  );
+}
 </script>
 
 <template>
@@ -164,7 +279,7 @@ const tendenciaAviso = computed(() =>
           y aviso a almacén tras la aprobación (meta ≤{{ UMBRAL_AVISO_HORAS }}h).
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Select v-model="filtroMes">
           <SelectTrigger class="w-40" aria-label="Filtrar por mes">
             <SelectValue placeholder="Mes" />
@@ -185,6 +300,21 @@ const tendenciaAviso = computed(() =>
             </SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          :disabled="isPending || isExporting || !hayDatos"
+          class="min-w-[168px] justify-center"
+          @click="exportarReporte"
+        >
+          <template v-if="isExporting">
+            <ProgressBar :value="progress" compact class="w-20" />
+            <span class="ml-2 text-xs tabular-nums text-muted-foreground">{{ Math.round(progress) }}%</span>
+          </template>
+          <template v-else>
+            <Download class="h-4 w-4 mr-2" />
+            Exportar Excel
+          </template>
+        </Button>
       </div>
     </div>
 

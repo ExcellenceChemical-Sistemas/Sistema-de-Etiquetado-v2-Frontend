@@ -15,6 +15,10 @@ import {
   rankingEtiquetasPorProducto,
   totalesEstadisticas,
 } from "~/utils/estadisticas";
+import ProgressBar from "~/components/ui/ProgressBar.vue";
+import { useXlsxExport } from "~/composables/useCsvExport";
+import { COLOR_BASE, graficoBarras, graficoColumnas, graficoDona } from "~/utils/graficosReporte";
+import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporteIndicadores";
 
 const { data: etiquetas, isPending, isError, refetch } = useHistorialEtiquetas();
 
@@ -83,6 +87,134 @@ const TARJETAS = computed(() => [
   { label: "COA descargados", valor: totales.value.coaDescargas, icon: Download },
   { label: "Fichas de seguridad vistas", valor: totales.value.fdsVistas, icon: ShieldAlert },
 ]);
+
+// --- Exportar el reporte completo (mismos filtros que la pantalla) ---
+const { progress, isExporting, exportarLibro } = useXlsxExport();
+
+const MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const MAX_BARRAS = 10;
+const MAX_SEGMENTOS = 5;
+
+// Mismo recorte que DonutProductosEscaneados: los 5 más escaneados y el resto sumado en "Otros".
+function segmentosEscaneos() {
+  const ordenados = [...productosMasEscaneados.value].sort((a, b) => b.escaneos - a.escaneos).filter((d) => d.escaneos > 0);
+  const top = ordenados.slice(0, MAX_SEGMENTOS).map((d) => ({ etiqueta: d.nombre, valor: d.escaneos }));
+  const resto = ordenados.slice(MAX_SEGMENTOS).reduce((s, d) => s + d.escaneos, 0);
+  if (resto > 0) top.push({ etiqueta: "Otros", valor: resto });
+  return top;
+}
+
+const hayDatosExportables = computed(
+  () => etiquetasDelPeriodo.value.length > 0 || serieMensual.value.some((m) => m.etiquetas > 0),
+);
+
+function exportarReporte() {
+  const segmentos = segmentosEscaneos();
+  const mensual = serieMensual.value;
+  exportarLibro(
+    () =>
+      construirReporte({
+        titulo: "Indicadores de etiquetas",
+        descripcion:
+          "El período filtra por la fecha en que se generó la etiqueta; escaneos, COA y FDS se cuentan sobre las etiquetas de ese período.",
+        filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
+        secciones: [
+          {
+            titulo: "Resumen del período",
+            kpis: TARJETAS.value.map((t) => [t.label, t.valor] as [string, number]),
+          },
+          {
+            titulo: "Gráficos",
+            graficos: [
+              {
+                titulo: "Insumos más etiquetados",
+                nota:
+                  productosMasEtiquetados.value.length > MAX_BARRAS
+                    ? `Top ${MAX_BARRAS}; el ranking completo está en la hoja "Etiquetas por producto".`
+                    : undefined,
+                imagen: productosMasEtiquetados.value.length
+                  ? graficoBarras(
+                      productosMasEtiquetados.value
+                        .slice(0, MAX_BARRAS)
+                        .map((p) => ({ etiqueta: p.nombre, valor: p.etiquetas })),
+                    )
+                  : null,
+                datos: {
+                  columnas: ["Producto", "Etiquetas"],
+                  filas: productosMasEtiquetados.value.slice(0, MAX_BARRAS).map((p) => [p.nombre, p.etiquetas]),
+                },
+              },
+              {
+                titulo: `Etiquetas por mes (${filtroAnio.value === "TODOS" ? "últimos 12 meses" : filtroAnio.value})`,
+                nota: "Respeta el año pero no el mes, igual que en pantalla; el mes filtrado va resaltado.",
+                imagen: mensual.some((m) => m.etiquetas > 0)
+                  ? graficoColumnas(
+                      mensual.map((m) => ({
+                        etiqueta: MESES_CORTOS[m.mes]!,
+                        valor: m.etiquetas,
+                        color: mesResaltado.value === null || mesResaltado.value === m.mes ? COLOR_BASE : "#94a3b8",
+                      })),
+                    )
+                  : null,
+                datos: {
+                  columnas: ["Mes", "Año", "Etiquetas"],
+                  filas: mensual.map((m) => [MESES_CORTOS[m.mes]!, m.anio, m.etiquetas]),
+                },
+              },
+              {
+                titulo: "Productos más escaneados",
+                vacio: "Todavía no hay escaneos de QR en este período.",
+                imagen: segmentos.length ? graficoDona(segmentos) : null,
+                datos: {
+                  columnas: ["Producto", "Escaneos"],
+                  filas: segmentos.map((s) => [s.etiqueta, s.valor]),
+                },
+              },
+            ],
+          },
+        ],
+        hojas: [
+          {
+            nombre: "Etiquetas por producto",
+            filas: productosMasEtiquetados.value,
+            columnas: [
+              { key: "nombre", label: "Producto", width: 44 },
+              { key: "etiquetas", label: "Etiquetas" },
+            ],
+          },
+          {
+            nombre: "Detalle por producto",
+            filas: porProducto.value,
+            columnas: [
+              { key: "nombre", label: "Producto", width: 44 },
+              { key: "escaneos", label: "Escaneos" },
+              { key: "coaVistas", label: "COA visto" },
+              { key: "coaDescargas", label: "COA descargado" },
+              { key: "fdsVistas", label: "FDS vista" },
+            ],
+          },
+          {
+            nombre: "COA por producto",
+            filas: rankingCoa.value,
+            columnas: [
+              { key: "nombre", label: "Producto", width: 44 },
+              { key: "coaVistas", label: "Vistas" },
+              { key: "coaDescargas", label: "Descargas" },
+            ],
+          },
+          {
+            nombre: "FDS por producto",
+            filas: rankingFds.value,
+            columnas: [
+              { key: "nombre", label: "Producto", width: 44 },
+              { key: "fdsVistas", label: "Vistas" },
+            ],
+          },
+        ],
+      }),
+    `indicadores-etiquetas-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
+  );
+}
 </script>
 
 <template>
@@ -100,7 +232,7 @@ const TARJETAS = computed(() => [
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Select v-model="filtroMes">
           <SelectTrigger class="w-40" aria-label="Filtrar por mes">
             <SelectValue placeholder="Mes" />
@@ -121,6 +253,21 @@ const TARJETAS = computed(() => [
             </SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          :disabled="isPending || isExporting || !hayDatosExportables"
+          class="min-w-[168px] justify-center"
+          @click="exportarReporte"
+        >
+          <template v-if="isExporting">
+            <ProgressBar :value="progress" compact class="w-20" />
+            <span class="ml-2 text-xs tabular-nums text-muted-foreground">{{ Math.round(progress) }}%</span>
+          </template>
+          <template v-else>
+            <Download class="h-4 w-4 mr-2" />
+            Exportar Excel
+          </template>
+        </Button>
       </div>
     </div>
 
