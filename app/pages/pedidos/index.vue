@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2, RefreshCw } from "@lucide/vue";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import { usePedidosQuery, useDeletePedido, useRegenerarTokenPedido } from "~/composables/usePedidos";
@@ -20,6 +20,8 @@ import PedidoObservacionDialog from "~/components/pedidos/PedidoObservacionDialo
 import PedidoProgreso from "~/components/pedidos/PedidoProgreso.vue";
 
 const permiso = usePermiso("PEDIDOS");
+const PAGE_SIZE = 10;
+const page = ref(1);
 
 const filtroEstado = ref<EstadoPedido | "TODOS">("TODOS");
 const { data: pedidos, isPending, isError, refetch } = usePedidosQuery(filtroEstado);
@@ -59,6 +61,21 @@ const pedidosFiltrados = computed(() => {
   }
 
   return lista;
+});
+
+// si cambia cualquier filtro, siempre volvemos a la página 1
+watch([filtroEstado, filtroMes, filtroAnio, busqueda], () => {
+  page.value = 1;
+});
+
+const totalPages = computed(() => Math.max(1, Math.ceil(pedidosFiltrados.value.length / PAGE_SIZE)));
+watch(totalPages, (tp) => {
+  if (page.value > tp) page.value = tp;
+});
+
+const pedidosPaginados = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE;
+  return pedidosFiltrados.value.slice(start, start + PAGE_SIZE);
 });
 
 const { progress, isExporting, exportar } = useXlsxExport();
@@ -330,7 +347,7 @@ async function confirmarRegenerar() {
             </TableRow>
           </template>
           <template v-else>
-            <TableRow v-for="p in pedidosFiltrados" :key="p.id">
+            <TableRow v-for="p in pedidosPaginados" :key="p.id">
               <TableCell class="max-w-48 truncate font-medium" :title="p.cliente.nombre">
                 {{ p.cliente.nombre }}
               </TableCell>
@@ -440,6 +457,44 @@ async function confirmarRegenerar() {
         </TableBody>
       </Table>
     </ScrollArea>
+
+    <div
+      v-if="!isPending && !isError && pedidosFiltrados.length > 0"
+      class="flex shrink-0 flex-wrap items-center justify-between gap-3"
+    >
+      <p class="text-sm text-muted-foreground">
+        {{ pedidosFiltrados.length }} pedido{{ pedidosFiltrados.length === 1 ? "" : "s" }} ·
+        página {{ page }} de {{ totalPages }}
+      </p>
+
+      <Pagination
+        v-model:page="page"
+        :total="pedidosFiltrados.length"
+        :items-per-page="PAGE_SIZE"
+        :sibling-count="1"
+        show-edges
+      >
+        <PaginationContent v-slot="{ items }">
+          <PaginationPrevious />
+          <template v-for="(item, index) in items" :key="index">
+            <PaginationItem
+              v-if="item.type === 'page'"
+              :value="item.value"
+              as-child
+            >
+              <Button
+                class="w-9 h-9 p-0"
+                :variant="item.value === page ? 'default' : 'outline'"
+              >
+                {{ item.value }}
+              </Button>
+            </PaginationItem>
+            <PaginationEllipsis v-else :index="index" />
+          </template>
+          <PaginationNext />
+        </PaginationContent>
+      </Pagination>
+    </div>
 
     <Dialog v-model:open="dialogOpen">
       <DialogContent>

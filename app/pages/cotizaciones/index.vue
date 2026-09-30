@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert } from "@lucide/vue";
+import { ref, computed, watch } from "vue";
+import { Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History } from "@lucide/vue";
 import {
   useCotizacionesQuery,
   useDeleteCotizacion,
@@ -19,8 +19,12 @@ import CotizacionForm from "~/components/cotizaciones/CotizacionForm.vue";
 import CotizacionFechaDialog from "~/components/cotizaciones/CotizacionFechaDialog.vue";
 import CotizacionEnviarDialog from "~/components/cotizaciones/CotizacionEnviarDialog.vue";
 import CotizacionProgreso from "~/components/cotizaciones/CotizacionProgreso.vue";
+import { useUsuarioActual } from "~/composables/useUsuarioActual";
 
 const permiso = usePermiso("PEDIDOS");
+const { esAdmin } = useUsuarioActual();
+const PAGE_SIZE = 10;
+const page = ref(1);
 
 const filtroEstado = ref<EstadoCotizacion | "TODOS">("TODOS");
 const { data: cotizaciones, isPending, isError, refetch } = useCotizacionesQuery(filtroEstado);
@@ -35,6 +39,21 @@ const cotizacionesFiltradas = computed(() => {
     );
   }
   return lista;
+});
+
+// si cambia el filtro o la búsqueda, siempre volvemos a la página 1
+watch([filtroEstado, busqueda], () => {
+  page.value = 1;
+});
+
+const totalPages = computed(() => Math.max(1, Math.ceil(cotizacionesFiltradas.value.length / PAGE_SIZE)));
+watch(totalPages, (tp) => {
+  if (page.value > tp) page.value = tp;
+});
+
+const cotizacionesPaginadas = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE;
+  return cotizacionesFiltradas.value.slice(start, start + PAGE_SIZE);
 });
 
 const TABS: { value: EstadoCotizacion | "TODOS"; label: string }[] = [
@@ -124,6 +143,10 @@ async function confirmarEliminar() {
   }
 }
 
+function formatFechaHoraOTexto(valor: string, campo: string) {
+  return campo === "numeroProforma" ? valor : formatFechaHora(valor);
+}
+
 function textoAlertas(c: Cotizacion) {
   return c.alertas
     .map((a) => `${CAMPO_COTIZACION_LABEL[a.campo]}: ${ALERTA_COTIZACION_LABEL[a.tipo]}`)
@@ -205,7 +228,7 @@ function textoAlertas(c: Cotizacion) {
             </TableRow>
           </template>
           <template v-else>
-            <TableRow v-for="c in cotizacionesFiltradas" :key="c.id">
+            <TableRow v-for="c in cotizacionesPaginadas" :key="c.id">
               <TableCell class="max-w-48 truncate font-medium">
                 <span class="inline-flex items-center gap-1.5" :title="c.cliente.nombre">
                   <TriangleAlert
@@ -251,19 +274,19 @@ function textoAlertas(c: Cotizacion) {
                           <Pencil class="mr-2 h-3.5 w-3.5" />
                           Corregir requerimiento
                         </DropdownMenuItem>
-                        <DropdownMenuItem v-if="c.cotizacionEnviadaEn" @click="abrirEnviar(c)">
+                        <DropdownMenuItem v-if="c.cotizacionEnviadaEn && esAdmin" @click="abrirEnviar(c)">
                           <Pencil class="mr-2 h-3.5 w-3.5" />
                           Corregir cotización enviada
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          v-if="c.pedidoAprobadoEn"
+                          v-if="c.pedidoAprobadoEn && esAdmin"
                           @click="abrirFecha(c, 'pedidoAprobadoEn', 'Corregir fecha de aprobación')"
                         >
                           <Pencil class="mr-2 h-3.5 w-3.5" />
                           Corregir aprobación
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          v-if="c.avisoAlmacenEn"
+                          v-if="c.avisoAlmacenEn && esAdmin"
                           @click="abrirFecha(c, 'avisoAlmacenEn', 'Corregir fecha de aviso a almacén')"
                         >
                           <Pencil class="mr-2 h-3.5 w-3.5" />
@@ -287,6 +310,44 @@ function textoAlertas(c: Cotizacion) {
       </Table>
     </ScrollArea>
 
+    <div
+      v-if="!isPending && !isError && cotizacionesFiltradas.length > 0"
+      class="flex shrink-0 flex-wrap items-center justify-between gap-3"
+    >
+      <p class="text-sm text-muted-foreground">
+        {{ cotizacionesFiltradas.length }} {{ cotizacionesFiltradas.length === 1 ? "cotización" : "cotizaciones" }} ·
+        página {{ page }} de {{ totalPages }}
+      </p>
+
+      <Pagination
+        v-model:page="page"
+        :total="cotizacionesFiltradas.length"
+        :items-per-page="PAGE_SIZE"
+        :sibling-count="1"
+        show-edges
+      >
+        <PaginationContent v-slot="{ items }">
+          <PaginationPrevious />
+          <template v-for="(item, index) in items" :key="index">
+            <PaginationItem
+              v-if="item.type === 'page'"
+              :value="item.value"
+              as-child
+            >
+              <Button
+                class="w-9 h-9 p-0"
+                :variant="item.value === page ? 'default' : 'outline'"
+              >
+                {{ item.value }}
+              </Button>
+            </PaginationItem>
+            <PaginationEllipsis v-else :index="index" />
+          </template>
+          <PaginationNext />
+        </PaginationContent>
+      </Pagination>
+    </div>
+
     <Dialog v-model:open="dialogOpen">
       <DialogContent>
         <DialogTitle>Nueva cotización</DialogTitle>
@@ -304,7 +365,7 @@ function textoAlertas(c: Cotizacion) {
     <CotizacionEnviarDialog v-model:open="enviarDialogOpen" :cotizacion="enviarDialogCotizacion" />
 
     <Dialog v-model:open="detalleOpen">
-      <DialogContent class="max-w-lg">
+      <DialogContent class="max-w-lg max-h-[85vh] overflow-y-auto scroll-tema">
         <DialogTitle>Detalle de la cotización</DialogTitle>
         <div v-if="detalleCotizacion" class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div>
@@ -359,6 +420,23 @@ function textoAlertas(c: Cotizacion) {
           <div>
             <p class="text-muted-foreground">Última edición</p>
             <p class="font-medium">{{ detalleCotizacion.ultimoEditadoPor?.nombre ?? "—" }}</p>
+          </div>
+          <div v-if="(detalleCotizacion.historial ?? []).length > 0" class="col-span-2 space-y-2">
+            <p class="flex items-center gap-1.5 text-muted-foreground">
+              <History class="h-4 w-4" />
+              Historial de cambios (hora real del sistema, no editable)
+            </p>
+            <ul class="space-y-1.5 rounded-md border border-border p-3 text-xs">
+              <li v-for="h in detalleCotizacion.historial ?? []" :key="h.id" class="border-b border-border/50 pb-1.5 last:border-0 last:pb-0">
+                <span class="font-medium text-foreground">{{ CAMPO_COTIZACION_LABEL[h.campo as keyof typeof CAMPO_COTIZACION_LABEL] ?? h.campo }}</span>
+                : {{ h.valorAnterior ? formatFechaHoraOTexto(h.valorAnterior, h.campo) : "(vacío)" }}
+                →
+                {{ h.valorNuevo ? formatFechaHoraOTexto(h.valorNuevo, h.campo) : "(vacío)" }}
+                <span class="block text-muted-foreground">
+                  {{ h.editadoPor.nombre }} · {{ formatFechaHora(h.editadoEn) }}
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </DialogContent>

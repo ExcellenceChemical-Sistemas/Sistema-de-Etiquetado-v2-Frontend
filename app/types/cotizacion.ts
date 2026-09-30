@@ -14,7 +14,7 @@ interface UsuarioResumen {
   nombre: string
 }
 
-export type TipoAlertaCotizacion = 'FERIADO_O_FIN_DE_SEMANA' | 'AUSENCIA_REGISTRADA'
+export type TipoAlertaCotizacion = 'FERIADO_O_FIN_DE_SEMANA' | 'AUSENCIA_REGISTRADA' | 'CARGA_TARDIA'
 
 export interface AlertaCotizacion {
   campo: 'cotizacionEnviadaEn' | 'pedidoAprobadoEn' | 'avisoAlmacenEn'
@@ -25,12 +25,24 @@ export interface AlertaCotizacion {
 export const ALERTA_COTIZACION_LABEL: Record<TipoAlertaCotizacion, string> = {
   FERIADO_O_FIN_DE_SEMANA: 'cae en fin de semana o feriado (la empresa no trabaja ese día)',
   AUSENCIA_REGISTRADA: 'cae dentro de una ausencia registrada de quien cargó el dato',
+  CARGA_TARDIA: 'se cargó o corrigió en el sistema mucho después de la fecha que dice',
 }
 
-export const CAMPO_COTIZACION_LABEL: Record<AlertaCotizacion['campo'], string> = {
+export const CAMPO_COTIZACION_LABEL: Record<'requerimientoEn' | 'numeroProforma' | AlertaCotizacion['campo'], string> = {
+  requerimientoEn: 'Requerimiento',
+  numeroProforma: 'N° Proforma',
   cotizacionEnviadaEn: 'Cotización enviada',
   pedidoAprobadoEn: 'Pedido aprobado',
   avisoAlmacenEn: 'Aviso a almacén',
+}
+
+export interface HistorialCotizacionItem {
+  id: number
+  campo: string
+  valorAnterior: string | null
+  valorNuevo: string | null
+  editadoPor: { id: number; nombre: string }
+  editadoEn: string
 }
 
 // Seguimiento del proceso de Joel (ver comentario en schema.prisma del backend): mismo patrón
@@ -55,6 +67,7 @@ export interface Cotizacion {
   updatedAt: string
   estado: EstadoCotizacion
   alertas: AlertaCotizacion[]
+  historial: HistorialCotizacionItem[]
 }
 
 export interface CrearCotizacionInput {
@@ -71,4 +84,5 @@ export interface ActualizarCotizacionInput {
   cotizacionEnviadaEn?: string
   pedidoAprobadoEn?: string
   avisoAlmacenEn?: string
+  motivoCorreccion?: string
 }

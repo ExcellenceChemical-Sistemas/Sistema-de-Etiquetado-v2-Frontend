@@ -5,6 +5,7 @@ import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
+import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChart.vue";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
 // indicador comercial (DS-TIEMPO DE RESP-JOEL): tiempo de respuesta de
@@ -105,6 +106,48 @@ function formatNumero(n: number, decimales = 1) {
 // podría esconder un problema real), se muestran aparte para que se revisen antes de confiar en
 // el indicador.
 const cotizacionesConAlertas = computed(() => cotizacionesFiltradas.value.filter((c) => c.alertas.length > 0));
+
+// Tendencia mensual (gráfico): a diferencia de las tarjetas de arriba, ignora el filtro de mes —
+// no tendría sentido un gráfico "por mes" mostrando un solo mes — pero sí respeta el año elegido,
+// para no mezclar años distintos en el mismo eje.
+const cotizacionesDelAnio = computed(() => {
+  if (filtroAnio.value === "TODOS") return [];
+  const anio = Number(filtroAnio.value);
+  return (cotizaciones.value ?? []).filter((c) => new Date(c.requerimientoEn).getFullYear() === anio);
+});
+
+function tendenciaMensual(
+  lista: Cotizacion[],
+  horasDe: (c: Cotizacion) => number | null,
+  umbral: number,
+) {
+  const porMes = Array.from({ length: 12 }, () => ({ total: 0, dentro: 0 }));
+  for (const c of lista) {
+    const horas = horasDe(c);
+    if (horas === null) continue;
+    const mes = new Date(c.requerimientoEn).getMonth();
+    porMes[mes]!.total++;
+    if (horas <= umbral) porMes[mes]!.dentro++;
+  }
+  return porMes
+    .map((m, i) => ({ mes: MESES[i]!.slice(0, 3), total: m.total, dentro: m.dentro, pct: m.total ? (m.dentro / m.total) * 100 : 0 }))
+    .filter((m) => m.total > 0);
+}
+
+const tendenciaCotizacion = computed(() =>
+  tendenciaMensual(
+    cotizacionesDelAnio.value,
+    (c) => (c.cotizacionEnviadaEn ? horasHabilesEntre(c.requerimientoEn, c.cotizacionEnviadaEn) : null),
+    UMBRAL_COTIZACION_HORAS,
+  ),
+);
+const tendenciaAviso = computed(() =>
+  tendenciaMensual(
+    cotizacionesDelAnio.value,
+    (c) => (c.pedidoAprobadoEn && c.avisoAlmacenEn ? horasHabilesEntre(c.pedidoAprobadoEn, c.avisoAlmacenEn) : null),
+    UMBRAL_AVISO_HORAS,
+  ),
+);
 </script>
 
 <template>
@@ -243,6 +286,17 @@ const cotizacionesConAlertas = computed(() => cotizacionesFiltradas.value.filter
               </Card>
             </div>
 
+            <Card>
+              <CardHeader class="pb-2">
+                <CardTitle class="text-sm font-medium text-muted-foreground">
+                  Cumplimiento mensual
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TendenciaMensualChart :datos="tendenciaCotizacion" :meta="80" />
+              </CardContent>
+            </Card>
+
             <Card v-if="peoresCotizacion.length > 0">
               <CardHeader class="pb-2">
                 <CardTitle class="text-sm font-medium text-muted-foreground">
@@ -323,6 +377,17 @@ const cotizacionesConAlertas = computed(() => cotizacionesFiltradas.value.filter
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader class="pb-2">
+                <CardTitle class="text-sm font-medium text-muted-foreground">
+                  Cumplimiento mensual
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TendenciaMensualChart :datos="tendenciaAviso" :meta="80" />
+              </CardContent>
+            </Card>
 
             <Card v-if="peoresAviso.length > 0">
               <CardHeader class="pb-2">
