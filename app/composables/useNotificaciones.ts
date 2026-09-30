@@ -52,3 +52,14 @@ export function useMarcarTodasLeidas() {
     onSuccess: () => invalidarNotificaciones(queryClient),
   })
 }
+
+export function useEliminarNotificacion() {
+  const api = useApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/notificaciones/${id}`)
+    },
+    onSuccess: () => invalidarNotificaciones(queryClient),
+  })
+}

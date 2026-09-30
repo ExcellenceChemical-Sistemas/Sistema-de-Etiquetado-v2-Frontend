@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Inbox } from "lucide-vue-next";
+import { Inbox, Check, Trash2 } from "lucide-vue-next";
 import {
   useNotificacionesQuery,
   useMarcarNotificacionLeida,
   useMarcarTodasLeidas,
+  useEliminarNotificacion,
 } from "~/composables/useNotificaciones";
 import type { Notificacion } from "~/types/notificacion";
 import { formatFechaHora } from "~/utils/fechaHora";
@@ -14,8 +15,9 @@ const hayNoLeidas = computed(() => (notificaciones.value ?? []).some((n) => !n.l
 
 const { mutate: marcarLeida } = useMarcarNotificacionLeida();
 const { mutateAsync: marcarTodas, isPending: marcandoTodas } = useMarcarTodasLeidas();
+const { mutate: eliminarNotificacion } = useEliminarNotificacion();
 
-function alAbrir(n: Notificacion) {
+function abrirPedido(n: Notificacion) {
   if (!n.leidaEn) marcarLeida(n.id);
   // Pedidos no tiene una vista de detalle propia por id (todo el detalle se ve en la lista),
   // así que solo lleva a la lista general — no hay un deep-link más específico posible hoy.
@@ -31,7 +33,7 @@ function alAbrir(n: Notificacion) {
         <p class="text-sm text-muted-foreground">Avisos internos del sistema, ej. pedidos que llevan mucho tiempo sin entregarse.</p>
       </div>
       <Button v-if="hayNoLeidas" variant="outline" size="sm" :disabled="marcandoTodas" @click="marcarTodas()">
-        Marcar todo como leído
+        Marcar todo como recibido
       </Button>
     </div>
 
@@ -53,23 +55,44 @@ function alAbrir(n: Notificacion) {
           </div>
         </template>
         <template v-else>
-          <button
-            v-for="n in notificaciones"
-            :key="n.id"
-            type="button"
-            class="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-accent"
-            :class="!n.leidaEn && 'bg-primary/5'"
-            @click="alAbrir(n)"
-          >
+          <div v-for="n in notificaciones" :key="n.id" class="flex items-start gap-3 p-4" :class="!n.leidaEn && 'bg-primary/5'">
             <span
               class="mt-1.5 h-2 w-2 shrink-0 rounded-full"
               :class="n.leidaEn ? 'bg-transparent' : 'bg-primary'"
             />
-            <div class="min-w-0 flex-1">
+            <button
+              type="button"
+              class="min-w-0 flex-1 text-left"
+              :class="n.pedidoId != null && 'cursor-pointer'"
+              @click="abrirPedido(n)"
+            >
               <p class="text-sm" :class="!n.leidaEn && 'font-medium'">{{ n.mensaje }}</p>
               <p class="text-xs text-muted-foreground">{{ formatFechaHora(n.createdAt) }}</p>
+            </button>
+            <div class="flex shrink-0 gap-1">
+              <Button
+                v-if="!n.leidaEn"
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8"
+                title="Alerta recibida"
+                aria-label="Alerta recibida"
+                @click="marcarLeida(n.id)"
+              >
+                <Check class="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8"
+                title="Eliminar"
+                aria-label="Eliminar"
+                @click="eliminarNotificacion(n.id)"
+              >
+                <Trash2 class="h-4 w-4" />
+              </Button>
             </div>
-          </button>
+          </div>
         </template>
       </div>
     </ScrollArea>

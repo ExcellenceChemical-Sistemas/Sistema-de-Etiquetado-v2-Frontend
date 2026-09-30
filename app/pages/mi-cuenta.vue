@@ -75,6 +75,20 @@ function onAvatarActualizado(url: string) {
   // Mantiene la UI consistente sin esperar a un refrescar() completo
   if (usuarioActual.value) usuarioActual.value.avatarUrl = url
 }
+
+// Minutos desde medianoche -> "12:00 p. m." para mostrar. Es un dato de solo lectura acá: editarlo
+// sigue siendo exclusivo del admin general desde Usuarios (ver Editarpermisos.vue).
+function minutosAHoraLegible(minutos: number): string {
+  const d = new Date(2000, 0, 1, Math.floor(minutos / 60), minutos % 60)
+  return d.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit' })
+}
+
+const refrigerioTexto = computed(() => {
+  const inicio = usuarioActual.value?.refrigerioInicioMinutos
+  const fin = usuarioActual.value?.refrigerioFinMinutos
+  if (inicio == null || fin == null) return null
+  return `${minutosAHoraLegible(inicio)} a ${minutosAHoraLegible(fin)}`
+})
 </script>
 
 <template>
@@ -113,6 +127,12 @@ function onAvatarActualizado(url: string) {
             <div class="space-y-2">
               <Label>Correo</Label>
               <p class="text-sm text-muted-foreground">{{ usuarioActual?.email }}</p>
+            </div>
+            <div class="space-y-2">
+              <Label>Refrigerio</Label>
+              <p class="text-sm text-muted-foreground">
+                {{ refrigerioTexto ?? 'No configurado — pedíselo a un administrador' }}
+              </p>
             </div>
             <Button :disabled="!huboCambioNombre || guardando" @click="guardarNombre">
               <Spinner v-if="guardando" class="mr-2 size-4" />
