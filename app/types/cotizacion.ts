@@ -45,6 +45,19 @@ export interface HistorialCotizacionItem {
   editadoEn: string
 }
 
+// Pedido con el mismo numeroProforma que la cotización (única llave que las cruza hoy, no hay
+// relación formal en el schema — ver CLAUDE.md del backend). Solo viene en GET /cotizaciones/:id,
+// no en el listado.
+export interface PedidoRelacionado {
+  id: number
+  recibidoEn: string
+  inicioPreparacionEn: string | null
+  preparadoEn: string | null
+  salioEn: string | null
+  entregadoEn: string | null
+  tokenSeguimiento: string
+}
+
 // Seguimiento del proceso de Joel (ver comentario en schema.prisma del backend): mismo patrón
 // que Pedido, sin columna "estado" propia — el backend la deriva de qué fechas están seteadas.
 // Insumos, cantidades y precio siguen viviendo en KEYFACIL ERP, no acá.
@@ -68,6 +81,9 @@ export interface Cotizacion {
   estado: EstadoCotizacion
   alertas: AlertaCotizacion[]
   historial: HistorialCotizacionItem[]
+  // Solo presente cuando la cotización se pidió por GET /cotizaciones/:id (detalle) — el listado
+  // (GET /cotizaciones) no lo trae, para no pagar un lookup extra por fila.
+  pedidoRelacionado?: PedidoRelacionado | null
 }
 
 // requerimientoEn no se manda al crear: el backend siempre usa la hora real del servidor (ver

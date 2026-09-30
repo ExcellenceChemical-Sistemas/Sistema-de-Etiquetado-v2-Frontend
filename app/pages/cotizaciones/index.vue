@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History } from "@lucide/vue";
+import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History, Truck } from "@lucide/vue";
+import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import {
   useCotizacionesQuery,
   useDeleteCotizacion,
@@ -168,10 +169,45 @@ function marcarSiguiente(c: Cotizacion) {
 const detalleOpen = ref(false);
 const detalleCotizacion = ref<Cotizacion | null>(null);
 
+// El listado no trae pedidoRelacionado (evita un lookup extra por fila) — al abrir el detalle se
+// muestra primero la versión del listado y se reemplaza en cuanto llega GET /cotizaciones/:id.
 function abrirDetalle(cotizacion: Cotizacion) {
   detalleCotizacion.value = cotizacion;
   detalleOpen.value = true;
+  const api = useApi();
+  api
+    .get<Cotizacion>(`/cotizaciones/${cotizacion.id}`)
+    .then(({ data }) => {
+      if (detalleCotizacion.value?.id === cotizacion.id) detalleCotizacion.value = data;
+    })
+    .catch(() => {
+      // se queda con la versión del listado; solo se pierde la sección de trazabilidad con Pedido
+    });
 }
+
+// Tiempo de punta a punta: desde que el cliente pidió la cotización hasta que el pedido se
+// entregó de verdad — cruza los dos módulos (Cotización cotiza, Pedido despacha) por el mismo
+// numeroProforma de KEYFACIL, ver PedidoRelacionado en types/cotizacion.ts.
+function formatDuracion(desdeIso: string, hastaIso: string): string {
+  const horas = (new Date(hastaIso).getTime() - new Date(desdeIso).getTime()) / 3_600_000;
+  if (horas < 24) return `${Math.round(horas)}h`;
+  const dias = Math.floor(horas / 24);
+  const resto = Math.round(horas % 24);
+  return resto > 0 ? `${dias}d ${resto}h` : `${dias}d`;
+}
+
+const tiempoTotalEntrega = computed(() => {
+  const entregadoEn = detalleCotizacion.value?.pedidoRelacionado?.entregadoEn;
+  const requerimientoEn = detalleCotizacion.value?.requerimientoEn;
+  if (!entregadoEn || !requerimientoEn) return null;
+  return formatDuracion(requerimientoEn, entregadoEn);
+});
+
+// SPA sin SSR (ver CLAUDE.md): window siempre existe acá, no hace falta guardarlo.
+const urlSeguimientoPedidoRelacionado = computed(() => {
+  const token = detalleCotizacion.value?.pedidoRelacionado?.tokenSeguimiento;
+  return token ? urlSeguimiento(window.location.origin, token) : "";
+});
 
 const { mutateAsync: eliminarCotizacion, isPending: eliminando } = useDeleteCotizacion();
 const eliminarOpen = ref(false);
@@ -483,6 +519,54 @@ function textoAlertas(c: Cotizacion) {
             <p class="text-muted-foreground">Avisado a almacén</p>
             <p class="font-medium">{{ formatFechaHora(detalleCotizacion.avisoAlmacenEn) }}</p>
           </div>
+          <div v-if="detalleCotizacion.pedidoRelacionado" class="col-span-2 space-y-2 rounded-md border border-border p-3">
+            <p class="flex items-center justify-between gap-2 text-muted-foreground">
+              <span class="flex items-center gap-1.5">
+                <Truck class="h-4 w-4" />
+                Trazabilidad con el pedido
+              </span>
+              <span v-if="tiempoTotalEntrega" class="font-mono text-xs tabular-nums text-foreground">
+                requerimiento → entrega: {{ tiempoTotalEntrega }}
+              </span>
+            </p>
+            <ul class="space-y-1 text-xs">
+              <li class="flex justify-between gap-2">
+                <span>Recibido en almacén</span>
+                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.recibidoEn) }}</span>
+              </li>
+              <li class="flex justify-between gap-2">
+                <span>Inicio de preparación</span>
+                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.inicioPreparacionEn) }}</span>
+              </li>
+              <li class="flex justify-between gap-2">
+                <span>Preparado</span>
+                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.preparadoEn) }}</span>
+              </li>
+              <li class="flex justify-between gap-2">
+                <span>Salió</span>
+                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.salioEn) }}</span>
+              </li>
+              <li class="flex justify-between gap-2">
+                <span>Entregado</span>
+                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.entregadoEn) }}</span>
+              </li>
+            </ul>
+            <a
+              :href="urlSeguimientoPedidoRelacionado"
+              target="_blank"
+              rel="noopener"
+              class="text-xs text-primary hover:underline"
+            >
+              Ver página pública de seguimiento →
+            </a>
+          </div>
+          <p
+            v-else-if="detalleCotizacion.numeroProforma"
+            class="col-span-2 text-xs text-muted-foreground"
+          >
+            Todavía no hay un Pedido registrado con esta proforma.
+          </p>
+
           <div class="col-span-2">
             <p class="text-muted-foreground">Notas</p>
             <p class="font-medium">{{ detalleCotizacion.notas ?? "—" }}</p>

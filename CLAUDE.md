@@ -145,6 +145,19 @@ every 1.5s up to 30s until the local print agent reports `IMPRESO` or `ERROR`.
 (`const { data } = await api.get<Producto[]>(...)`), but `/usuarios/me` is wrapped —
 `useUsuarioActual` reads `data.data`. Check the backend before assuming.
 
+**Cotizaciones (`pages/cotizaciones/`) — marcar vs. corregir.** `requerimientoEn`,
+`cotizacionEnviadaEn`, `pedidoAprobadoEn`, `avisoAlmacenEn` all follow the backend's audit policy
+(see backend `CLAUDE.md`): the first mark always uses server time, so `CotizacionForm.vue` doesn't
+even ask for `requerimientoEn` anymore, and `CotizacionFechaDialog.vue`/`CotizacionEnviarDialog.vue`
+only show an editable date + a required `motivo` textarea when `esCorreccion` (the field already
+has a value) — otherwise it's a static "se va a registrar con la hora actual" message. The "Corregir
+…" menu items in `pages/cotizaciones/index.vue` are gated by `esAdmin`, matching the backend's
+`ForbiddenException` for non-admins. Each `Cotizacion` carries `alertas` (integrity flags —
+feriado/ausencia/carga tardía, shown as warnings, never hidden) and `historial` (immutable audit
+trail) from the backend — both are rendered in the detail dialog and (for alerts) as a banner in
+`pages/cotizaciones/indicadores.vue`. `pages/ausencias/index.vue` is an admin-only registry feeding
+the ausencia check.
+
 **PDF viewing** uses `pdfjs-dist` with the worker imported as a Vite URL
 (`pdfjs-dist/build/pdf.worker.min.mjs?url`) — see `composables/usePdfViewer.ts`, rendered by
 `components/pdf/VisorPdf.vue`. It cancels the in-flight `renderTask` before each re-render and
