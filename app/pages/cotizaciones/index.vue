@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History } from "@lucide/vue";
+import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History } from "@lucide/vue";
 import {
   useCotizacionesQuery,
   useDeleteCotizacion,
 } from "~/composables/useCotizaciones";
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
+import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { toast } from "vue-sonner";
 import {
   ALERTA_COTIZACION_LABEL,
@@ -29,9 +31,33 @@ const page = ref(1);
 const filtroEstado = ref<EstadoCotizacion | "TODOS">("TODOS");
 const { data: cotizaciones, isPending, isError, refetch } = useCotizacionesQuery(filtroEstado);
 
+// --- Búsqueda + filtro por mes/año (sobre la fecha de requerimiento) ---
 const busqueda = ref("");
+const filtroMes = ref("TODOS");
+const filtroAnio = ref("TODOS");
+
+const MESES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+const aniosDisponibles = computed(() => {
+  const anios = new Set((cotizaciones.value ?? []).map((c) => new Date(c.requerimientoEn).getFullYear()));
+  return Array.from(anios).sort((a, b) => b - a);
+});
+
 const cotizacionesFiltradas = computed(() => {
   let lista = cotizaciones.value ?? [];
+
+  if (filtroMes.value !== "TODOS") {
+    const mes = Number(filtroMes.value);
+    lista = lista.filter((c) => new Date(c.requerimientoEn).getMonth() === mes);
+  }
+  if (filtroAnio.value !== "TODOS") {
+    const anio = Number(filtroAnio.value);
+    lista = lista.filter((c) => new Date(c.requerimientoEn).getFullYear() === anio);
+  }
+
   const q = busqueda.value.trim().toLowerCase();
   if (q) {
     lista = lista.filter(
@@ -41,8 +67,8 @@ const cotizacionesFiltradas = computed(() => {
   return lista;
 });
 
-// si cambia el filtro o la búsqueda, siempre volvemos a la página 1
-watch([filtroEstado, busqueda], () => {
+// si cambia cualquier filtro, siempre volvemos a la página 1
+watch([filtroEstado, filtroMes, filtroAnio, busqueda], () => {
   page.value = 1;
 });
 
@@ -55,6 +81,30 @@ const cotizacionesPaginadas = computed(() => {
   const start = (page.value - 1) * PAGE_SIZE;
   return cotizacionesFiltradas.value.slice(start, start + PAGE_SIZE);
 });
+
+const { progress, isExporting, exportar } = useXlsxExport();
+
+const xlsxColumns: XlsxColumn<Cotizacion>[] = [
+  { key: (c: Cotizacion) => c.cliente.nombre, label: "Cliente" },
+  { key: (c: Cotizacion) => c.numeroProforma ?? "", label: "N° Proforma" },
+  { key: (c: Cotizacion) => ESTADO_COTIZACION_LABEL[c.estado], label: "Estado" },
+  { key: (c: Cotizacion) => formatFechaHora(c.requerimientoEn), label: "Requerimiento del cliente" },
+  { key: (c: Cotizacion) => formatFechaHora(c.cotizacionEnviadaEn), label: "Cotización enviada" },
+  { key: (c: Cotizacion) => formatFechaHora(c.pedidoAprobadoEn), label: "Pedido aprobado" },
+  { key: (c: Cotizacion) => formatFechaHora(c.avisoAlmacenEn), label: "Avisado a almacén" },
+  { key: (c: Cotizacion) => c.notas ?? "", label: "Notas" },
+  { key: (c: Cotizacion) => textoAlertas(c), label: "Alertas de integridad" },
+  { key: (c: Cotizacion) => c.creadoPor.nombre, label: "Creado por" },
+];
+
+function exportarXlsx() {
+  // Exporta exactamente lo que se ve: tab de estado + búsqueda + mes/año
+  exportar(
+    cotizacionesFiltradas.value,
+    xlsxColumns,
+    `cotizaciones-${new Date().toISOString().slice(0, 10)}.xlsx`,
+  );
+}
 
 const TABS: { value: EstadoCotizacion | "TODOS"; label: string }[] = [
   { value: "TODOS", label: "Todas" },
@@ -171,6 +221,23 @@ function textoAlertas(c: Cotizacion) {
             Indicadores
           </NuxtLink>
         </Button>
+        <Button
+          variant="outline"
+          :disabled="isExporting || cotizacionesFiltradas.length === 0"
+          class="min-w-[168px] justify-center"
+          @click="exportarXlsx"
+        >
+          <template v-if="isExporting">
+            <ProgressBar :value="progress" compact class="w-20" />
+            <span class="ml-2 text-xs tabular-nums text-muted-foreground">
+              {{ Math.round(progress) }}%
+            </span>
+          </template>
+          <template v-else>
+            <Download class="h-4 w-4 mr-2" />
+            Exportar Excel
+          </template>
+        </Button>
         <Button v-if="permiso.puedeCrear" @click="dialogOpen = true">Nueva cotización</Button>
       </div>
     </div>
@@ -192,6 +259,26 @@ function textoAlertas(c: Cotizacion) {
         <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input v-model="busqueda" placeholder="Buscar por cliente o proforma..." aria-label="Buscar por cliente o proforma" class="pl-8" />
       </div>
+      <Select v-model="filtroMes">
+        <SelectTrigger class="w-40" aria-label="Filtrar por mes">
+          <SelectValue placeholder="Mes" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="TODOS">Todos los meses</SelectItem>
+          <SelectItem v-for="(mes, i) in MESES" :key="i" :value="String(i)">{{ mes }}</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select v-model="filtroAnio">
+        <SelectTrigger class="w-28" aria-label="Filtrar por año">
+          <SelectValue placeholder="Año" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="TODOS">Todos</SelectItem>
+          <SelectItem v-for="anio in aniosDisponibles" :key="anio" :value="String(anio)">
+            {{ anio }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
 
     <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
