@@ -1,4 +1,8 @@
-export type TipoNotificacion = 'PEDIDO_VENCIDO' | 'COTIZACION_SIN_AVISO_ALMACEN'
+export type TipoNotificacion =
+  | 'PEDIDO_VENCIDO'
+  | 'PEDIDO_SALIO_SIN_ENTREGAR'
+  | 'COTIZACION_SIN_AVISO_ALMACEN'
+  | 'COTIZACION_RESPUESTA_LENTA'
 
 export interface Notificacion {
   id: number
