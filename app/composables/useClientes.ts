@@ -1,11 +1,15 @@
+import type { MaybeRefOrGetter } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import type { ActualizarClienteInput, Cliente, ClienteInput } from '~/types/cliente'
 
 // Trae todos los clientes de una (son ~300) y el filtrado lo hace
 // Searchcombobox en memoria — mismo patrón que ya usan los combobox de lote.
-export function useClientesQuery() {
+// `enabled` es opcional (default: siempre habilitada) para no romper a los llamadores existentes
+// que ya viven detrás de una pantalla gateada por permiso (Clientes, los combobox de Cotización/Pedido).
+export function useClientesQuery(options: { enabled?: MaybeRefOrGetter<boolean> } = {}) {
   const api = useApi()
   return useQuery({
+    enabled: options.enabled,
     queryKey: ['clientes'],
     queryFn: async () => {
       const { data } = await api.get<Cliente[]>('/clientes')

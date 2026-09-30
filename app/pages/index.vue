@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight, Truck } from '@lucide/vue'
+import { Package, Layers, Factory, Printer, TriangleAlert, Plus, ArrowRight, Truck, Contact, ClipboardList } from '@lucide/vue'
 import { useProductos } from '~/composables/useProductos'
 import { useLotes } from '~/composables/useLotes'
 import { usePedidosQuery } from '~/composables/usePedidos'
+import { useCotizacionesQuery } from '~/composables/useCotizaciones'
+import { useClientesQuery } from '~/composables/useClientes'
 
 // Misma regla que el sidebar y el middleware: sin puedeVer no se consulta ni se muestra.
 const permisoProductos = usePermiso('PRODUCTOS')
@@ -11,16 +13,22 @@ const permisoLotes = usePermiso('LOTES')
 const permisoFabricantes = usePermiso('FABRICANTES')
 const permisoEtiquetas = usePermiso('ETIQUETAS')
 const permisoPedidos = usePermiso('PEDIDOS')
+const permisoCotizaciones = usePermiso('COTIZACIONES')
+const permisoClientes = usePermiso('CLIENTES')
 
 const { data: productos, isPending: cargandoProductos } = useProductos({ enabled: () => permisoProductos.puedeVer })
 const { data: lotes, isPending: cargandoLotes } = useLotes({ enabled: () => permisoLotes.puedeVer })
 const { data: fabricantes, isPending: cargandoFabricantes } = useFabricantesQuery({ enabled: () => permisoFabricantes.puedeVer })
 const { data: pedidos, isPending: cargandoPedidos } = usePedidosQuery(ref('TODOS'), { enabled: () => permisoPedidos.puedeVer })
+const { data: cotizaciones, isPending: cargandoCotizaciones } = useCotizacionesQuery(ref('TODOS'), { enabled: () => permisoCotizaciones.puedeVer })
+const { data: clientes, isPending: cargandoClientes } = useClientesQuery({ enabled: () => permisoClientes.puedeVer })
 
 const totalProductos = computed(() => productos.value?.length ?? 0)
 const totalLotes = computed(() => lotes.value?.length ?? 0)
 const totalFabricantes = computed(() => fabricantes.value?.length ?? 0)
 const totalPedidos = computed(() => pedidos.value?.length ?? 0)
+const totalCotizaciones = computed(() => cotizaciones.value?.length ?? 0)
+const totalClientes = computed(() => clientes.value?.length ?? 0)
 
 // lotes que vencen en los próximos 30 días — ajusta el campo si tu
 // tipo Lote usa otro nombre para la fecha de vencimiento
@@ -73,6 +81,22 @@ const resguardos = computed(() =>
       to: '/pedidos',
       visible: permisoPedidos.puedeVer,
     },
+    {
+      label: 'Cotizaciones',
+      value: totalCotizaciones.value,
+      loading: cargandoCotizaciones.value,
+      icon: ClipboardList,
+      to: '/cotizaciones',
+      visible: permisoCotizaciones.puedeVer,
+    },
+    {
+      label: 'Clientes',
+      value: totalClientes.value,
+      loading: cargandoClientes.value,
+      icon: Contact,
+      to: '/clientes',
+      visible: permisoClientes.puedeVer,
+    },
   ].filter((r) => r.visible),
 )
 
@@ -101,7 +125,7 @@ const accesosRapidos = [
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Excellence Chemical S.A.C.
           </p>
-          <h1 class="text-2xl font-semibold mt-1">Panel de etiquetado</h1>
+          <h1 class="text-2xl font-semibold mt-1">Gestión Excellence Chemical</h1>
         </div>
       </div>
       <div class="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
