@@ -164,8 +164,11 @@ const resumenTotal = computed(() => {
   const lista = pedidosConCotizacion.value;
   const total = lista.length;
   const promedioCotizacion = total ? lista.reduce((s, p) => s + p.horasCotizacion, 0) / total : 0;
+  // Promedio de la etapa Almacén sobre este mismo subconjunto (no el `resumen.promedioHoras`
+  // general, que mezcla pedidos sin cotización vinculada) — así las 3 tarjetas suman entre sí.
+  const promedioAlmacen = total ? lista.reduce((s, p) => s + p.horas, 0) / total : 0;
   const promedioTotal = total ? lista.reduce((s, p) => s + p.horasTotal, 0) / total : 0;
-  return { total, promedioCotizacion, promedioTotal };
+  return { total, promedioCotizacion, promedioAlmacen, promedioTotal };
 });
 
 const peoresTotal = computed(() => [...pedidosConCotizacion.value].sort((a, b) => b.horasTotal - a.horasTotal).slice(0, 15));
@@ -304,7 +307,7 @@ function exportarReporte() {
             kpis: [
               ["Pedidos con cotización vinculada", resumenTotal.value.total],
               ["Promedio en etapa Cotización (requerimiento→recepción)", Number(resumenTotal.value.promedioCotizacion.toFixed(1))],
-              ["Promedio en etapa Almacén (recepción→entrega)", Number(r.promedioHoras.toFixed(1))],
+              ["Promedio en etapa Almacén (recepción→entrega)", Number(resumenTotal.value.promedioAlmacen.toFixed(1))],
               ["Promedio total (requerimiento→entrega)", Number(resumenTotal.value.promedioTotal.toFixed(1))],
             ],
           },
@@ -567,7 +570,7 @@ function exportarReporte() {
             </div>
             <div class="rounded-md border border-border p-3">
               <p class="text-xs text-muted-foreground">Etapa Almacén (recepción → entrega)</p>
-              <p class="text-xl font-semibold">{{ formatNumero(resumen.promedioHoras) }}h</p>
+              <p class="text-xl font-semibold">{{ formatNumero(resumenTotal.promedioAlmacen) }}h</p>
             </div>
             <div class="rounded-md border border-primary/30 bg-primary/5 p-3">
               <p class="text-xs text-muted-foreground">Total (requerimiento → entrega)</p>
