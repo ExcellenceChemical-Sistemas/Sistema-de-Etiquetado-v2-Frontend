@@ -17,11 +17,12 @@ const { mutate: marcarLeida } = useMarcarNotificacionLeida();
 const { mutateAsync: marcarTodas, isPending: marcandoTodas } = useMarcarTodasLeidas();
 const { mutate: eliminarNotificacion } = useEliminarNotificacion();
 
-function abrirPedido(n: Notificacion) {
+function abrirOrigen(n: Notificacion) {
   if (!n.leidaEn) marcarLeida(n.id);
-  // Pedidos no tiene una vista de detalle propia por id (todo el detalle se ve en la lista),
-  // así que solo lleva a la lista general — no hay un deep-link más específico posible hoy.
+  // Ni Pedidos ni Cotizaciones tienen una vista de detalle propia por id (todo el detalle se ve
+  // en la lista), así que solo lleva a la lista general — no hay un deep-link más específico hoy.
   if (n.pedidoId) navigateTo("/pedidos");
+  else if (n.cotizacionId) navigateTo("/cotizaciones");
 }
 </script>
 
@@ -63,8 +64,8 @@ function abrirPedido(n: Notificacion) {
             <button
               type="button"
               class="min-w-0 flex-1 text-left"
-              :class="n.pedidoId != null && 'cursor-pointer'"
-              @click="abrirPedido(n)"
+              :class="(n.pedidoId != null || n.cotizacionId != null) && 'cursor-pointer'"
+              @click="abrirOrigen(n)"
             >
               <p class="text-sm" :class="!n.leidaEn && 'font-medium'">{{ n.mensaje }}</p>
               <p class="text-xs text-muted-foreground">{{ formatFechaHora(n.createdAt) }}</p>
