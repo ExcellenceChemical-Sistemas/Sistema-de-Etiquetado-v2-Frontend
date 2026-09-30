@@ -4,7 +4,7 @@ import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle } from "@lucide/vu
 import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
-import type { Cotizacion, EstadoCotizacion } from "~/types/cotizacion";
+import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
 // indicador comercial (DS-TIEMPO DE RESP-JOEL): tiempo de respuesta de
@@ -99,6 +99,12 @@ const peoresAviso = computed(() =>
 function formatNumero(n: number, decimales = 1) {
   return n.toLocaleString("es-PE", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
 }
+
+// Registros cuya fecha de alguna etapa cayó en un feriado/fin de semana o dentro de una ausencia
+// registrada de quien la cargó — ver Ausencias. No se excluyen de los promedios de arriba (eso
+// podría esconder un problema real), se muestran aparte para que se revisen antes de confiar en
+// el indicador.
+const cotizacionesConAlertas = computed(() => cotizacionesFiltradas.value.filter((c) => c.alertas.length > 0));
 </script>
 
 <template>
@@ -155,6 +161,38 @@ function formatNumero(n: number, decimales = 1) {
     <template v-else>
       <ScrollArea class="min-h-0 flex-1">
         <div class="space-y-6 pr-2">
+          <Card v-if="cotizacionesConAlertas.length > 0" class="border-amber-500/40 bg-amber-500/10">
+            <CardHeader class="pb-2">
+              <CardTitle class="flex items-center gap-1.5 text-sm font-medium text-amber-700">
+                <AlertTriangle class="h-4 w-4" />
+                {{ cotizacionesConAlertas.length }} registro(s) con alerta de integridad — revisar antes de confiar en el promedio
+              </CardTitle>
+            </CardHeader>
+            <CardContent class="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Proforma</TableHead>
+                    <TableHead>Motivo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="c in cotizacionesConAlertas" :key="c.id">
+                    <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
+                    <TableCell>{{ c.numeroProforma ?? "—" }}</TableCell>
+                    <TableCell class="text-xs">
+                      <div v-for="(a, i) in c.alertas" :key="i">
+                        <span class="font-medium">{{ CAMPO_COTIZACION_LABEL[a.campo] }}</span>:
+                        {{ ALERTA_COTIZACION_LABEL[a.tipo] }}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
           <!-- Bloque 1: tiempo de respuesta de cotización -->
           <section class="space-y-3">
             <h2 class="text-lg font-semibold">Tiempo de respuesta de cotización</h2>

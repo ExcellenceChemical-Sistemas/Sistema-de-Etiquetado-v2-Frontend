@@ -24,6 +24,7 @@ import {
   Truck,
   Contact,
   ClipboardList,
+  ShieldAlert,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
@@ -116,6 +117,12 @@ const items = computed(() =>
       url: "/usuarios",
       icon: Users,
       visible: permisoUsuarios.puedeVer || esAdminKpis.value,
+    },
+    {
+      title: "Ausencias",
+      url: "/ausencias",
+      icon: ShieldAlert,
+      visible: esAdmin.value,
     },
   ].filter((i) => i.visible),
 );

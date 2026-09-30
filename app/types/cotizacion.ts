@@ -14,6 +14,25 @@ interface UsuarioResumen {
   nombre: string
 }
 
+export type TipoAlertaCotizacion = 'FERIADO_O_FIN_DE_SEMANA' | 'AUSENCIA_REGISTRADA'
+
+export interface AlertaCotizacion {
+  campo: 'cotizacionEnviadaEn' | 'pedidoAprobadoEn' | 'avisoAlmacenEn'
+  tipo: TipoAlertaCotizacion
+  motivo?: string
+}
+
+export const ALERTA_COTIZACION_LABEL: Record<TipoAlertaCotizacion, string> = {
+  FERIADO_O_FIN_DE_SEMANA: 'cae en fin de semana o feriado (la empresa no trabaja ese día)',
+  AUSENCIA_REGISTRADA: 'cae dentro de una ausencia registrada de quien cargó el dato',
+}
+
+export const CAMPO_COTIZACION_LABEL: Record<AlertaCotizacion['campo'], string> = {
+  cotizacionEnviadaEn: 'Cotización enviada',
+  pedidoAprobadoEn: 'Pedido aprobado',
+  avisoAlmacenEn: 'Aviso a almacén',
+}
+
 // Seguimiento del proceso de Joel (ver comentario en schema.prisma del backend): mismo patrón
 // que Pedido, sin columna "estado" propia — el backend la deriva de qué fechas están seteadas.
 // Insumos, cantidades y precio siguen viviendo en KEYFACIL ERP, no acá.
@@ -35,6 +54,7 @@ export interface Cotizacion {
   createdAt: string
   updatedAt: string
   estado: EstadoCotizacion
+  alertas: AlertaCotizacion[]
 }
 
 export interface CrearCotizacionInput {

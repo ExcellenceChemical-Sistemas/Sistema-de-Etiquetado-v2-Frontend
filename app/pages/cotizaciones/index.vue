@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil } from "@lucide/vue";
+import { Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert } from "@lucide/vue";
 import {
   useCotizacionesQuery,
   useDeleteCotizacion,
@@ -8,7 +8,13 @@ import {
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
 import { toast } from "vue-sonner";
-import { ESTADO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
+import {
+  ALERTA_COTIZACION_LABEL,
+  CAMPO_COTIZACION_LABEL,
+  ESTADO_COTIZACION_LABEL,
+  type Cotizacion,
+  type EstadoCotizacion,
+} from "~/types/cotizacion";
 import CotizacionForm from "~/components/cotizaciones/CotizacionForm.vue";
 import CotizacionFechaDialog from "~/components/cotizaciones/CotizacionFechaDialog.vue";
 import CotizacionEnviarDialog from "~/components/cotizaciones/CotizacionEnviarDialog.vue";
@@ -117,6 +123,12 @@ async function confirmarEliminar() {
     toast.error(e?.response?.data?.message ?? "No se pudo eliminar la cotización");
   }
 }
+
+function textoAlertas(c: Cotizacion) {
+  return c.alertas
+    .map((a) => `${CAMPO_COTIZACION_LABEL[a.campo]}: ${ALERTA_COTIZACION_LABEL[a.tipo]}`)
+    .join("\n");
+}
 </script>
 
 <template>
@@ -194,8 +206,15 @@ async function confirmarEliminar() {
           </template>
           <template v-else>
             <TableRow v-for="c in cotizacionesFiltradas" :key="c.id">
-              <TableCell class="max-w-48 truncate font-medium" :title="c.cliente.nombre">
-                {{ c.cliente.nombre }}
+              <TableCell class="max-w-48 truncate font-medium">
+                <span class="inline-flex items-center gap-1.5" :title="c.cliente.nombre">
+                  <TriangleAlert
+                    v-if="c.alertas.length > 0"
+                    class="h-4 w-4 shrink-0 text-amber-500"
+                    :title="textoAlertas(c)"
+                  />
+                  {{ c.cliente.nombre }}
+                </span>
               </TableCell>
               <TableCell>{{ c.numeroProforma ?? "—" }}</TableCell>
               <TableCell :title="formatFechaHora(c.requerimientoEn)">
@@ -319,6 +338,19 @@ async function confirmarEliminar() {
           <div class="col-span-2">
             <p class="text-muted-foreground">Notas</p>
             <p class="font-medium">{{ detalleCotizacion.notas ?? "—" }}</p>
+          </div>
+          <div v-if="detalleCotizacion.alertas.length > 0" class="col-span-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+            <p class="mb-1 flex items-center gap-1.5 font-medium text-amber-600">
+              <TriangleAlert class="h-4 w-4" />
+              Alertas de integridad
+            </p>
+            <ul class="list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
+              <li v-for="(a, i) in detalleCotizacion.alertas" :key="i">
+                <span class="font-medium text-foreground">{{ CAMPO_COTIZACION_LABEL[a.campo] }}</span>:
+                {{ ALERTA_COTIZACION_LABEL[a.tipo] }}
+                <span v-if="a.motivo">({{ a.motivo }})</span>
+              </li>
+            </ul>
           </div>
           <div>
             <p class="text-muted-foreground">Creado por</p>
