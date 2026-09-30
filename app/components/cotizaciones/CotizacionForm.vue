@@ -6,6 +6,7 @@ import { useClientesQuery } from "~/composables/useClientes";
 import { useCreateCotizacion } from "~/composables/useCotizaciones";
 import type { Cliente } from "~/types/cliente";
 import { toast } from "vue-sonner";
+import { datetimeLocalAhora, datetimeLocalAIso } from "~/utils/fechaHora";
 
 const emit = defineEmits<{ success: [] }>();
 
@@ -13,9 +14,11 @@ const { data: clientes, isLoading: cargandoClientes } = useClientesQuery();
 
 const { handleSubmit, defineField, errors, isSubmitting } = useForm({
   validationSchema: toTypedSchema(cotizacionSchema),
+  initialValues: { requerimientoEn: datetimeLocalAhora() },
 });
 
 const [clienteId] = defineField("clienteId", { validateOnModelUpdate: false });
+const [requerimientoEn, requerimientoEnAttrs] = defineField("requerimientoEn");
 const [notas, notasAttrs] = defineField("notas");
 
 function clienteLabel(c: Cliente) {
@@ -28,6 +31,7 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     await crearCotizacion({
       clienteId: values.clienteId,
+      requerimientoEn: datetimeLocalAIso(values.requerimientoEn),
       notas: values.notas,
     });
     toast.success("Cotización registrada como recibida");
@@ -60,11 +64,23 @@ const onSubmit = handleSubmit(async (values) => {
       </p>
     </div>
 
-    <p class="text-xs text-muted-foreground">
-      La fecha y hora de requerimiento se registra ahora, con la hora del sistema — así el
-      indicador mide el tiempo real desde que llegó el pedido. Si hace falta corregirla porque se
-      cargó tarde, solo un administrador puede hacerlo después.
-    </p>
+    <div class="space-y-2">
+      <Label for="requerimientoEn">Fecha y hora de requerimiento</Label>
+      <Input
+        id="requerimientoEn"
+        v-model="requerimientoEn"
+        v-bind="requerimientoEnAttrs"
+        type="datetime-local"
+        step="1"
+      />
+      <p v-if="errors.requerimientoEn" class="text-sm text-destructive">
+        {{ errors.requerimientoEn }}
+      </p>
+      <p v-else class="text-xs text-muted-foreground">
+        Precargada con la hora actual — se puede cambiar, por ejemplo si el cliente hizo el pedido
+        antes de cargarlo en el sistema.
+      </p>
+    </div>
 
     <div class="space-y-2">
       <Label for="notas">Notas (opcional)</Label>

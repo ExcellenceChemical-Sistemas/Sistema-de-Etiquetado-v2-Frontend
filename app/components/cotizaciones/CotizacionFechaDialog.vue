@@ -5,10 +5,11 @@ import { useUpdateCotizacion } from "~/composables/useCotizaciones";
 import { isoADatetimeLocal, datetimeLocalAIso } from "~/utils/fechaHora";
 import type { Cotizacion, ActualizarCotizacionInput } from "~/types/cotizacion";
 
-// Las 4 fechas (incluida requerimientoEn) se fijan con la hora real del servidor la primera vez
-// que se marcan — nadie elige el valor. Si ya estaban marcadas (requerimientoEn siempre lo está,
-// se fija al crear la cotización), es una corrección: exclusiva de un Admin, con motivo
-// obligatorio. El backend aplica la misma regla — esto solo evita el viaje redondo con un 403.
+// cotizacionEnviadaEn/pedidoAprobadoEn/avisoAlmacenEn se fijan con la hora real del servidor la
+// primera vez que se marcan — nadie elige el valor. Si ya estaban marcadas, es una corrección:
+// exclusiva de un Admin, con motivo obligatorio (el backend aplica la misma regla, esto solo evita
+// el viaje redondo con un 403). requerimientoEn es distinto: es de carga libre, así que siempre
+// deja elegir fecha y hora y nunca pide motivo, sin importar si ya tenía un valor.
 const props = defineProps<{
   open: boolean;
   cotizacion: Cotizacion | null;
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 }>();
 
 const esCorreccion = computed(() => !!props.cotizacion?.[props.campo]);
+// requerimientoEn nunca pasa por el flujo de corrección con motivo: es de carga libre.
+const pideMotivo = computed(() => esCorreccion.value && props.campo !== 'requerimientoEn');
 
 const valor = ref("");
 const motivo = ref("");
@@ -39,7 +42,7 @@ const { mutateAsync: actualizar, isPending } = useUpdateCotizacion();
 
 const puedeGuardar = computed(() => {
   if (!valor.value) return false;
-  if (esCorreccion.value) return !!motivo.value.trim();
+  if (pideMotivo.value) return !!motivo.value.trim();
   return true;
 });
 
@@ -50,7 +53,7 @@ async function guardar() {
       // Al marcar por primera vez el backend ignora el valor y usa su propia hora — igual se manda
       // "ahora" acá solo para no dejar el campo vacío. Al corregir sí importa el valor elegido.
       [props.campo]: esCorreccion.value ? datetimeLocalAIso(valor.value) : new Date().toISOString(),
-      ...(esCorreccion.value && { motivoCorreccion: motivo.value.trim() }),
+      ...(pideMotivo.value && { motivoCorreccion: motivo.value.trim() }),
     };
     await actualizar({ id: props.cotizacion.id, input });
     toast.success("Cotización actualizada");
@@ -74,7 +77,7 @@ async function guardar() {
           Se va a registrar con la hora actual del sistema — no es editable, para que el
           indicador mida el tiempo real.
         </p>
-        <div v-if="esCorreccion" class="space-y-2">
+        <div v-if="pideMotivo" class="space-y-2">
           <Label for="motivo">Motivo de la corrección</Label>
           <Textarea id="motivo" v-model="motivo" rows="2" placeholder="Por qué se corrige esta fecha" />
         </div>

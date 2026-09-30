@@ -432,9 +432,9 @@ function textoAlertas(c: Cotizacion) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <template v-if="permiso.puedeEditar">
-                        <DropdownMenuItem v-if="esAdmin" @click="abrirFecha(c, 'requerimientoEn', 'Corregir fecha de requerimiento')">
+                        <DropdownMenuItem @click="abrirFecha(c, 'requerimientoEn', 'Editar fecha de requerimiento')">
                           <Pencil class="mr-2 h-3.5 w-3.5" />
-                          Corregir requerimiento
+                          Editar requerimiento
                         </DropdownMenuItem>
                         <DropdownMenuItem v-if="c.cotizacionEnviadaEn && esAdmin" @click="abrirEnviar(c)">
                           <Pencil class="mr-2 h-3.5 w-3.5" />

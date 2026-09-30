@@ -25,10 +25,12 @@ import {
   Contact,
   ClipboardList,
   ShieldAlert,
+  Bell,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
 import { useAccesoKpisIso } from "~/composables/useAccesoKpisIso";
+import { useNotificacionesNoLeidasQuery } from "~/composables/useNotificaciones";
 
 const { session } = useAuth();
 
@@ -52,6 +54,8 @@ const permisoClientes = usePermiso("CLIENTES");
 
 const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
 
+const { data: notificacionesNoLeidas } = useNotificacionesNoLeidasQuery();
+
 // Gestiona accesos de KPIs/ISO sin ser admin general: entra a /usuarios
 // aunque no tenga el permiso USUARIOS (ver middleware/permisos.global.ts).
 const esAdminKpis = computed(() => usuarioActual.value?.esAdminKpis === true);
@@ -59,6 +63,13 @@ const esAdminKpis = computed(() => usuarioActual.value?.esAdminKpis === true);
 const items = computed(() =>
   [
     { title: "Inicio", url: "/", icon: Home, visible: true },
+    {
+      title: "Mensajería",
+      url: "/mensajeria",
+      icon: Bell,
+      visible: true,
+      badge: notificacionesNoLeidas.value || undefined,
+    },
     {
       title: "Fabricantes",
       url: "/fabricantes",
@@ -177,6 +188,12 @@ const route = useRoute();
                 <NuxtLink :to="item.url">
                   <component :is="item.icon" />
                   <span>{{ item.title }}</span>
+                  <span
+                    v-if="item.badge"
+                    class="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground group-data-[collapsible=icon]:hidden"
+                  >
+                    {{ item.badge }}
+                  </span>
                 </NuxtLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

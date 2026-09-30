@@ -87,10 +87,11 @@ export interface Cotizacion {
   pedidoRelacionado?: PedidoRelacionado | null
 }
 
-// requerimientoEn no se manda al crear: el backend siempre usa la hora real del servidor (ver
-// CrearCotizacionDto en el backend). Corregirla después es exclusivo de un Admin (ActualizarCotizacionInput).
+// requerimientoEn es de carga libre (ver CAMPOS_PROTEGIDOS en el backend): si no se manda, el
+// backend usa la hora del servidor; si se manda, se usa tal cual, sin restricción de Admin.
 export interface CrearCotizacionInput {
   clienteId: number
+  requerimientoEn?: string
   notas?: string
 }
 
