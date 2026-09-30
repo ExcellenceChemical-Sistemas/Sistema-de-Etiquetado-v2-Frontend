@@ -61,6 +61,12 @@ export interface Usuario {
    * Opcional hasta que corra la migración que agrega el campo en el backend.
    */
   esAdminKpis?: boolean
+  /**
+   * Refrigerio del usuario, en minutos desde medianoche (ej. 720 = 12:00pm). Ambos null/ausentes
+   * = sin configurar. Usado por AlertasPedidosService (backend) para no contarlo como hora hábil.
+   */
+  refrigerioInicioMinutos?: number | null
+  refrigerioFinMinutos?: number | null
   /** Lo devuelve /usuarios/me; null o ausente si el usuario no subió foto. */
   avatarUrl?: string | null
   permisos: Permiso[]

@@ -40,6 +40,43 @@ const permisosState = reactive(crearPermisosStateVacio());
 const accesosKpisIsoState = reactive(crearAccesosKpisIsoStateVacio());
 const guardando = ref(false);
 
+// Refrigerio en minutos desde medianoche <-> "HH:mm" para los <input type="time">.
+function minutosAHora(minutos: number | null | undefined): string {
+  if (minutos == null) return "";
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+function horaAMinutos(hora: string): number | null {
+  if (!hora) return null;
+  const [h = 0, m = 0] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
+
+const refrigerioInicio = ref("");
+const refrigerioFin = ref("");
+const guardandoRefrigerio = ref(false);
+
+// Guardado independiente del flujo de permisos/accesos KPIs-ISO: aplica también a un usuario
+// esAdmin (el botón "Guardar permisos" está oculto para admins, que no tienen permisos por
+// módulo — pero sí pueden tener un refrigerio cargado).
+async function guardarRefrigerio() {
+  if (!props.usuario) return;
+  guardandoRefrigerio.value = true;
+  try {
+    const api = useApi();
+    await api.patch(`/usuarios/${props.usuario.id}/refrigerio`, {
+      refrigerioInicioMinutos: horaAMinutos(refrigerioInicio.value),
+      refrigerioFinMinutos: horaAMinutos(refrigerioFin.value),
+    });
+    toast.success("Refrigerio actualizado");
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? "No se pudo guardar el refrigerio");
+  } finally {
+    guardandoRefrigerio.value = false;
+  }
+}
+
 const { esAdmin: soyAdmin, usuarioActual: usuarioLogueado } = useUsuarioActual();
 
 /**
@@ -165,6 +202,8 @@ watch(
       poblarPermisosState(permisosState, usuario.permisos ?? []);
       // los accesos de KPIs/ISO siempre se piden aparte, nunca se leen de la fila
       cargarAccesos(usuario.id);
+      refrigerioInicio.value = minutosAHora(usuario.refrigerioInicioMinutos);
+      refrigerioFin.value = minutosAHora(usuario.refrigerioFinMinutos);
     }
   },
   { immediate: true },
@@ -190,6 +229,7 @@ async function guardar() {
         permisos: permisosStateAArray(permisosState),
       }));
     }
+
 
     ({ data } = await api.patch(
       `/usuarios/${props.usuario.id}/accesos-kpis-iso`,
@@ -267,6 +307,23 @@ async function guardar() {
               </p>
             </div>
             <AdminAccesoskpisiso v-else v-model="accesosKpisIsoState" />
+          </div>
+
+          <div v-if="soyAdmin" class="space-y-1.5 pt-2">
+            <p class="text-sm font-medium">Refrigerio</p>
+            <p class="text-xs text-muted-foreground">
+              Se usa para no contarlo como hora hábil en la alerta de pedidos vencidos. Dejá los dos
+              campos vacíos si este usuario no tiene un horario fijo cargado.
+            </p>
+            <div class="flex items-center gap-2">
+              <Input v-model="refrigerioInicio" type="time" class="w-32" aria-label="Inicio del refrigerio" />
+              <span class="text-sm text-muted-foreground">a</span>
+              <Input v-model="refrigerioFin" type="time" class="w-32" aria-label="Fin del refrigerio" />
+              <Button variant="outline" size="sm" :disabled="guardandoRefrigerio" @click="guardarRefrigerio">
+                <Loader2 v-if="guardandoRefrigerio" class="h-4 w-4 animate-spin" />
+                Guardar refrigerio
+              </Button>
+            </div>
           </div>
         </div>
       </ScrollArea>
