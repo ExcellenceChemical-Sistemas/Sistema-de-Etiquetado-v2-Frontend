@@ -48,6 +48,7 @@ const permisoEtiquetas = usePermiso("ETIQUETAS");
 const permisoUsuarios = usePermiso("USUARIOS");
 const permisoPedidos = usePermiso("PEDIDOS");
 const permisoCotizaciones = usePermiso("COTIZACIONES");
+const permisoClientes = usePermiso("CLIENTES");
 
 const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
 
@@ -105,7 +106,7 @@ const items = computed(() =>
       title: "Clientes",
       url: "/clientes",
       icon: Contact,
-      visible: permisoPedidos.puedeVer,
+      visible: permisoClientes.puedeVer,
     },
     {
       title: "Cotizaciones",

@@ -42,15 +42,12 @@ describe('rutaPermitida', () => {
     expect(rutaPermitida('/lotesx', usuario(), false)).toBe(true) // ruta libre, no la de lotes
   })
 
-  it('/clientes y /pedidos comparten PEDIDOS', () => {
-    const u = conPermiso('PEDIDOS', 'puedeVer')
-    expect(rutaPermitida('/clientes', u, false)).toBe(true)
-    expect(rutaPermitida('/pedidos', u, false)).toBe(true)
-  })
-
-  it('/cotizaciones tiene su propio recurso, separado de PEDIDOS', () => {
+  it('Pedidos, Cotizaciones y Clientes tienen cada uno su propio recurso', () => {
+    expect(rutaPermitida('/pedidos', conPermiso('PEDIDOS', 'puedeVer'), false)).toBe(true)
     expect(rutaPermitida('/cotizaciones', conPermiso('PEDIDOS', 'puedeVer'), false)).toBe(false)
     expect(rutaPermitida('/cotizaciones', conPermiso('COTIZACIONES', 'puedeVer'), false)).toBe(true)
+    expect(rutaPermitida('/clientes', conPermiso('PEDIDOS', 'puedeVer'), false)).toBe(false)
+    expect(rutaPermitida('/clientes', conPermiso('CLIENTES', 'puedeVer'), false)).toBe(true)
   })
 
   it('el Admin de KPIs entra a /usuarios sin el permiso USUARIOS, pero solo ahí', () => {

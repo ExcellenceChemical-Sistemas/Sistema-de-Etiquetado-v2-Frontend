@@ -12,7 +12,7 @@ import { usePermiso } from "~/composables/usePermiso";
 import { TIPO_DOCUMENTO_CLIENTE_LABEL, type Cliente } from "~/types/cliente";
 import { toast } from "vue-sonner";
 
-const permiso = usePermiso("PEDIDOS");
+const permiso = usePermiso("CLIENTES");
 
 const { data: clientes, isPending, isFetching, isError, refetch } = useClientesQuery();
 

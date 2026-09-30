@@ -14,18 +14,25 @@ const props = defineProps<{
 }>();
 
 // Dependencias entre permisos: algunas pantallas llenan sus selectores con
-// listas de otro recurso. Sin el "Ver" de ese recurso el backend responde 403
-// y el selector queda vacío, así que se tilda solo. Se puede destildar a mano.
+// listas de otro recurso, o dan acceso a una acción de otro recurso desde su propia pantalla.
+// Sin ese permiso el backend responde 403 (selector vacío, o botón que falla al guardar), así
+// que se tilda solo. Se puede destildar a mano. Por defecto se tilda "Ver"; se puede pedir otra
+// acción puntual con { recurso, accion }.
 //   - Generar etiqueta: plantillas (PLANTILLAS) y lotes (LOTES).
 //   - Formulario de lote: productos (PRODUCTOS) y fabricantes (FABRICANTES).
-//   - Nueva cotización: el combobox de cliente lee /clientes (recurso PEDIDOS) — alguien con
-//     COTIZACIONES pero sin ningún Pedidos vería el selector vacío.
+//   - Nueva cotización / Nuevo pedido: el combobox de cliente lee /clientes (recurso CLIENTES,
+//     propio), y el link "Créalo en Clientes" deja crear uno nuevo ahí mismo — hace falta Ver y
+//     Crear en Clientes, no solo Ver, si no quien solo tiene COTIZACIONES o PEDIDOS no puede
+//     registrar un cliente nuevo.
 type Accion = (typeof ACCIONES)[number]["key"];
-const DEPENDENCIAS: { recurso: Recurso; accion: Accion; requiere: Recurso[] }[] = [
+type Requisito = Recurso | { recurso: Recurso; accion: Accion };
+const REQUIERE_CLIENTES: Requisito[] = ["CLIENTES", { recurso: "CLIENTES", accion: "puedeCrear" }];
+const DEPENDENCIAS: { recurso: Recurso; accion: Accion; requiere: Requisito[] }[] = [
   { recurso: "ETIQUETAS", accion: "puedeCrear", requiere: ["PLANTILLAS", "LOTES"] },
   { recurso: "LOTES", accion: "puedeCrear", requiere: ["PRODUCTOS", "FABRICANTES"] },
   { recurso: "LOTES", accion: "puedeEditar", requiere: ["PRODUCTOS", "FABRICANTES"] },
-  { recurso: "COTIZACIONES", accion: "puedeCrear", requiere: ["PEDIDOS"] },
+  { recurso: "COTIZACIONES", accion: "puedeCrear", requiere: REQUIERE_CLIENTES },
+  { recurso: "PEDIDOS", accion: "puedeCrear", requiere: REQUIERE_CLIENTES },
 ];
 
 function cambiar(recurso: Recurso, key: Accion, valor: boolean) {
@@ -33,7 +40,10 @@ function cambiar(recurso: Recurso, key: Accion, valor: boolean) {
   if (!valor) return;
   for (const d of DEPENDENCIAS) {
     if (d.recurso === recurso && d.accion === key) {
-      for (const r of d.requiere) props.modelValue[r].puedeVer = true;
+      for (const r of d.requiere) {
+        if (typeof r === "string") props.modelValue[r].puedeVer = true;
+        else props.modelValue[r.recurso][r.accion] = true;
+      }
     }
   }
 }

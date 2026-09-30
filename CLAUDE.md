@@ -95,14 +95,19 @@ answer whenever delete answers 409.
 **Two parallel permission systems.** Do not conflate them:
 
 1. *CRUD permisos* — `utils/permisos.ts` holds `RECURSOS`
-   (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`) × four
-   booleans (`puedeVer`/`puedeCrear`/`puedeEditar`/`puedeEliminar`). This file must mirror the
-   backend's Zod enum in `usuarios.dto.ts`; adding a recurso there means adding it here.
-   There is no `COA` resource: COA upload is controlled by `LOTES.puedeEditar`. `/clientes` shares `PEDIDOS` on purpose.
+   (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`,
+   `COTIZACIONES`, `CLIENTES`) × four booleans (`puedeVer`/`puedeCrear`/`puedeEditar`/`puedeEliminar`).
+   This file must mirror the backend's Zod enum in `usuarios.dto.ts`; adding a recurso there means
+   adding it here. There is no `COA` resource: COA upload is controlled by `LOTES.puedeEditar`.
+   `PEDIDOS`, `COTIZACIONES`, and `CLIENTES` used to all share `PEDIDOS` but were split into their own
+   resources — different people are responsible for each in practice.
    `usePermiso('RECURSO')` returns a reactive object with `esAdmin` bypass baked in.
    Some screens fill their selectors from another resource's list, so they need that "Ver" too:
    Generar Etiqueta needs `PLANTILLAS` and `LOTES` (`puedeVer`); the lote form needs `PRODUCTOS` and
-   `FABRICANTES`. `Permisosgrid.vue` auto-ticks them through its `DEPENDENCIAS` table, and each screen
+   `FABRICANTES`; Nueva Cotización and Nuevo Pedido both need `CLIENTES` `puedeVer`+`puedeCrear` (the
+   client combobox and its "create new client" link read/write `/clientes`).
+   `Permisosgrid.vue` auto-ticks them through its `DEPENDENCIAS` table (most entries only need
+   `puedeVer` on the dependency, but the `CLIENTES` ones tick `puedeCrear` too), and each screen
    shows a "no tenés permiso" message on a 403 instead of an empty selector. New dependency → add a row.
 2. *KPIs/ISO accesos* — `useAccesoKpisIso()` resolves per-folder access from
    `usuarioActual.accesosIndicador` (per `ProcesoIndicador`) and `accesoIso`, each with five

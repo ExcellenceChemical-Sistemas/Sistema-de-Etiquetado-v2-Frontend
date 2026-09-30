@@ -6,10 +6,10 @@
 // COA no es un recurso propio: subir/reemplazar/eliminar el COA de un lote se
 // controla con LOTES.puedeEditar (ver lotes.controller.ts en el backend). No
 // se lista acá para no ofrecer en el grid un permiso que ningún guard consulta.
-// PEDIDOS y COTIZACIONES son recursos separados a propósito: los encargados son personas
-// distintas (uno despacha pedidos, otro cotiza) — antes compartían uno solo y no se podía
-// otorgar acceso a uno sin el otro.
-export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS', 'COTIZACIONES'] as const
+// PEDIDOS, COTIZACIONES y CLIENTES son recursos separados a propósito: los encargados son
+// personas distintas (una despacha pedidos, otra cotiza, y Clientes lo puede llevar alguien
+// más) — antes compartían PEDIDOS y no se podía otorgar acceso a uno sin los otros.
+export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS', 'COTIZACIONES', 'CLIENTES'] as const
 export type Recurso = (typeof RECURSOS)[number]
 
 export const RECURSO_LABEL: Record<Recurso, string> = {
@@ -21,6 +21,7 @@ export const RECURSO_LABEL: Record<Recurso, string> = {
   ETIQUETAS: 'Generar Etiquetas',
   PEDIDOS: 'Pedidos',
   COTIZACIONES: 'Cotizaciones',
+  CLIENTES: 'Clientes',
 }
 
 export const ACCIONES = [
