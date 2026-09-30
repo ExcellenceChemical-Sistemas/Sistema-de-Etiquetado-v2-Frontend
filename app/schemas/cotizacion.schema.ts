@@ -1,8 +1,9 @@
 import { z } from 'zod'
 
 // Al crear todavía no existe proforma (KEYFACIL la genera recién cuando Joel cotiza).
-// requerimientoEn es obligatorio y se carga a mano: es la fecha/hora del SMS o chat en el que el
-// cliente pidió la cotización, no necesariamente "ahora" (Joel suele cargarlo después).
+// requerimientoEn ya no se pide acá: el backend la fija con la hora real del servidor al crear
+// (antes se cargaba a mano, pero eso permitía elegir una fecha más antigua para mejorar el
+// indicador — corregirla después de creada es exclusivo de un Admin, ver CotizacionFechaDialog).
 export const cotizacionSchema = z.object({
   clienteId: z
     .number({
@@ -10,9 +11,6 @@ export const cotizacionSchema = z.object({
       invalid_type_error: 'Selecciona un cliente',
     })
     .min(1, 'Selecciona un cliente'),
-  requerimientoEn: z
-    .string({ required_error: 'La fecha y hora de requerimiento son obligatorias' })
-    .min(1, 'La fecha y hora de requerimiento son obligatorias'),
   notas: z.string().max(1000).optional(),
 })
 

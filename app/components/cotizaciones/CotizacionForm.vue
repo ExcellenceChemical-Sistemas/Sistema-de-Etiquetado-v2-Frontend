@@ -4,7 +4,6 @@ import { toTypedSchema } from "@vee-validate/zod";
 import { cotizacionSchema } from "~/schemas/cotizacion.schema";
 import { useClientesQuery } from "~/composables/useClientes";
 import { useCreateCotizacion } from "~/composables/useCotizaciones";
-import { datetimeLocalAhora, datetimeLocalAIso } from "~/utils/fechaHora";
 import type { Cliente } from "~/types/cliente";
 import { toast } from "vue-sonner";
 
@@ -14,11 +13,9 @@ const { data: clientes, isLoading: cargandoClientes } = useClientesQuery();
 
 const { handleSubmit, defineField, errors, isSubmitting } = useForm({
   validationSchema: toTypedSchema(cotizacionSchema),
-  initialValues: { requerimientoEn: datetimeLocalAhora() },
 });
 
 const [clienteId] = defineField("clienteId", { validateOnModelUpdate: false });
-const [requerimientoEn, requerimientoEnAttrs] = defineField("requerimientoEn");
 const [notas, notasAttrs] = defineField("notas");
 
 function clienteLabel(c: Cliente) {
@@ -32,7 +29,6 @@ const onSubmit = handleSubmit(async (values) => {
     await crearCotizacion({
       clienteId: values.clienteId,
       notas: values.notas,
-      requerimientoEn: datetimeLocalAIso(values.requerimientoEn),
     });
     toast.success("Cotización registrada como recibida");
     emit("success");
@@ -64,23 +60,11 @@ const onSubmit = handleSubmit(async (values) => {
       </p>
     </div>
 
-    <div class="space-y-2">
-      <Label for="requerimientoEn">Fecha y hora en que el cliente pidió la cotización</Label>
-      <Input
-        id="requerimientoEn"
-        v-model="requerimientoEn"
-        v-bind="requerimientoEnAttrs"
-        type="datetime-local"
-        step="1"
-      />
-      <p class="text-xs text-muted-foreground">
-        La del SMS o chat en que llegó el pedido, no necesariamente ahora — corregila si cargás
-        esto más tarde.
-      </p>
-      <p v-if="errors.requerimientoEn" class="text-sm text-destructive">
-        {{ errors.requerimientoEn }}
-      </p>
-    </div>
+    <p class="text-xs text-muted-foreground">
+      La fecha y hora de requerimiento se registra ahora, con la hora del sistema — así el
+      indicador mide el tiempo real desde que llegó el pedido. Si hace falta corregirla porque se
+      cargó tarde, solo un administrador puede hacerlo después.
+    </p>
 
     <div class="space-y-2">
       <Label for="notas">Notas (opcional)</Label>

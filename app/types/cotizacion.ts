@@ -17,7 +17,7 @@ interface UsuarioResumen {
 export type TipoAlertaCotizacion = 'FERIADO_O_FIN_DE_SEMANA' | 'AUSENCIA_REGISTRADA' | 'CARGA_TARDIA'
 
 export interface AlertaCotizacion {
-  campo: 'cotizacionEnviadaEn' | 'pedidoAprobadoEn' | 'avisoAlmacenEn'
+  campo: 'requerimientoEn' | 'cotizacionEnviadaEn' | 'pedidoAprobadoEn' | 'avisoAlmacenEn'
   tipo: TipoAlertaCotizacion
   motivo?: string
 }
@@ -70,10 +70,11 @@ export interface Cotizacion {
   historial: HistorialCotizacionItem[]
 }
 
+// requerimientoEn no se manda al crear: el backend siempre usa la hora real del servidor (ver
+// CrearCotizacionDto en el backend). Corregirla después es exclusivo de un Admin (ActualizarCotizacionInput).
 export interface CrearCotizacionInput {
   clienteId: number
   notas?: string
-  requerimientoEn?: string
 }
 
 export interface ActualizarCotizacionInput {
