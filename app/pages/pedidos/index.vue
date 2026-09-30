@@ -26,10 +26,15 @@ const page = ref(1);
 const filtroEstado = ref<EstadoPedido | "TODOS">("TODOS");
 const { data: pedidos, isPending, isError, refetch } = usePedidosQuery(filtroEstado);
 
-// --- Búsqueda + filtro por mes/año (sobre la fecha de recepción) ---
+// --- Búsqueda + filtro por día/mes/año (sobre la fecha de recepción) ---
+// Por defecto se filtra por el día de hoy (día+mes+año), como pidió el usuario: la pantalla
+// abre mostrando solo lo de hoy, no el historial completo. "Todos" (limpiarFechas) saca los 3
+// filtros de una para ver todo.
+const hoy = new Date();
 const busqueda = ref("");
-const filtroMes = ref("TODOS");
-const filtroAnio = ref("TODOS");
+const filtroDia = ref(String(hoy.getDate()));
+const filtroMes = ref(String(hoy.getMonth()));
+const filtroAnio = ref(String(hoy.getFullYear()));
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -38,12 +43,40 @@ const MESES = [
 
 const aniosDisponibles = computed(() => {
   const anios = new Set((pedidos.value ?? []).map((p) => new Date(p.recibidoEn).getFullYear()));
+  anios.add(hoy.getFullYear());
   return Array.from(anios).sort((a, b) => b - a);
 });
+
+// Cuántos días mostrar en el select: los del mes/año elegidos si ambos están fijados, si no 31
+// (sin restringir de más cuando "Mes" o "Año" siguen en "Todos").
+const diasEnMes = computed(() => {
+  if (filtroMes.value === "TODOS" || filtroAnio.value === "TODOS") return 31;
+  return new Date(Number(filtroAnio.value), Number(filtroMes.value) + 1, 0).getDate();
+});
+
+// Si cambia mes/año y el día elegido ya no existe en ese mes (ej. 31 en un mes de 30), se cae a
+// "Todos" en vez de quedar en un valor inválido.
+watch(diasEnMes, (dias) => {
+  if (filtroDia.value !== "TODOS" && Number(filtroDia.value) > dias) filtroDia.value = "TODOS";
+});
+
+function limpiarFechas() {
+  filtroDia.value = "TODOS";
+  filtroMes.value = "TODOS";
+  filtroAnio.value = "TODOS";
+}
+
+const hayFiltroFecha = computed(
+  () => filtroDia.value !== "TODOS" || filtroMes.value !== "TODOS" || filtroAnio.value !== "TODOS",
+);
 
 const pedidosFiltrados = computed(() => {
   let lista = pedidos.value ?? [];
 
+  if (filtroDia.value !== "TODOS") {
+    const dia = Number(filtroDia.value);
+    lista = lista.filter((p) => new Date(p.recibidoEn).getDate() === dia);
+  }
   if (filtroMes.value !== "TODOS") {
     const mes = Number(filtroMes.value);
     lista = lista.filter((p) => new Date(p.recibidoEn).getMonth() === mes);
@@ -64,7 +97,7 @@ const pedidosFiltrados = computed(() => {
 });
 
 // si cambia cualquier filtro, siempre volvemos a la página 1
-watch([filtroEstado, filtroMes, filtroAnio, busqueda], () => {
+watch([filtroEstado, filtroDia, filtroMes, filtroAnio, busqueda], () => {
   page.value = 1;
 });
 
@@ -290,6 +323,15 @@ async function confirmarRegenerar() {
         <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input v-model="busqueda" placeholder="Buscar por cliente o proforma..." aria-label="Buscar por cliente o proforma" class="pl-8" />
       </div>
+      <Select v-model="filtroDia">
+        <SelectTrigger class="w-24" aria-label="Filtrar por día">
+          <SelectValue placeholder="Día" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="TODOS">Todos</SelectItem>
+          <SelectItem v-for="d in diasEnMes" :key="d" :value="String(d)">{{ d }}</SelectItem>
+        </SelectContent>
+      </Select>
       <Select v-model="filtroMes">
         <SelectTrigger class="w-40" aria-label="Filtrar por mes">
           <SelectValue placeholder="Mes" />
@@ -310,6 +352,9 @@ async function confirmarRegenerar() {
           </SelectItem>
         </SelectContent>
       </Select>
+      <Button v-if="hayFiltroFecha" variant="ghost" size="sm" @click="limpiarFechas">
+        Ver todos los pedidos
+      </Button>
     </div>
 
     <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">

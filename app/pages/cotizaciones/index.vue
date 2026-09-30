@@ -32,10 +32,13 @@ const page = ref(1);
 const filtroEstado = ref<EstadoCotizacion | "TODOS">("TODOS");
 const { data: cotizaciones, isPending, isError, refetch } = useCotizacionesQuery(filtroEstado);
 
-// --- Búsqueda + filtro por mes/año (sobre la fecha de requerimiento) ---
+// --- Búsqueda + filtro por día/mes/año (sobre la fecha de requerimiento) ---
+// Mismo criterio que Pedidos: por defecto solo hoy (día+mes+año); "Ver todas" limpia los 3.
+const hoy = new Date();
 const busqueda = ref("");
-const filtroMes = ref("TODOS");
-const filtroAnio = ref("TODOS");
+const filtroDia = ref(String(hoy.getDate()));
+const filtroMes = ref(String(hoy.getMonth()));
+const filtroAnio = ref(String(hoy.getFullYear()));
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -44,12 +47,36 @@ const MESES = [
 
 const aniosDisponibles = computed(() => {
   const anios = new Set((cotizaciones.value ?? []).map((c) => new Date(c.requerimientoEn).getFullYear()));
+  anios.add(hoy.getFullYear());
   return Array.from(anios).sort((a, b) => b - a);
 });
+
+const diasEnMes = computed(() => {
+  if (filtroMes.value === "TODOS" || filtroAnio.value === "TODOS") return 31;
+  return new Date(Number(filtroAnio.value), Number(filtroMes.value) + 1, 0).getDate();
+});
+
+watch(diasEnMes, (dias) => {
+  if (filtroDia.value !== "TODOS" && Number(filtroDia.value) > dias) filtroDia.value = "TODOS";
+});
+
+function limpiarFechas() {
+  filtroDia.value = "TODOS";
+  filtroMes.value = "TODOS";
+  filtroAnio.value = "TODOS";
+}
+
+const hayFiltroFecha = computed(
+  () => filtroDia.value !== "TODOS" || filtroMes.value !== "TODOS" || filtroAnio.value !== "TODOS",
+);
 
 const cotizacionesFiltradas = computed(() => {
   let lista = cotizaciones.value ?? [];
 
+  if (filtroDia.value !== "TODOS") {
+    const dia = Number(filtroDia.value);
+    lista = lista.filter((c) => new Date(c.requerimientoEn).getDate() === dia);
+  }
   if (filtroMes.value !== "TODOS") {
     const mes = Number(filtroMes.value);
     lista = lista.filter((c) => new Date(c.requerimientoEn).getMonth() === mes);
@@ -69,7 +96,7 @@ const cotizacionesFiltradas = computed(() => {
 });
 
 // si cambia cualquier filtro, siempre volvemos a la página 1
-watch([filtroEstado, filtroMes, filtroAnio, busqueda], () => {
+watch([filtroEstado, filtroDia, filtroMes, filtroAnio, busqueda], () => {
   page.value = 1;
 });
 
@@ -295,6 +322,15 @@ function textoAlertas(c: Cotizacion) {
         <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input v-model="busqueda" placeholder="Buscar por cliente o proforma..." aria-label="Buscar por cliente o proforma" class="pl-8" />
       </div>
+      <Select v-model="filtroDia">
+        <SelectTrigger class="w-24" aria-label="Filtrar por día">
+          <SelectValue placeholder="Día" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="TODOS">Todos</SelectItem>
+          <SelectItem v-for="d in diasEnMes" :key="d" :value="String(d)">{{ d }}</SelectItem>
+        </SelectContent>
+      </Select>
       <Select v-model="filtroMes">
         <SelectTrigger class="w-40" aria-label="Filtrar por mes">
           <SelectValue placeholder="Mes" />
@@ -315,6 +351,9 @@ function textoAlertas(c: Cotizacion) {
           </SelectItem>
         </SelectContent>
       </Select>
+      <Button v-if="hayFiltroFecha" variant="ghost" size="sm" @click="limpiarFechas">
+        Ver todas las cotizaciones
+      </Button>
     </div>
 
     <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
