@@ -49,12 +49,12 @@ el commit, hay que parar y preguntar antes de pushear.
    - Backend (Render): esperar el deploy y pegar `curl` al endpoint de salud
      (`GET /api/salud` o el que exponga el proyecto) confirmando `{"ok":true,"db":true}`
      o equivalente. Revisar logs de Render si el deploy falla.
-   - Frontend (Cloudflare Workers / Vercel, según cuál esté activo): abrir el sitio
-     desplegado con el browser en este harness, comprobar que carga sin el error 500
-     de Nuxt, y revisar la consola/network para CORS u otros errores reales (no
-     confundir con mensajes de consola cacheados de una carga anterior — si hay dudas,
-     repetir el fetch real con `javascript_tool` en vez de confiar en el historial de
-     consola).
+   - Frontend (producción: `https://gestion.excellencechemical.workers.dev`): el push
+     **no** despliega solo — hay que generar y subir a mano (ver nota de Cloudflare
+     abajo). Después, confirmar que `/_nuxt/builds/latest.json` trae el `id`/`timestamp`
+     del build recién generado (si sigue el viejo, el deploy no salió), abrir el sitio con
+     el browser de este harness y revisar CORS con un `fetch` real a `/api/salud` desde
+     ese origen (no confiar en mensajes de consola cacheados de una carga anterior).
    - agente-impresion: no tiene despliegue automático — los cambios se llevan a la
      máquina con la impresora manualmente; avisar al usuario que ese paso queda
      pendiente de su lado si el cambio afecta a ese repo.
@@ -73,12 +73,20 @@ el commit, hay que parar y preguntar antes de pushear.
   dos frontends live a la vez (ej. Vercel + Cloudflare durante una migración), ambos
   orígenes tienen que estar en `FRONTEND_URLS` en Render — confirmar con el usuario si
   ya lo actualizó ahí, porque esa variable no la edito yo directamente.
-- **Cloudflare Workers (frontend)**: el build command debe ser `npm run build` (no
-  `npm run generate`) porque Nitro genera su propio `wrangler.json` en
-  `.output/server/` que pisa al `wrangler.jsonc` del repo, y esa configuración generada
-  espera el entry-point de servidor que solo produce `build`, no `generate`. Las
-  variables `NUXT_PUBLIC_*` deben estar cargadas TANTO en "Build variables" como en
-  "Runtime variables and secrets" del proyecto en Cloudflare — son secciones separadas.
+- **Cloudflare Workers (frontend, producción)**: el Worker `gestion` es un sitio estático
+  (SPA, `ssr:false`) sin script propio — ver `wrangler.jsonc`. **No hay build automático
+  en Cloudflare al pushear**: se despliega a mano desde la máquina del usuario, que tiene
+  `wrangler` autenticado:
+  1. `npm run generate` (no `npm run build`: `build` no deja `index.html`/`200.html` en
+     `.output/public`, que es lo que sirve el Worker).
+  2. Verificar antes de subir: `.output/public/index.html` tiene
+     `apiBase:"https://chemical-backend-fk8r.onrender.com/api"` (las `NUXT_PUBLIC_*` se
+     hornean en build desde el `.env` local; si apunta a localhost, no desplegar).
+  3. `npx wrangler deploy` desde la raíz del repo frontend.
+  El "súbelo a producción" del usuario cubre este deploy junto con el push.
+- **Vercel (frontend, legado)**: `excellencechemical.vercel.app` ya no es producción y su
+  origen no está en `FRONTEND_URLS`, así que ahí el login falla por CORS. Un check verde de
+  Vercel en GitHub **no** significa que producción se haya actualizado.
 - **Secretos**: nunca leo ni escribo variables de entorno reales (Render, Cloudflare,
   `.env`) — solo indico al usuario qué valor cargar y dónde, y confirmo el resultado
   con verificación externa (curl, browser), nunca pidiéndole que me pegue el valor.

@@ -42,12 +42,13 @@ backend, la del backend es la más reciente (según su propia nota de estado).
 
 ## Despliegue (Cloudflare Workers y/o Vercel)
 
-- Si el build target es Cloudflare Workers: el comando de build en el dashboard debe ser
-  `npm run build` (no `npm run generate`) porque Nitro genera su propio `wrangler.json` en
-  `.output/server/` que pisa al `wrangler.jsonc` del repo, y ese config generado espera el
-  entry-point de servidor que solo produce `build`. Las variables `NUXT_PUBLIC_*` van cargadas
-  TANTO en "Build variables" como en "Runtime variables and secrets" — son secciones separadas
-  del dashboard.
+- Producción es el Worker estático `gestion` (`https://gestion.excellencechemical.workers.dev`,
+  ver `wrangler.jsonc`), y **no se despliega al pushear**: se sube a mano con
+  `npm run generate` + `npx wrangler deploy` (no `npm run build`, que no deja `index.html` en
+  `.output/public`). Las `NUXT_PUBLIC_*` se hornean en el generate desde el `.env` local —
+  confirmar que `apiBase` en `.output/public/index.html` apunta al backend de Render antes de subir.
+- `excellencechemical.vercel.app` es legado: no está en `FRONTEND_URLS` y un check verde de
+  Vercel no implica que producción se haya actualizado.
 - No agregar `nitro.preset` en `nuxt.config.ts` sin confirmar antes que no rompe el otro hosting
   si ambos siguen live en paralelo (Vercel auto-detecta su propio preset).
 - Si hay dos frontends live a la vez durante una migración, el backend necesita ambos orígenes en
