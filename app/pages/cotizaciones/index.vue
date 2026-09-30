@@ -21,7 +21,7 @@ import CotizacionEnviarDialog from "~/components/cotizaciones/CotizacionEnviarDi
 import CotizacionProgreso from "~/components/cotizaciones/CotizacionProgreso.vue";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 
-const permiso = usePermiso("PEDIDOS");
+const permiso = usePermiso("COTIZACIONES");
 const { esAdmin } = useUsuarioActual();
 const PAGE_SIZE = 10;
 const page = ref(1);

@@ -48,6 +48,11 @@ describe('rutaPermitida', () => {
     expect(rutaPermitida('/pedidos', u, false)).toBe(true)
   })
 
+  it('/cotizaciones tiene su propio recurso, separado de PEDIDOS', () => {
+    expect(rutaPermitida('/cotizaciones', conPermiso('PEDIDOS', 'puedeVer'), false)).toBe(false)
+    expect(rutaPermitida('/cotizaciones', conPermiso('COTIZACIONES', 'puedeVer'), false)).toBe(true)
+  })
+
   it('el Admin de KPIs entra a /usuarios sin el permiso USUARIOS, pero solo ahí', () => {
     const u = usuario({ esAdminKpis: true })
     expect(rutaPermitida('/usuarios', u, false)).toBe(true)

@@ -47,6 +47,7 @@ const permisoLotes = usePermiso("LOTES");
 const permisoEtiquetas = usePermiso("ETIQUETAS");
 const permisoUsuarios = usePermiso("USUARIOS");
 const permisoPedidos = usePermiso("PEDIDOS");
+const permisoCotizaciones = usePermiso("COTIZACIONES");
 
 const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
 
@@ -110,7 +111,7 @@ const items = computed(() =>
       title: "Cotizaciones",
       url: "/cotizaciones",
       icon: ClipboardList,
-      visible: permisoPedidos.puedeVer,
+      visible: permisoCotizaciones.puedeVer,
     },
     {
       title: "Usuarios",

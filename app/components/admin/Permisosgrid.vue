@@ -18,11 +18,14 @@ const props = defineProps<{
 // y el selector queda vacío, así que se tilda solo. Se puede destildar a mano.
 //   - Generar etiqueta: plantillas (PLANTILLAS) y lotes (LOTES).
 //   - Formulario de lote: productos (PRODUCTOS) y fabricantes (FABRICANTES).
+//   - Nueva cotización: el combobox de cliente lee /clientes (recurso PEDIDOS) — alguien con
+//     COTIZACIONES pero sin ningún Pedidos vería el selector vacío.
 type Accion = (typeof ACCIONES)[number]["key"];
 const DEPENDENCIAS: { recurso: Recurso; accion: Accion; requiere: Recurso[] }[] = [
   { recurso: "ETIQUETAS", accion: "puedeCrear", requiere: ["PLANTILLAS", "LOTES"] },
   { recurso: "LOTES", accion: "puedeCrear", requiere: ["PRODUCTOS", "FABRICANTES"] },
   { recurso: "LOTES", accion: "puedeEditar", requiere: ["PRODUCTOS", "FABRICANTES"] },
+  { recurso: "COTIZACIONES", accion: "puedeCrear", requiere: ["PEDIDOS"] },
 ];
 
 function cambiar(recurso: Recurso, key: Accion, valor: boolean) {
