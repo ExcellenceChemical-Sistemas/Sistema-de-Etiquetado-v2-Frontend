@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { productoSchema, type ProductoFormValues } from '~/schemas/producto.schema'
@@ -111,6 +111,30 @@ async function quitarFichaTecnica() {
 // propuesta: la persona la revisa y corrige antes de guardar el producto.
 const { mutateAsync: analizarFicha, isPending: leyendoFicha } = useAnalizarFicha()
 const clasificacionLeida = ref(false)
+
+// Barra de progreso "trickle": no hay un % real (el servidor no lo informa), así que sube
+// asintóticamente hacia ~92% mientras dura la espera y solo llega a 100% cuando la respuesta
+// real vuelve. El OCR de respaldo (fichas escaneadas) puede tardar varios segundos, a
+// diferencia de la lectura de texto normal (casi instantánea) — por eso no se usa una
+// duración fija como en la exportación a Excel.
+const progresoAnalisis = ref(0)
+let progresoRaf = 0
+function iniciarProgresoAnalisis() {
+  progresoAnalisis.value = 1
+  const inicio = performance.now()
+  const tick = (ahora: number) => {
+    const transcurrido = ahora - inicio
+    progresoAnalisis.value = 92 * (1 - Math.exp(-transcurrido / 4000))
+    progresoRaf = requestAnimationFrame(tick)
+  }
+  progresoRaf = requestAnimationFrame(tick)
+}
+function detenerProgresoAnalisis() {
+  cancelAnimationFrame(progresoRaf)
+  progresoAnalisis.value = 100
+  setTimeout(() => { progresoAnalisis.value = 0 }, 300)
+}
+onBeforeUnmount(() => cancelAnimationFrame(progresoRaf))
 // La sección GHS se muestra si el producto ya tiene datos, cuando la FDS los propone,
 // o si la persona decide marcarlos a mano.
 const mostrarGhs = ref(
@@ -124,6 +148,7 @@ const mostrarGhs = ref(
 
 async function leerClasificacion(file: File) {
   clasificacionLeida.value = false
+  iniciarProgresoAnalisis()
   try {
     const c = await analizarFicha(file)
     if (c.noPeligroso) {
@@ -145,6 +170,8 @@ async function leerClasificacion(file: File) {
     }
   } catch (e: any) {
     toast.error(e?.response?.data?.message ?? 'No se pudo leer la ficha de seguridad')
+  } finally {
+    detenerProgresoAnalisis()
   }
 }
 
@@ -231,6 +258,12 @@ const onSubmit = handleSubmit(async (values) => {
       <template #titulo>Ficha de seguridad </template>
     </FichaProductoCampo>
 
+    <ProgressBar
+      v-if="leyendoFicha || progresoAnalisis > 0"
+      :value="progresoAnalisis"
+      label="Analizando la ficha de seguridad (puede tardar si es un PDF escaneado)…"
+    />
+
     <FichaProductoCampo
       id="fichaTecnicaFile"
       v-model="fichaTecnicaFile"
@@ -248,9 +281,8 @@ const onSubmit = handleSubmit(async (values) => {
     <div v-if="mostrarGhs">
       <div class="space-y-2">
         <Label>Pictogramas GHS <span class="text-muted-foreground font-normal">(opcional)</span></Label>
-        <p v-if="leyendoFicha" class="text-xs text-muted-foreground">Leyendo la ficha de seguridad…</p>
         <p
-          v-else-if="clasificacionLeida"
+          v-if="clasificacionLeida"
           class="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300"
         >
           Datos leídos de la ficha de seguridad. Revísalos con la sección 2 de la FDS antes de guardar.
