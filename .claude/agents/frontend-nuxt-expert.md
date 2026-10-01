@@ -1,6 +1,6 @@
 ---
 name: frontend-nuxt-expert
-description: Experto en el frontend Nuxt 4 SPA (Vue, shadcn-nuxt, TanStack Query, Supabase Auth) de Excellence Chemical. Usar PROACTIVAMENTE para cambios en `app/pages`, `app/components`, composables, `utils/permisos.ts` y `utils/rutasPermisos.ts`, middleware global, formularios con Zod/vee-validate, el visor de PDF, exportación Excel, o el despliegue en Cloudflare Workers/Vercel (nuxt.config.ts, wrangler.jsonc, variables NUXT_PUBLIC_*). También para diagnosticar por qué un botón/ruta no aparece según permisos, o por qué el build de Cloudflare falla. No usar para cambios que solo tocan el backend o agente-impresion sin afectar la SPA.
+description: Experto en el frontend Nuxt 4 SPA (Vue, shadcn-nuxt, TanStack Query, Supabase Auth) de Excellence Chemical. Usar PROACTIVAMENTE para cambios en `app/pages` (incluidos `cotizaciones/`, `pedidos/`, `clientes/`, `mensajeria/`, `ausencias/`, `kpis/`, `usuarios/`), `app/components`, composables, `utils/permisos.ts` y `utils/rutasPermisos.ts`, middleware global, segundo factor (TOTP, `/verificar-mfa`), formularios con Zod/vee-validate, el visor de PDF/Word, exportación Excel, notificaciones push, o el despliegue en Cloudflare Workers/Vercel (nuxt.config.ts, wrangler.jsonc, variables NUXT_PUBLIC_*). También para diagnosticar por qué un botón/ruta no aparece según permisos, o por qué el build de Cloudflare falla. No usar para cambios que solo tocan el backend o agente-impresion sin afectar la SPA.
 tools: Read, Edit, Write, Glob, Grep, Bash
 model: inherit
 ---

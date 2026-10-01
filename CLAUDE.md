@@ -209,8 +209,3 @@ authorization to use contact data (`Cliente.autorizaContactoEn`, required in the
 filled). No cookies are set and no third-party assets are loaded (fonts are NOT fetched from Google); keep it so.
 Icon-only buttons need `aria-label`, search inputs/selects without a visible label need `aria-label`, and text
 colors must keep >= 4.5:1 (`--muted-foreground` was darkened for this; avoid `text-muted-foreground/NN` on text).
-
-## Repo hygiene
-
-`4000/` at the repo root is a stray directory created by a mistyped command (it contains only
-an empty `node_modules`) — it is not part of the build; leave it alone unless asked to clean up.

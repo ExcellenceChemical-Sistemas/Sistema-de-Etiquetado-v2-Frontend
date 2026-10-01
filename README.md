@@ -5,6 +5,9 @@ Aplicación web (panel administrativo) construida con **Nuxt 4** para Excellence
 1. **Etiquetado** — fabricantes, productos (con ficha de seguridad y clasificación GHS), lotes (con carga de COA), plantillas, usuarios/permisos, impresión de etiquetas e historial de etiquetas generadas.
 2. **KPIs / Documentación ISO** — árbol de carpetas y documentos con control de acceso granular, visor propio de PDF y de Word.
 3. **Pedidos / tiempo de entrega** — reemplaza el registro manual en Excel del lead time de pedidos: pedidos con sus etapas (recibido → en preparación → preparado → salió → entregado), clientes e indicadores de tiempos (`/pedidos`, `/clientes`, `/pedidos/indicadores`).
+4. **Cotizaciones** — seguimiento del proceso de Joel (requerimiento → cotización enviada → aprobación → aviso a almacén), con las mismas protecciones anti-manipulación de fechas que el backend aplica (`/cotizaciones`, `/cotizaciones/indicadores`).
+5. **Mensajería / notificaciones** — bandeja interna de notificaciones y opt-in a Web Push (`/mensajeria`).
+6. **Ausencias** — registro admin de vacaciones/licencias por usuario, usado por las alertas de integridad de Cotizaciones (`/ausencias`).
 
 Es el cliente de la API NestJS que vive en el repo hermano `../backend`.
 
@@ -59,15 +62,20 @@ app/
 │   ├── auth.global.ts       # sesión / rutas públicas
 │   └── permisos.global.ts   # aplica utils/rutasPermisos.ts al navegar
 ├── pages/
-│   ├── index.vue / login.vue / mi-cuenta.vue
+│   ├── index.vue / login.vue / mi-cuenta.vue / verificar-mfa.vue
 │   ├── generar-etiqueta.vue / historial/index.vue · historial/indicadores.vue   # historial: etiquetas generadas, filtros y enlace al QR; indicadores: insumos más etiquetados por mes/año y uso del QR
 │   ├── pedidos/index.vue · pedidos/indicadores.vue · clientes/index.vue
+│   ├── cotizaciones/index.vue · cotizaciones/indicadores.vue
+│   ├── mensajeria/index.vue                   # bandeja de notificaciones + opt-in a Web Push
+│   ├── ausencias/index.vue                    # registro admin de vacaciones/licencias
 │   ├── e/[token].vue                          # página pública del QR (sin login)
+│   ├── p/[token].vue                          # página pública de seguimiento de un pedido (sin login)
 │   ├── fabricantes/index.vue · productos/index.vue · lotes/index.vue
 │   ├── kpis/index.vue                       # raíces (KPIs-SGC / ISO-SGC)
 │   ├── kpis/[id]/index.vue                  # contenido de una carpeta
 │   ├── kpis/[id]/documento/[archivoId].vue  # visor de un documento
 │   ├── olvide-password.vue / restablecer-password.vue
+│   ├── privacidad.vue / seguridad.vue / cookies.vue   # páginas legales públicas
 │   └── usuarios/index.vue, usuarios/[id].vue
 ├── plugins/               # vee-validate.ts, vue-query.ts, refrescar-permisos.client.ts
 ├── schemas/               # etiqueta, fabricante, lote, producto (Zod)
@@ -105,7 +113,7 @@ No hay que confundirlos: son modelos distintos, con endpoints distintos.
 
 ### 1. Permisos CRUD (`Permiso`)
 
-`app/utils/permisos.ts` es la fuente de verdad: `RECURSOS` (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`) × cuatro booleanos (`puedeVer` / `puedeCrear` / `puedeEditar` / `puedeEliminar`). Este archivo tiene que espejar el enum `Recurso` del backend (`usuarios.dto.ts`). No hay recurso `COA`: subir el COA es `LOTES.puedeEditar`. `/clientes` comparte `PEDIDOS` a propósito.
+`app/utils/permisos.ts` es la fuente de verdad: `RECURSOS` (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`, `COTIZACIONES`, `CLIENTES`) × cuatro booleanos (`puedeVer` / `puedeCrear` / `puedeEditar` / `puedeEliminar`). Este archivo tiene que espejar el enum `Recurso` del backend (`usuarios.dto.ts`). No hay recurso `COA`: subir el COA es `LOTES.puedeEditar`. `PEDIDOS`, `COTIZACIONES` y `CLIENTES` antes compartían todos el recurso `PEDIDOS` pero se separaron: en la práctica cada uno tiene un responsable distinto (despacho, cotización, el combo de clientes de ambos formularios).
 
 `usePermiso('RECURSO')` devuelve un objeto reactivo con el bypass de `esAdmin` ya incorporado.
 
@@ -148,7 +156,7 @@ El grid se indexa **por `proceso`, nunca por el `id` de la fila** de Prisma: eso
 
 ## Fichas de seguridad y pictogramas GHS
 
-- En el formulario de producto, al elegir la **ficha de seguridad (PDF)** se llama a `POST /productos/analizar-ficha` (`useAnalizarFicha`) y se rellenan pictogramas, palabra de advertencia y frases H/P como **propuesta** (aviso ámbar "revísalos"). Si la ficha dice que el producto no es peligroso se avisa; si es un PDF escaneado, o no se encuentra nada, los pictogramas se marcan a mano.
+- En el formulario de producto, al elegir la **ficha de seguridad (PDF)** se llama a `POST /productos/analizar-ficha` (`useAnalizarFicha`) y se rellenan pictogramas, palabra de advertencia y frases H/P como **propuesta** (aviso ámbar "revísalos"). Mientras se analiza se muestra una barra de progreso (`ProgressBar.vue`, progreso "a trompicones" que se acerca asintóticamente al 92% y salta a 100% recién cuando responde el backend — no hay forma de saber de antemano cuánto va a tardar, sobre todo si cae al OCR). Si la ficha dice que el producto no es peligroso se avisa. El backend intenta primero leer el texto del PDF y, si es un escaneo sin texto, cae a OCR — en ese caso la respuesta trae `origen: 'ocr'` y se muestra un aviso extra pidiendo revisar la clasificación con más cuidado, porque el OCR es menos confiable que el texto real. Solo si ni el texto ni el OCR encuentran nada legible, los pictogramas se marcan a mano.
 - Los 9 pictogramas oficiales de la ONU están en `public/ghs/GHS01.png`–`GHS09.png`; `utils/ghs.ts` tiene sus nombres y descripciones y `components/etiquetas/PictogramaGhs.vue` los dibuja.
 - Se ven en la **página pública del QR** (`pages/e/[token].vue`), no en la etiqueta impresa.
 - En `/productos`, la columna **GHS** marca "N pictogramas" (verde) o "Incompleto" (ámbar, `utils/ghs.ts` → `estadoGhs()`) cuando el producto tiene frases H o palabra de advertencia pero ningún pictograma marcado; un aviso arriba de la tabla cuenta cuántos productos están así. El mismo aviso aparece dentro del formulario al editar ese producto.
@@ -162,8 +170,8 @@ El grid se indexa **por `proceso`, nunca por el `id` de la fila** de Prisma: eso
 
 - `components/etiquetas/AlertasImpresion.vue`, montado en `layouts/default.vue`, consulta cada 15s `GET /etiquetas/agente/estado` (`useEstadoImpresion`) y muestra un banner + toast cuando el agente de impresión no responde, la impresora tiene un problema (papel, tinta, tapa abierta...) o hay etiquetas esperando demasiado. Solo lo ven quienes tienen `ETIQUETAS:puedeVer` o `puedeCrear`.
 - En `/generar-etiqueta`, el botón **Vista previa** (`useVistaPrevia`) pide al agente que dibuje la etiqueta con los datos del formulario, sin imprimirla ni crear ningún trabajo; se muestra en un diálogo con scroll.
-- `/estadisticas` (requiere `ETIQUETAS:puedeVer`, enlazada desde el sidebar y desde `/historial`) centraliza el uso de las etiquetas: 4 tarjetas con los totales (escaneos, COA vistos/descargados, FDS vistas), el donut `DonutProductosEscaneados.vue` de productos más escaneados, **dos tablas separadas** — "COA — vistas y descargas por producto" y "Ficha de seguridad (FDS) — vistas por producto" — que muestran explícitamente de qué producto es cada estadística (no solo el total), y al final una tabla de detalle completo con las 4 métricas juntas. `utils/estadisticas.ts` agrega `useHistorialEtiquetas()` en `agruparEstadisticasPorProducto()` (solo productos con actividad) y `totalesEstadisticas()`; el donut reutiliza `utils/escaneos.ts` → `agruparEscaneosPorProducto()`. No vive en el Inicio ni en el Historial a propósito, para no duplicar la lógica de agregación en dos páginas.
-  Las tres tablas usan `ScrollArea`/`ScrollBar` de shadcn (no `overflow-y-auto` nativo) con una altura fija (`h-72` / `h-[28rem]`) que solo se aplica cuando hay más filas de las que entran (umbral en `UMBRAL_SCROLL`/`UMBRAL_SCROLL_DETALLE`) — con pocos productos el `ScrollArea` no fuerza altura y se ve compacto, sin scroll ni hueco vacío. `estadisticas.vue` tiene un `<style scoped>` con `:deep([data-slot="table-container"])`: el `<Table>` de shadcn envuelve la tabla en su propio div `overflow-auto` (`Table.vue`), que dentro de un `ScrollArea` crea un segundo contenedor con scroll propio y rompe el `sticky` del `thead` (se pega a ese div, no al viewport real) — sin ese override el encabezado de la tabla desaparece al scrollear en vez de quedar fijo arriba. Solo se anula el overflow **vertical** (`overflow-y: visible`); el horizontal se deja en `auto` a propósito, porque la tabla de "Detalle completo" tiene 5 columnas y en celulares (~375px) no entra entera — probado con un iframe de 390px de ancho (Chrome no deja redimensionar la ventana real en este entorno), confirmando que esa tabla scrollea de lado sin desbordar la página.
+- `/historial/indicadores` (requiere `ETIQUETAS:puedeVer`, enlazada desde `/historial`) centraliza el uso de las etiquetas: 4 tarjetas con los totales (escaneos, COA vistos/descargados, FDS vistas), el donut `DonutProductosEscaneados.vue` de productos más escaneados, **dos tablas separadas** — "COA — vistas y descargas por producto" y "Ficha de seguridad (FDS) — vistas por producto" — que muestran explícitamente de qué producto es cada estadística (no solo el total), y al final una tabla de detalle completo con las 4 métricas juntas. `utils/estadisticas.ts` agrega `useHistorialEtiquetas()` en `agruparEstadisticasPorProducto()` (solo productos con actividad) y `totalesEstadisticas()`; el donut reutiliza `utils/escaneos.ts` → `agruparEscaneosPorProducto()`.
+  Las tres tablas usan `ScrollArea`/`ScrollBar` de shadcn (no `overflow-y-auto` nativo) con una altura fija (`h-72` / `h-[28rem]`) que solo se aplica cuando hay más filas de las que entran (umbral en `UMBRAL_SCROLL`/`UMBRAL_SCROLL_DETALLE`) — con pocos productos el `ScrollArea` no fuerza altura y se ve compacto, sin scroll ni hueco vacío. `historial/indicadores.vue` tiene un `<style scoped>` con `:deep([data-slot="table-container"])`: el `<Table>` de shadcn envuelve la tabla en su propio div `overflow-auto` (`Table.vue`), que dentro de un `ScrollArea` crea un segundo contenedor con scroll propio y rompe el `sticky` del `thead` (se pega a ese div, no al viewport real) — sin ese override el encabezado de la tabla desaparece al scrollear en vez de quedar fijo arriba. Solo se anula el overflow **vertical** (`overflow-y: visible`); el horizontal se deja en `auto` a propósito, porque la tabla de "Detalle completo" tiene 5 columnas y en celulares (~375px) no entra entera — probado con un iframe de 390px de ancho (Chrome no deja redimensionar la ventana real en este entorno), confirmando que esa tabla scrollea de lado sin desbordar la página.
 
 ## Color de fondo
 
@@ -252,4 +260,3 @@ El backend tiene que estar corriendo para que funcione cualquier cosa más allá
 - **Verificación en dos pasos (TOTP).** Mi cuenta tiene una tarjeta para activarla con una app autenticadora (QR + primer código; `components/mi-cuenta/DosPasos.vue`, composable `useMfa`) y para desactivarla. Con el factor activo, iniciar sesión lleva a `/verificar-mfa` a pedir el código (el middleware `auth.global.ts` lo fuerza, pero quien realmente lo exige es el backend: responde 403 `MFA_REQUERIDO` a una sesión de solo contraseña, y el interceptor de `useApi` lleva a esa pantalla). Si el backend tiene `EXIGIR_MFA_ADMIN=true`, un administrador sin factor recibe `MFA_ENROLAR` y se lo lleva a Mi cuenta. Requiere que el TOTP esté habilitado en Supabase (Authentication → Multi-Factor).
 - Los botones de COA en `LoteForm.vue` se gatean con el recurso `LOTES` (no hay recurso `COA`).
 - `contexto-fase3-kpis-iso.md` en la raíz es el documento de diseño del módulo KPIs/ISO. Está **parcialmente desactualizado**: describe el rediseño de permisos como "decidido pero no implementado", cuando en realidad ya está implementado en backend y frontend. Sirve para entender el *porqué* de las reglas, no como estado de avance.
-- `4000/` en la raíz es un directorio suelto creado por un comando mal tipeado (contiene solo un `node_modules` vacío) — no es parte del build.
