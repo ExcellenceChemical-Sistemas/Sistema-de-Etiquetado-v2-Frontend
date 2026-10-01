@@ -25,7 +25,18 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: "es" },
       title: "Excellence Chemical — Sistema de Gestión",
-      meta: [{ name: "viewport", content: "width=device-width, initial-scale=1" }],
+      meta: [
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "theme-color", content: "#f97316" },
+        // Safari/iOS no lee manifest.webmanifest: necesita sus propias meta tags para instalar como PWA.
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+        { name: "apple-mobile-web-app-title", content: "Excellence Chemical" },
+      ],
+      link: [
+        { rel: "manifest", href: "/manifest.webmanifest" },
+        { rel: "apple-touch-icon", href: "/excellence-chemical-icon.png" },
+      ],
     },
   },
 });

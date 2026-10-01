@@ -1,0 +1,25 @@
+{
+  "name": "Excellence Chemical — Sistema de Gestión",
+  "short_name": "Excellence Chemical",
+  "description": "Gestión de etiquetado, lotes, KPIs y documentación ISO de Excellence Chemical S.A.C.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/excellence-chemical-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/excellence-chemical-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
