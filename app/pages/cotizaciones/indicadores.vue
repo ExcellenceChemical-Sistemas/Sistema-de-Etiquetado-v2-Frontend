@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Download, Truck }
 import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
+import { corteLimiteAvisoAlmacen, cumplioCorteAvisoAlmacen } from "~/utils/corteAvisoAlmacen";
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
 import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChart.vue";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
@@ -14,9 +15,15 @@ import { urlSeguimiento } from "~/utils/seguimientoPedido";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
 // indicador comercial (DS-TIEMPO DE RESP-JOEL): tiempo de respuesta de
-// cotización (meta 2h) y tiempo de aviso a almacén tras la aprobación (meta 1h).
+// cotización (meta 2h) y aviso a almacén tras la aprobación.
+//
+// El de aviso a almacén NO se mide en horas desde la aprobación: Joel no avisa apenas aprueba
+// cada cotización, junta todas las del día y avisa en un solo corte a las 5pm hora Perú (política
+// confirmada con el negocio, 2026-10-01). Medirlo en horas con una meta fija castigaba todo lo
+// aprobado antes de las 5pm aunque Joel estuviera trabajando exactamente como corresponde — ver
+// corteLimiteAvisoAlmacen()/cumplioCorteAvisoAlmacen() en utils/corteAvisoAlmacen.ts, mismo
+// criterio que corte-aviso-almacen.ts del backend (la alerta "sin avisar a almacén").
 const UMBRAL_COTIZACION_HORAS = 2;
-const UMBRAL_AVISO_HORAS = 1;
 
 const filtroTodas = ref<EstadoCotizacion | "TODOS">("TODOS");
 const { data: cotizaciones, isPending, isError, refetch } = useCotizacionesQuery(filtroTodas);
@@ -62,16 +69,29 @@ const cotizadasConTiempo = computed<ConHoras[]>(() =>
     })),
 );
 
-// Bloque 2: tiempo de aviso a almacén (aprobación -> aviso a almacén).
-const avisadasConTiempo = computed<ConHoras[]>(() =>
+// Bloque 2: aviso a almacén (aprobación -> aviso a almacén), medido contra el corte de las 5pm
+// del día hábil en que se aprobó, no contra una cantidad fija de horas — ver nota arriba.
+interface ConCorte extends Cotizacion {
+  corteLimite: Date;
+  cumplioCorte: boolean;
+  horasHabilesDeAtraso: number; // 0 si cumplioCorte; si no, cuánto pasó el corte, en horas hábiles
+}
+
+const avisadasConCorte = computed<ConCorte[]>(() =>
   cotizacionesFiltradas.value
     .filter((c): c is Cotizacion & { pedidoAprobadoEn: string; avisoAlmacenEn: string } =>
       !!c.pedidoAprobadoEn && !!c.avisoAlmacenEn,
     )
-    .map((c) => ({
-      ...c,
-      horas: horasHabilesEntre(c.pedidoAprobadoEn, c.avisoAlmacenEn),
-    })),
+    .map((c) => {
+      const corteLimite = corteLimiteAvisoAlmacen(c.pedidoAprobadoEn);
+      const cumplioCorte = cumplioCorteAvisoAlmacen(c.pedidoAprobadoEn, c.avisoAlmacenEn);
+      return {
+        ...c,
+        corteLimite,
+        cumplioCorte,
+        horasHabilesDeAtraso: cumplioCorte ? 0 : horasHabilesEntre(corteLimite, c.avisoAlmacenEn),
+      };
+    }),
 );
 
 function resumenDe(lista: ConHoras[], umbral: number) {
@@ -93,13 +113,31 @@ function resumenDe(lista: ConHoras[], umbral: number) {
 }
 
 const resumenCotizacion = computed(() => resumenDe(cotizadasConTiempo.value, UMBRAL_COTIZACION_HORAS));
-const resumenAviso = computed(() => resumenDe(avisadasConTiempo.value, UMBRAL_AVISO_HORAS));
+
+function resumenCorteDe(lista: ConCorte[]) {
+  const total = lista.length;
+  const cumple = lista.filter((c) => c.cumplioCorte).length;
+  const fuera = total - cumple;
+  const atrasos = lista.filter((c) => !c.cumplioCorte).map((c) => c.horasHabilesDeAtraso);
+  const atrasoPromedio = atrasos.length ? atrasos.reduce((s, h) => s + h, 0) / atrasos.length : 0;
+  return {
+    total,
+    cumple,
+    fuera,
+    pctCumple: total ? (cumple / total) * 100 : 0,
+    pctFuera: total ? (fuera / total) * 100 : 0,
+    atrasoPromedio,
+    atrasoMaximo: atrasos.length ? Math.max(...atrasos) : 0,
+  };
+}
+
+const resumenAviso = computed(() => resumenCorteDe(avisadasConCorte.value));
 
 const peoresCotizacion = computed(() =>
   [...cotizadasConTiempo.value].filter((c) => c.horas > UMBRAL_COTIZACION_HORAS).sort((a, b) => b.horas - a.horas),
 );
 const peoresAviso = computed(() =>
-  [...avisadasConTiempo.value].filter((c) => c.horas > UMBRAL_AVISO_HORAS).sort((a, b) => b.horas - a.horas),
+  [...avisadasConCorte.value].filter((c) => !c.cumplioCorte).sort((a, b) => b.horasHabilesDeAtraso - a.horasHabilesDeAtraso),
 );
 
 function formatNumero(n: number, decimales = 1) {
@@ -146,13 +184,22 @@ const tendenciaCotizacion = computed(() =>
     UMBRAL_COTIZACION_HORAS,
   ),
 );
-const tendenciaAviso = computed(() =>
-  tendenciaMensual(
-    cotizacionesDelAnio.value,
-    (c) => (c.pedidoAprobadoEn && c.avisoAlmacenEn ? horasHabilesEntre(c.pedidoAprobadoEn, c.avisoAlmacenEn) : null),
-    UMBRAL_AVISO_HORAS,
-  ),
-);
+// Para el aviso a almacén la tendencia mensual también se arma distinto: cada cotización vale
+// 1 (cumplió su corte) o 0 (no), en vez de comparar horas contra un umbral fijo.
+function tendenciaMensualCorte(lista: Cotizacion[]) {
+  const porMes = Array.from({ length: 12 }, () => ({ total: 0, dentro: 0 }));
+  for (const c of lista) {
+    if (!c.pedidoAprobadoEn || !c.avisoAlmacenEn) continue;
+    const mes = new Date(c.requerimientoEn).getMonth();
+    porMes[mes]!.total++;
+    if (cumplioCorteAvisoAlmacen(c.pedidoAprobadoEn, c.avisoAlmacenEn)) porMes[mes]!.dentro++;
+  }
+  return porMes
+    .map((m, i) => ({ mes: MESES[i]!.slice(0, 3), total: m.total, dentro: m.dentro, pct: m.total ? (m.dentro / m.total) * 100 : 0 }))
+    .filter((m) => m.total > 0);
+}
+
+const tendenciaAviso = computed(() => tendenciaMensualCorte(cotizacionesDelAnio.value));
 
 // --- Bloque 3: trazabilidad de punta a punta con el Pedido (requerimiento -> entrega real) ---
 // Cruza por numeroProforma (ver CLAUDE.md del backend). Solo entra a este bloque lo que ya tiene
@@ -244,6 +291,64 @@ function seccionIndicador(titulo: string, resumen: Resumen, umbral: number, tend
   };
 }
 
+type ResumenCorte = ReturnType<typeof resumenCorteDe>;
+
+function seccionIndicadorCorte(resumen: ResumenCorte, tendencia: Tendencia): SeccionReporte {
+  return {
+    titulo: "Aviso a almacén",
+    kpis: [
+      ["Registros en el período", resumen.total],
+      ["Avisadas antes o en su corte de las 5pm", resumen.cumple],
+      ["Avisadas después de su corte", resumen.fuera],
+      ["% que cumplió su corte (meta ≥80%)", `${formatNumero(resumen.pctCumple, 0)}%`],
+      ["Cumple la meta", resumen.total ? (resumen.pctCumple >= 80 ? "Sí" : "No") : "—"],
+      ["Atraso promedio de las que no cumplieron (horas hábiles)", Number(resumen.atrasoPromedio.toFixed(1))],
+      ["Atraso máximo (h)", Number(resumen.atrasoMaximo.toFixed(1))],
+    ],
+    graficos: [
+      {
+        titulo: "Cumplimiento mensual",
+        nota:
+          filtroAnio.value === "TODOS"
+            ? undefined
+            : `Año ${filtroAnio.value} completo (el gráfico no aplica el filtro de mes, igual que en pantalla).`,
+        vacio: "Elegí un año en el filtro para incluir la tendencia mensual.",
+        imagen: tendencia.length
+          ? graficoColumnas(
+              tendencia.map((m) => ({
+                etiqueta: m.mes,
+                valor: m.pct,
+                texto: `${Math.round(m.pct)}%`,
+                color: m.pct >= 80 ? COLOR_VERDE : COLOR_AMBAR,
+              })),
+              { maximo: 100, meta: 80, etiquetaMeta: "Meta 80%" },
+            )
+          : null,
+        datos: {
+          columnas: ["Mes", "Total", "Cumplió su corte", "% cumplimiento"],
+          filas: tendencia.map((m) => [m.mes, m.total, m.dentro, `${Math.round(m.pct)}%`]),
+        },
+      },
+    ],
+  };
+}
+
+const columnasAvisoCorte: XlsxColumn<ConCorte>[] = [
+  { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
+  { key: (c) => c.numeroProforma ?? "", label: "N° Proforma" },
+  { key: (c) => formatFechaHora(c.pedidoAprobadoEn!), label: "Pedido aprobado", width: 22 },
+  { key: (c) => formatFechaHora(c.corteLimite.toISOString()), label: "Corte límite (5pm)", width: 22 },
+  { key: (c) => formatFechaHora(c.avisoAlmacenEn!), label: "Avisado a almacén", width: 22 },
+  {
+    key: (c) => (c.cumplioCorte ? "Cumplió su corte" : "Fuera de plazo"),
+    label: "Resultado",
+    width: 18,
+    colorFill: (v) => (v === "Cumplió su corte" ? FILL_GREEN : FILL_AMBER),
+  },
+  { key: (c) => (c.cumplioCorte ? 0 : Number(c.horasHabilesDeAtraso.toFixed(1))), label: "Horas hábiles de atraso" },
+  { key: (c) => (c.alertas.length ? "Sí" : ""), label: "Con alerta" },
+];
+
 function columnasTiempo(umbral: number, desde: string, hasta: string, campoDesde: keyof Cotizacion, campoHasta: keyof Cotizacion): XlsxColumn<ConHoras>[] {
   return [
     { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
@@ -287,7 +392,7 @@ function exportarReporte() {
     () =>
       construirReporte({
         titulo: "Indicador de tiempo de respuesta — Cotizaciones",
-        descripcion: `Horas hábiles (lun-vie 7:30-17:30, sin feriados). Metas: cotización ≤${UMBRAL_COTIZACION_HORAS}h y aviso a almacén ≤${UMBRAL_AVISO_HORAS}h, en ≥80% de los casos.`,
+        descripcion: `Cotización: horas hábiles (lun-vie 7:30-17:30, sin feriados), meta ≤${UMBRAL_COTIZACION_HORAS}h. Aviso a almacén: Joel avisa en un solo corte diario a las 5pm, así que se mide si se avisó antes o en el corte del día hábil en que se aprobó, no en horas. Meta en ambos: ≥80% de los casos.`,
         filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
         secciones: [
           {
@@ -297,7 +402,7 @@ function exportarReporte() {
             ],
           },
           seccionIndicador("Tiempo de respuesta de cotización", resumenCotizacion.value, UMBRAL_COTIZACION_HORAS, tendenciaCotizacion.value),
-          seccionIndicador("Tiempo de aviso a almacén", resumenAviso.value, UMBRAL_AVISO_HORAS, tendenciaAviso.value),
+          seccionIndicadorCorte(resumenAviso.value, tendenciaAviso.value),
           {
             titulo: "Trazabilidad con el pedido (requerimiento → entrega real)",
             kpis: [
@@ -318,8 +423,8 @@ function exportarReporte() {
           },
           {
             nombre: "Aviso a almacén",
-            filas: [...avisadasConTiempo.value].sort((a, b) => b.horas - a.horas),
-            columnas: columnasTiempo(UMBRAL_AVISO_HORAS, "Pedido aprobado", "Avisado a almacén", "pedidoAprobadoEn", "avisoAlmacenEn"),
+            filas: [...avisadasConCorte.value].sort((a, b) => b.horasHabilesDeAtraso - a.horasHabilesDeAtraso),
+            columnas: columnasAvisoCorte,
           },
           {
             nombre: "Trazabilidad con pedido",
@@ -345,7 +450,7 @@ function exportarReporte() {
         <h1 class="text-2xl font-semibold">Indicador de tiempo de respuesta</h1>
         <p class="text-sm text-muted-foreground">
           Mismas dos métricas que hoy se llevan a mano: respuesta de cotización (meta ≤{{ UMBRAL_COTIZACION_HORAS }}h)
-          y aviso a almacén tras la aprobación (meta ≤{{ UMBRAL_AVISO_HORAS }}h).
+          y aviso a almacén avisado en el corte diario de las 5pm (Joel junta las del día y avisa en un solo corte, no apenas aprueba cada una).
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -527,9 +632,13 @@ function exportarReporte() {
             </Card>
           </section>
 
-          <!-- Bloque 2: tiempo de aviso a almacén -->
+          <!-- Bloque 2: aviso a almacén, contra el corte diario de las 5pm -->
           <section class="space-y-3">
-            <h2 class="text-lg font-semibold">Tiempo de aviso a almacén</h2>
+            <h2 class="text-lg font-semibold">Aviso a almacén</h2>
+            <p class="text-sm text-muted-foreground">
+              Joel avisa a almacén en un solo corte diario a las 5pm (no apenas aprueba cada cotización): se mide si
+              se avisó antes o en el corte del día hábil en que se aprobó, no en horas desde la aprobación.
+            </p>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -539,39 +648,39 @@ function exportarReporte() {
                 <CardContent>
                   <p class="text-2xl font-semibold">{{ resumenAviso.total }}</p>
                   <p class="text-xs text-muted-foreground">
-                    {{ resumenAviso.dentro }} dentro de {{ UMBRAL_AVISO_HORAS }}h · {{ resumenAviso.fuera }} fuera de plazo
+                    {{ resumenAviso.cumple }} cumplieron su corte · {{ resumenAviso.fuera }} fuera de plazo
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">% dentro de {{ UMBRAL_AVISO_HORAS }}h</CardTitle>
+                  <CardTitle class="text-sm font-medium text-muted-foreground">% que cumplió su corte</CardTitle>
                   <Clock class="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <p class="text-2xl font-semibold" :class="resumenAviso.pctDentro >= 80 ? 'text-green-600' : 'text-amber-600'">
-                    {{ formatNumero(resumenAviso.pctDentro, 0) }}%
+                  <p class="text-2xl font-semibold" :class="resumenAviso.pctCumple >= 80 ? 'text-green-600' : 'text-amber-600'">
+                    {{ formatNumero(resumenAviso.pctCumple, 0) }}%
                   </p>
                   <p class="text-xs text-muted-foreground">Meta: ≥80%</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">Promedio</CardTitle>
+                  <CardTitle class="text-sm font-medium text-muted-foreground">Atraso promedio</CardTitle>
                   <Timer class="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <p class="text-2xl font-semibold">{{ formatNumero(resumenAviso.promedio) }}h</p>
-                  <p class="text-xs text-muted-foreground">desv. estándar {{ formatNumero(resumenAviso.desviacion) }}h</p>
+                  <p class="text-2xl font-semibold">{{ formatNumero(resumenAviso.atrasoPromedio) }}h</p>
+                  <p class="text-xs text-muted-foreground">Solo entre las que no cumplieron su corte</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">Tiempo máximo</CardTitle>
+                  <CardTitle class="text-sm font-medium text-muted-foreground">Atraso máximo</CardTitle>
                   <AlertTriangle class="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <p class="text-2xl font-semibold">{{ formatNumero(resumenAviso.maximo) }}h</p>
+                  <p class="text-2xl font-semibold">{{ formatNumero(resumenAviso.atrasoMaximo) }}h</p>
                   <p class="text-xs text-muted-foreground">El aviso más demorado del período</p>
                 </CardContent>
               </Card>
@@ -601,8 +710,9 @@ function exportarReporte() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Proforma</TableHead>
                       <TableHead>Pedido aprobado</TableHead>
+                      <TableHead>Corte límite (5pm)</TableHead>
                       <TableHead>Avisado a almacén</TableHead>
-                      <TableHead class="text-right">Horas</TableHead>
+                      <TableHead class="text-right">Horas de atraso</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -610,8 +720,9 @@ function exportarReporte() {
                       <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
                       <TableCell>{{ c.numeroProforma }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.pedidoAprobadoEn) }}</TableCell>
+                      <TableCell>{{ formatFechaHora(c.corteLimite.toISOString()) }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.avisoAlmacenEn) }}</TableCell>
-                      <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(c.horas) }}</TableCell>
+                      <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(c.horasHabilesDeAtraso) }}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
