@@ -34,12 +34,12 @@ function abrirOrigen(n: Notificacion) {
 
 <template>
   <div class="flex h-full min-h-0 flex-col gap-4 p-4 lg:p-6">
-    <div class="flex items-center justify-between">
-      <div>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0">
         <h1 class="text-2xl font-semibold">Mensajería</h1>
         <p class="text-sm text-muted-foreground">Avisos internos del sistema, ej. pedidos que llevan mucho tiempo sin entregarse.</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <Button
           v-if="pushSoportado"
           variant="outline"

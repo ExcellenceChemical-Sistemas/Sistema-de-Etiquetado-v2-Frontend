@@ -92,6 +92,7 @@ onBeforeUnmount(() =>
         "
         :disabled="loading"
         autocomplete="off"
+        class="pr-8"
         @focus="onFocus"
       />
       <ChevronsUpDown

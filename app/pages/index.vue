@@ -114,18 +114,18 @@ const accesosRapidos = [
 <template>
   <div class="p-6 space-y-8 max-w-5xl">
     <!-- cabecera: marca + eyebrow + estado, como el encabezado de una hoja de planta -->
-    <div class="flex items-baseline justify-between gap-4 border-b pb-4">
+    <div class="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
       <div class="flex items-center gap-3">
         <img
           src="/excellence-chemical-icon.png"
           alt="Excellence Chemical"
           class="h-7 w-7 shrink-0 self-start mt-0.5"
         />
-        <div>
+        <div class="min-w-0">
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Excellence Chemical S.A.C.
           </p>
-          <h1 class="text-2xl font-semibold mt-1">Gestión Excellence Chemical</h1>
+          <h1 class="text-xl sm:text-2xl font-semibold mt-1">Gestión Excellence Chemical</h1>
         </div>
       </div>
       <div class="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
