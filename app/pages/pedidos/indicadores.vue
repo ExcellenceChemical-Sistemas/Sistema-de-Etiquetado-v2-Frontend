@@ -3,9 +3,11 @@ import { ref, computed } from "vue";
 import { ArrowLeft, Download, Clock, AlertTriangle, PackageCheck, Timer, FileClock } from "@lucide/vue";
 import { usePedidosQuery } from "~/composables/usePedidos";
 import { formatFechaHora } from "~/utils/fechaHora";
-import { FILL_GREEN, FILL_RED, useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import { FILL_GREEN, FILL_RED, type XlsxColumn } from "~/composables/useCsvExport";
+import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoDona } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporteIndicadores";
+import { construirReportePdf } from "~/utils/reportePdf";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { CATEGORIA_OBSERVACION_LABEL, type EstadoPedido, type Pedido } from "~/types/pedido";
@@ -177,7 +179,7 @@ function formatNumero(n: number, decimales = 1) {
   return n.toLocaleString("es-PE", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
 }
 
-const { progress, isExporting, exportarLibro } = useXlsxExport();
+const { progress, isExporting, exportarPdf } = usePdfExport();
 
 const columnasCuello: XlsxColumn<PedidoConTiempo>[] = [
   { key: (p) => p.cliente.nombre, label: "Cliente", width: 36 },
@@ -243,9 +245,9 @@ const columnasTrazabilidad: XlsxColumn<PedidoConTiempoTotal>[] = [
 function exportarReporte() {
   const r = resumen.value;
   const hayEntregados = pedidosFiltrados.value.length > 0;
-  exportarLibro(
+  exportarPdf(
     () =>
-      construirReporte({
+      construirReportePdf({
         titulo: "Indicador de tiempo de entrega — Pedidos",
         descripcion: `Recepción → entrega al cliente, en horas hábiles (lun-vie 7:30-17:30, sin feriados). Meta: ≥80% de pedidos entregados dentro de ${UMBRAL_HORAS}h.`,
         filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
@@ -326,7 +328,7 @@ function exportarReporte() {
           },
         ],
       }),
-    `indicadores-pedidos-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
+    `indicadores-pedidos-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.pdf`,
   );
 }
 </script>
@@ -378,7 +380,7 @@ function exportarReporte() {
           </template>
           <template v-else>
             <Download class="h-4 w-4 mr-2" />
-            Exportar Excel
+            Exportar PDF
           </template>
         </Button>
       </div>

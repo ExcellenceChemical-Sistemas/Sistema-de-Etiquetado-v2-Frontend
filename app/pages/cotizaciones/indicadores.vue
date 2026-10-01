@@ -8,9 +8,11 @@ import { corteLimiteAvisoAlmacen, cumplioCorteAvisoAlmacen } from "~/utils/corte
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
 import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChart.vue";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
-import { FILL_AMBER, FILL_GREEN, useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
+import { FILL_AMBER, FILL_GREEN, type XlsxColumn } from "~/composables/useCsvExport";
+import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_AMBAR, COLOR_VERDE, graficoColumnas } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo, type SeccionReporte } from "~/utils/reporteIndicadores";
+import { construirReportePdf } from "~/utils/reportePdf";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
@@ -245,7 +247,7 @@ function urlSeguimientoDe(c: ConTiempoTotal) {
 }
 
 // --- Exportar el reporte completo (mismos filtros que la pantalla) ---
-const { progress, isExporting, exportarLibro } = useXlsxExport();
+const { progress, isExporting, exportarPdf } = usePdfExport();
 
 type Resumen = ReturnType<typeof resumenDe>;
 type Tendencia = typeof tendenciaCotizacion.value;
@@ -388,9 +390,9 @@ const columnasAlertas: XlsxColumn<Cotizacion>[] = [
 const hayDatos = computed(() => cotizacionesFiltradas.value.length > 0);
 
 function exportarReporte() {
-  exportarLibro(
+  exportarPdf(
     () =>
-      construirReporte({
+      construirReportePdf({
         titulo: "Indicador de tiempo de respuesta — Cotizaciones",
         descripcion: `Cotización: horas hábiles (lun-vie 7:30-17:30, sin feriados), meta ≤${UMBRAL_COTIZACION_HORAS}h. Aviso a almacén: Joel avisa en un solo corte diario a las 5pm, así que se mide si se avisó antes o en el corte del día hábil en que se aprobó, no en horas. Meta en ambos: ≥80% de los casos.`,
         filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
@@ -434,7 +436,7 @@ function exportarReporte() {
           { nombre: "Alertas de integridad", filas: cotizacionesConAlertas.value, columnas: columnasAlertas },
         ],
       }),
-    `indicadores-cotizaciones-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
+    `indicadores-cotizaciones-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.pdf`,
   );
 }
 </script>
@@ -486,7 +488,7 @@ function exportarReporte() {
           </template>
           <template v-else>
             <Download class="h-4 w-4 mr-2" />
-            Exportar Excel
+            Exportar PDF
           </template>
         </Button>
       </div>

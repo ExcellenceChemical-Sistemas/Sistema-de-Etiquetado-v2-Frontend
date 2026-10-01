@@ -16,9 +16,10 @@ import {
   totalesEstadisticas,
 } from "~/utils/estadisticas";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
-import { useXlsxExport } from "~/composables/useCsvExport";
+import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_BASE, graficoBarras, graficoColumnas, graficoDona } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporteIndicadores";
+import { construirReportePdf } from "~/utils/reportePdf";
 
 const { data: etiquetas, isPending, isError, refetch } = useHistorialEtiquetas();
 
@@ -89,7 +90,7 @@ const TARJETAS = computed(() => [
 ]);
 
 // --- Exportar el reporte completo (mismos filtros que la pantalla) ---
-const { progress, isExporting, exportarLibro } = useXlsxExport();
+const { progress, isExporting, exportarPdf } = usePdfExport();
 
 const MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const MAX_BARRAS = 10;
@@ -111,9 +112,9 @@ const hayDatosExportables = computed(
 function exportarReporte() {
   const segmentos = segmentosEscaneos();
   const mensual = serieMensual.value;
-  exportarLibro(
+  exportarPdf(
     () =>
-      construirReporte({
+      construirReportePdf({
         titulo: "Indicadores de etiquetas",
         descripcion:
           "El período filtra por la fecha en que se generó la etiqueta; escaneos, COA y FDS se cuentan sobre las etiquetas de ese período.",
@@ -212,7 +213,7 @@ function exportarReporte() {
           },
         ],
       }),
-    `indicadores-etiquetas-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.xlsx`,
+    `indicadores-etiquetas-${sufijoPeriodo(filtroMes.value, filtroAnio.value)}.pdf`,
   );
 }
 </script>
@@ -265,7 +266,7 @@ function exportarReporte() {
           </template>
           <template v-else>
             <Download class="h-4 w-4 mr-2" />
-            Exportar Excel
+            Exportar PDF
           </template>
         </Button>
       </div>
