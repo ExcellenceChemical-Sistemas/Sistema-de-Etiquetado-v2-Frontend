@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Inbox, Check, Trash2 } from "lucide-vue-next";
+import { Inbox, Check, Trash2, Bell, BellOff } from "lucide-vue-next";
 import {
   useNotificacionesQuery,
   useMarcarNotificacionLeida,
   useMarcarTodasLeidas,
   useEliminarNotificacion,
 } from "~/composables/useNotificaciones";
+import { usePushNotifications } from "~/composables/usePushNotifications";
 import type { Notificacion } from "~/types/notificacion";
 import { formatFechaHora } from "~/utils/fechaHora";
 
@@ -16,6 +17,11 @@ const hayNoLeidas = computed(() => (notificaciones.value ?? []).some((n) => !n.l
 const { mutate: marcarLeida } = useMarcarNotificacionLeida();
 const { mutateAsync: marcarTodas, isPending: marcandoTodas } = useMarcarTodasLeidas();
 const { mutate: eliminarNotificacion } = useEliminarNotificacion();
+
+const { soportado: pushSoportado, suscrito: pushSuscrito, cargando: pushCargando, refrescarEstado, activar: activarPush, desactivar: desactivarPush } = usePushNotifications();
+onMounted(() => {
+  if (pushSoportado) refrescarEstado();
+});
 
 function abrirOrigen(n: Notificacion) {
   if (!n.leidaEn) marcarLeida(n.id);
@@ -33,9 +39,21 @@ function abrirOrigen(n: Notificacion) {
         <h1 class="text-2xl font-semibold">Mensajería</h1>
         <p class="text-sm text-muted-foreground">Avisos internos del sistema, ej. pedidos que llevan mucho tiempo sin entregarse.</p>
       </div>
-      <Button v-if="hayNoLeidas" variant="outline" size="sm" :disabled="marcandoTodas" @click="marcarTodas()">
-        Marcar todo como recibido
-      </Button>
+      <div class="flex gap-2">
+        <Button
+          v-if="pushSoportado"
+          variant="outline"
+          size="sm"
+          :disabled="pushCargando"
+          @click="pushSuscrito ? desactivarPush() : activarPush()"
+        >
+          <component :is="pushSuscrito ? BellOff : Bell" class="mr-2 h-4 w-4" />
+          {{ pushSuscrito ? "Desactivar notificaciones push" : "Activar notificaciones push" }}
+        </Button>
+        <Button v-if="hayNoLeidas" variant="outline" size="sm" :disabled="marcandoTodas" @click="marcarTodas()">
+          Marcar todo como recibido
+        </Button>
+      </div>
     </div>
 
     <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">

@@ -81,6 +81,14 @@ but is still `aal1` to `/verificar-mfa` (navigation convenience only — the bac
 interceptor handles the backend's 403 codes `MFA_REQUERIDO` (→ `/verificar-mfa`) and `MFA_ENROLAR` (→ `/mi-cuenta?mfa=obligatorio`).
 Pure logic (levels, code normalisation, error messages) is in `utils/mfa.ts`.
 
+**Web Push.** `composables/usePushNotifications.ts` + `public/sw.js` (minimal, push-only — no
+offline caching, on purpose, so an old SW never serves a stale build). The VAPID public key is
+fetched from the backend (`GET /notificaciones/push/clave-publica`), never baked into the
+frontend build, so there's one single source of truth for the key pair. Opt-in button lives in
+`pages/mensajeria/index.vue` ("Activar notificaciones push"); the backend sends pushes for the
+same alerts already shown in the campana (see backend `CLAUDE.md`, `PushService`) — this is a
+delivery channel on top of `Notificacion`, not a replacement.
+
 **Session stays in sync.** `plugins/refrescar-permisos.client.ts` re-fetches `/usuarios/me` when the tab
 regains focus and every 5 min (`useUsuarioActual().refrescar()`); on a change it toasts and, if the current
 route is no longer allowed, sends the user home. `useApi`'s response interceptor signs the user out on a 403
