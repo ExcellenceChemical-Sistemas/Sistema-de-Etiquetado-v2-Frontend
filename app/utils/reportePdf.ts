@@ -22,6 +22,7 @@ const MARGEN = 14
 const ANCHO_PAGINA = 210 // A4 portrait, mm
 const ALTO_PAGINA = 297
 const ANCHO_UTIL = ANCHO_PAGINA - MARGEN * 2
+const ANCHO_UTIL_APAISADO = ALTO_PAGINA - MARGEN * 2 // A4 landscape: ancho = alto del portrait
 const Y_INICIO_CONTENIDO = 24
 const Y_LIMITE_CONTENIDO = ALTO_PAGINA - 16
 
@@ -46,6 +47,14 @@ function limpiar(texto: string): string {
 }
 function limpiarCelda(valor: string | number): string {
   return limpiar(String(valor))
+}
+
+// Ancho de columna estimado en mm a partir del `width` (en caracteres, pensado para Excel) de
+// cada `XlsxColumn` — mismo criterio de fallback que `agregarHojaTabla` (useCsvExport.ts) para
+// que las columnas guarden las mismas proporciones relativas que en el Excel que reemplazan.
+function anchoColumnaMm(col: XlsxColumn<any>): number {
+  const caracteres = col.width ?? Math.max(col.label.length + 4, 14)
+  return caracteres * 1.7
 }
 
 export function construirReportePdf(reporte: Reporte): jsPDF {
@@ -185,10 +194,13 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
     y += 2
   }
 
-  // --- Detalle: una tabla por hoja, cada una en página nueva para que no se corte a la mitad ---
+  // --- Detalle: una tabla por hoja, cada una en página nueva apaisada (más columnas que las
+  // secciones de arriba: en portrait, autotable las achica tanto que el texto se parte letra por
+  // letra — se detectó probando el PDF real de Pedidos, con 14 columnas) ---
   for (const hoja of reporte.hojas) {
     if (hoja.filas.length === 0) continue
-    saltoDePagina()
+    doc.addPage('a4', 'landscape')
+    y = Y_INICIO_CONTENIDO
     doc.setTextColor(...COLOR_TITULO)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12.5)
@@ -211,6 +223,14 @@ function agregarTablaHoja<T>(doc: jsPDF, hoja: HojaReporte<T>, startY: number) {
   const valorDe = (row: T, col: XlsxColumn<T>) =>
     (typeof col.key === 'function' ? col.key(row) : row[col.key]) ?? ''
 
+  // Reparte ANCHO_UTIL_APAISADO entre las columnas según su ancho relativo (en vez de dejar que
+  // autotable las achique por su cuenta cuando no entran): con muchas columnas, su algoritmo de
+  // auto-ajuste puede reducirlas por debajo del ancho de una sola letra.
+  const anchosBase = columnas.map(anchoColumnaMm)
+  const totalBase = anchosBase.reduce((s, w) => s + w, 0)
+  const factor = totalBase > ANCHO_UTIL_APAISADO ? ANCHO_UTIL_APAISADO / totalBase : 1
+  const columnStyles = Object.fromEntries(anchosBase.map((w, i) => [i, { cellWidth: w * factor }]))
+
   autoTable(doc, {
     startY,
     margin: { left: MARGEN, right: MARGEN, top: Y_INICIO_CONTENIDO, bottom: 16 },
@@ -220,6 +240,7 @@ function agregarTablaHoja<T>(doc: jsPDF, hoja: HojaReporte<T>, startY: number) {
     styles: { fontSize: 7.5, cellPadding: 1.6, lineColor: COLOR_BORDE, lineWidth: 0.1, overflow: 'linebreak' },
     headStyles: { fillColor: COLOR_SECCION, textColor: [255, 255, 255], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: FILL_KPI },
+    columnStyles,
     didParseCell(data) {
       if (data.section !== 'body') return
       const col = columnas[data.column.index]
@@ -240,6 +261,10 @@ function agregarEncabezadoPie(doc: jsPDF, titulo: string) {
   const generadoCorto = new Date().toLocaleDateString('es-PE', { dateStyle: 'short' })
   for (let p = 1; p <= totalPaginas; p++) {
     doc.setPage(p)
+    // Las hojas de detalle son apaisadas (más anchas que las de portada/secciones), así que el
+    // ancho/alto de cada página se lee en vivo en vez de asumir siempre A4 portrait.
+    const anchoPagina = doc.internal.pageSize.getWidth()
+    const altoPagina = doc.internal.pageSize.getHeight()
     if (p > 1) {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(8.5)
@@ -247,18 +272,18 @@ function agregarEncabezadoPie(doc: jsPDF, titulo: string) {
       doc.text('Excellence Chemical S.A.C.', MARGEN, 11)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...COLOR_SUAVE)
-      doc.text(limpiar(titulo), ANCHO_PAGINA - MARGEN, 11, { align: 'right' })
+      doc.text(limpiar(titulo), anchoPagina - MARGEN, 11, { align: 'right' })
       doc.setDrawColor(...COLOR_BORDE)
       doc.setLineWidth(0.2)
-      doc.line(MARGEN, 14, ANCHO_PAGINA - MARGEN, 14)
+      doc.line(MARGEN, 14, anchoPagina - MARGEN, 14)
     }
     doc.setDrawColor(...COLOR_BORDE)
     doc.setLineWidth(0.2)
-    doc.line(MARGEN, ALTO_PAGINA - 12, ANCHO_PAGINA - MARGEN, ALTO_PAGINA - 12)
+    doc.line(MARGEN, altoPagina - 12, anchoPagina - MARGEN, altoPagina - 12)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7.5)
     doc.setTextColor(...COLOR_SUAVE)
-    doc.text(`Generado el ${generadoCorto}`, MARGEN, ALTO_PAGINA - 7)
-    doc.text(`Página ${p} de ${totalPaginas}`, ANCHO_PAGINA - MARGEN, ALTO_PAGINA - 7, { align: 'right' })
+    doc.text(`Generado el ${generadoCorto}`, MARGEN, altoPagina - 7)
+    doc.text(`Página ${p} de ${totalPaginas}`, anchoPagina - MARGEN, altoPagina - 7, { align: 'right' })
   }
 }
