@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History, Truck } from "@lucide/vue";
+import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History, Truck, Undo2 } from "@lucide/vue";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import {
   useCotizacionesQuery,
@@ -21,6 +21,7 @@ import {
 import CotizacionForm from "~/components/cotizaciones/CotizacionForm.vue";
 import CotizacionFechaDialog from "~/components/cotizaciones/CotizacionFechaDialog.vue";
 import CotizacionEnviarDialog from "~/components/cotizaciones/CotizacionEnviarDialog.vue";
+import CotizacionDeshacerDialog from "~/components/cotizaciones/CotizacionDeshacerDialog.vue";
 import CotizacionProgreso from "~/components/cotizaciones/CotizacionProgreso.vue";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 
@@ -181,6 +182,16 @@ const enviarDialogCotizacion = ref<Cotizacion | null>(null);
 function abrirEnviar(cotizacion: Cotizacion) {
   enviarDialogCotizacion.value = cotizacion;
   enviarDialogOpen.value = true;
+}
+
+const deshacerDialogOpen = ref(false);
+const deshacerDialogCotizacion = ref<Cotizacion | null>(null);
+const deshacerDialogCampo = ref<"cotizacionEnviadaEn" | "pedidoAprobadoEn" | "avisoAlmacenEn">("pedidoAprobadoEn");
+
+function abrirDeshacer(cotizacion: Cotizacion, campo: typeof deshacerDialogCampo.value) {
+  deshacerDialogCotizacion.value = cotizacion;
+  deshacerDialogCampo.value = campo;
+  deshacerDialogOpen.value = true;
 }
 
 function marcarSiguiente(c: Cotizacion) {
@@ -454,6 +465,31 @@ function textoAlertas(c: Cotizacion) {
                           <Pencil class="mr-2 h-3.5 w-3.5" />
                           Corregir aviso a almacén
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator v-if="esAdmin && (c.cotizacionEnviadaEn || c.pedidoAprobadoEn || c.avisoAlmacenEn)" />
+                        <DropdownMenuItem
+                          v-if="c.avisoAlmacenEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(c, 'avisoAlmacenEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer aviso a almacén
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          v-if="c.pedidoAprobadoEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(c, 'pedidoAprobadoEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer aprobación
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          v-if="c.cotizacionEnviadaEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(c, 'cotizacionEnviadaEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer cotización enviada
+                        </DropdownMenuItem>
                       </template>
                       <template v-if="permiso.puedeEliminar">
                         <DropdownMenuSeparator v-if="permiso.puedeEditar" />
@@ -525,6 +561,12 @@ function textoAlertas(c: Cotizacion) {
     />
 
     <CotizacionEnviarDialog v-model:open="enviarDialogOpen" :cotizacion="enviarDialogCotizacion" />
+
+    <CotizacionDeshacerDialog
+      v-model:open="deshacerDialogOpen"
+      :cotizacion="deshacerDialogCotizacion"
+      :campo="deshacerDialogCampo"
+    />
 
     <Dialog v-model:open="detalleOpen">
       <DialogContent class="max-w-lg max-h-[85vh] overflow-y-auto scroll-tema">

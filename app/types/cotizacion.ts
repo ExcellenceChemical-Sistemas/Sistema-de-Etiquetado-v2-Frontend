@@ -104,4 +104,8 @@ export interface ActualizarCotizacionInput {
   pedidoAprobadoEn?: string
   avisoAlmacenEn?: string
   motivoCorreccion?: string
+  // Deshace una etapa ya marcada (vuelve esa fecha, y las que dependen de ella, a null) — para un
+  // clic accidental, ej. "Marcar pedido aprobado" en la cotización equivocada. Exclusivo de Admin,
+  // con motivoCorreccion obligatorio. No se combina con las fechas de arriba en el mismo PATCH.
+  revertirEtapa?: 'cotizacionEnviadaEn' | 'pedidoAprobadoEn' | 'avisoAlmacenEn'
 }
