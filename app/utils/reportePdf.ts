@@ -58,7 +58,12 @@ function anchoColumnaMm(col: XlsxColumn<any>): number {
 }
 
 export function construirReportePdf(reporte: Reporte): jsPDF {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  // `compress: true` es necesario para que jsPDF aplique FlateDecode a las imágenes de los
+  // gráficos (canvas PNG): sin esto las inserta como bitmap RGB crudo — un gráfico de 1096x464px
+  // pesaba 1.5MB sin comprimir, inflando un PDF de 5 páginas a 2.6MB (detectado probando la
+  // exportación real de Pedidos, que sí tiene gráficos — a diferencia de Cotizaciones, que no
+  // mostró este problema porque sus gráficos dependen del filtro de año y no se dibujaron).
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true })
   let y = 0
 
   function saltoDePagina() {
