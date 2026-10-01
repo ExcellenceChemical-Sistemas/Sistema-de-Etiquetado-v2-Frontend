@@ -37,6 +37,17 @@ function pxAMm(px: number) {
   return px * 0.2646 // 96dpi
 }
 
+// Las fuentes base14 de jsPDF (Helvetica/WinAnsi) no tienen ≤/≥/→: sin esto se imprimen como
+// glifos rotos (comillas/símbolos sueltos) en vez del carácter — se detectó probando el PDF real
+// contra producción. Se limpia acá, en el único punto donde todo el texto converge antes de
+// `doc.text`/autoTable, en vez de tocar cada string en las 3 páginas que arman el `Reporte`.
+function limpiar(texto: string): string {
+  return texto.replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/→/g, '->')
+}
+function limpiarCelda(valor: string | number): string {
+  return limpiar(String(valor))
+}
+
 export function construirReportePdf(reporte: Reporte): jsPDF {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   let y = 0
@@ -58,14 +69,14 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
   doc.setTextColor(...BLANCO)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(15)
-  doc.text(reporte.titulo, MARGEN, 15)
+  doc.text(limpiar(reporte.titulo), MARGEN, 15)
   y = 32
 
   if (reporte.descripcion) {
     doc.setTextColor(...COLOR_SUAVE)
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(9)
-    const lineas = doc.splitTextToSize(reporte.descripcion, ANCHO_UTIL)
+    const lineas = doc.splitTextToSize(limpiar(reporte.descripcion), ANCHO_UTIL)
     doc.text(lineas, MARGEN, y)
     y += lineas.length * 4.2 + 2
   }
@@ -84,7 +95,7 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
       theme: 'plain',
       tableWidth: 90,
       styles: { fontSize: 9, cellPadding: 1.5 },
-      body: reporte.filtros.map(([nombre, valor]) => [nombre, valor]),
+      body: reporte.filtros.map(([nombre, valor]) => [limpiar(nombre), limpiar(valor)]),
       columnStyles: {
         0: { fontStyle: 'bold', textColor: COLOR_SECCION, fillColor: FILL_KPI, cellWidth: 45 },
         1: { textColor: COLOR_TITULO, cellWidth: 45 },
@@ -100,7 +111,7 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
     doc.setTextColor(...COLOR_SECCION)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(size)
-    doc.text(texto, MARGEN + 2.5, y + 5.5)
+    doc.text(limpiar(texto), MARGEN + 2.5, y + 5.5)
     y += 8 + 4
   }
 
@@ -112,7 +123,7 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
       margin: { left: MARGEN, right: MARGEN, top: Y_INICIO_CONTENIDO, bottom: 16 },
       theme: 'grid',
       styles: { fontSize: 9.5, cellPadding: 2.2, lineColor: COLOR_BORDE, lineWidth: 0.1 },
-      body: kpis.map(([nombre, valor]) => [nombre, String(valor)]),
+      body: kpis.map(([nombre, valor]) => [limpiar(nombre), limpiarCelda(valor)]),
       columnStyles: {
         0: { fillColor: FILL_KPI, textColor: COLOR_SECCION },
         1: { fontStyle: 'bold', textColor: COLOR_TITULO, halign: 'right', cellWidth: 40 },
@@ -130,14 +141,14 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
       doc.setTextColor(...COLOR_SECCION)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
-      doc.text(grafico.titulo, MARGEN, y + 4)
+      doc.text(limpiar(grafico.titulo), MARGEN, y + 4)
       y += 6
 
       if (grafico.nota) {
         doc.setFont('helvetica', 'italic')
         doc.setFontSize(8)
         doc.setTextColor(...COLOR_SUAVE)
-        const lineas = doc.splitTextToSize(grafico.nota, ANCHO_UTIL)
+        const lineas = doc.splitTextToSize(limpiar(grafico.nota), ANCHO_UTIL)
         doc.text(lineas, MARGEN, y)
         y += lineas.length * 3.6 + 2
       }
@@ -153,7 +164,7 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
         doc.setFont('helvetica', 'italic')
         doc.setFontSize(9)
         doc.setTextColor(...COLOR_SUAVE)
-        doc.text(grafico.vacio ?? 'Sin datos para graficar en este filtro', MARGEN, y + 3)
+        doc.text(limpiar(grafico.vacio ?? 'Sin datos para graficar en este filtro'), MARGEN, y + 3)
         y += 9
       }
 
@@ -162,8 +173,8 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
           startY: y,
           margin: { left: MARGEN, right: MARGEN, top: Y_INICIO_CONTENIDO, bottom: 16 },
           theme: 'grid',
-          head: [grafico.datos.columnas],
-          body: grafico.datos.filas.map((fila) => fila.map(String)),
+          head: [grafico.datos.columnas.map(limpiar)],
+          body: grafico.datos.filas.map((fila) => fila.map(limpiarCelda)),
           styles: { fontSize: 8.5, cellPadding: 1.8, lineColor: COLOR_BORDE, lineWidth: 0.1 },
           headStyles: { fillColor: COLOR_SECCION, textColor: BLANCO, fontStyle: 'bold' },
           alternateRowStyles: { fillColor: FILL_KPI },
@@ -181,7 +192,7 @@ export function construirReportePdf(reporte: Reporte): jsPDF {
     doc.setTextColor(...COLOR_TITULO)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12.5)
-    doc.text(hoja.nombre, MARGEN, y)
+    doc.text(limpiar(hoja.nombre), MARGEN, y)
     y += 3
     doc.setDrawColor(...COLOR_ACENTO)
     doc.setLineWidth(0.6)
@@ -204,8 +215,8 @@ function agregarTablaHoja<T>(doc: jsPDF, hoja: HojaReporte<T>, startY: number) {
     startY,
     margin: { left: MARGEN, right: MARGEN, top: Y_INICIO_CONTENIDO, bottom: 16 },
     theme: 'grid',
-    head: [columnas.map((c) => c.label)],
-    body: hoja.filas.map((row) => columnas.map((c) => String(valorDe(row, c)))),
+    head: [columnas.map((c) => limpiar(c.label))],
+    body: hoja.filas.map((row) => columnas.map((c) => limpiarCelda(valorDe(row, c) as string | number))),
     styles: { fontSize: 7.5, cellPadding: 1.6, lineColor: COLOR_BORDE, lineWidth: 0.1, overflow: 'linebreak' },
     headStyles: { fillColor: COLOR_SECCION, textColor: [255, 255, 255], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: FILL_KPI },
@@ -236,7 +247,7 @@ function agregarEncabezadoPie(doc: jsPDF, titulo: string) {
       doc.text('Excellence Chemical S.A.C.', MARGEN, 11)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...COLOR_SUAVE)
-      doc.text(titulo, ANCHO_PAGINA - MARGEN, 11, { align: 'right' })
+      doc.text(limpiar(titulo), ANCHO_PAGINA - MARGEN, 11, { align: 'right' })
       doc.setDrawColor(...COLOR_BORDE)
       doc.setLineWidth(0.2)
       doc.line(MARGEN, 14, ANCHO_PAGINA - MARGEN, 14)
