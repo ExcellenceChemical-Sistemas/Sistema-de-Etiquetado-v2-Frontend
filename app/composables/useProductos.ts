@@ -137,6 +137,8 @@ export interface ClasificacionFds {
   frasesH: string[]
   frasesP: string[]
   noPeligroso: boolean
+  // 'ocr': la ficha era un PDF escaneado sin texto, se leyó con OCR (menos confiable, revisar con más cuidado).
+  origen: 'texto' | 'ocr'
 }
 
 // Lee una FDS (PDF) y devuelve la clasificación GHS propuesta. No guarda nada.

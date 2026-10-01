@@ -140,6 +140,9 @@ async function leerClasificacion(file: File) {
     frasesP.value = c.frasesP
     clasificacionLeida.value = true
     mostrarGhs.value = true
+    if (c.origen === 'ocr') {
+      toast.warning('La ficha era un PDF escaneado: esta clasificación se leyó por OCR y puede tener errores. Revisala con más cuidado antes de guardar.')
+    }
   } catch (e: any) {
     toast.error(e?.response?.data?.message ?? 'No se pudo leer la ficha de seguridad')
   }
