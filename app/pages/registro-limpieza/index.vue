@@ -2,6 +2,9 @@
 import { ExternalLink, SprayCan } from "lucide-vue-next";
 import { REGISTRO_LIMPIEZA } from "~/config/registroLimpieza";
 import { useRegistroLimpiezaQuery } from "~/composables/useRegistroLimpieza";
+import { usePermiso } from "~/composables/usePermiso";
+
+const permiso = usePermiso("REGISTRO_LIMPIEZA");
 
 const hayForm = computed(() => !!REGISTRO_LIMPIEZA.formUrl);
 const hayHistorial = computed(() => !!REGISTRO_LIMPIEZA.sheetCsvUrl);
@@ -23,7 +26,7 @@ const { data, isPending, isError, refetch } = useRegistroLimpiezaQuery();
           <h1 class="text-2xl font-semibold mt-1">Registro de limpieza</h1>
         </div>
       </div>
-      <Button v-if="hayForm" as-child>
+      <Button v-if="hayForm && permiso.puedeCrear" as-child>
         <a :href="REGISTRO_LIMPIEZA.formUrl" target="_blank" rel="noopener noreferrer">
           <ExternalLink class="h-4 w-4" />
           Nuevo registro

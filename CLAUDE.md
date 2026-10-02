@@ -104,11 +104,16 @@ answer whenever delete answers 409.
 
 1. *CRUD permisos* — `utils/permisos.ts` holds `RECURSOS`
    (`LOTES`, `PRODUCTOS`, `FABRICANTES`, `PLANTILLAS`, `USUARIOS`, `ETIQUETAS`, `PEDIDOS`,
-   `COTIZACIONES`, `CLIENTES`) × four booleans (`puedeVer`/`puedeCrear`/`puedeEditar`/`puedeEliminar`).
+   `COTIZACIONES`, `CLIENTES`, `REGISTRO_LIMPIEZA`) × four booleans
+   (`puedeVer`/`puedeCrear`/`puedeEditar`/`puedeEliminar`).
    This file must mirror the backend's Zod enum in `usuarios.dto.ts`; adding a recurso there means
    adding it here. There is no `COA` resource: COA upload is controlled by `LOTES.puedeEditar`.
    `PEDIDOS`, `COTIZACIONES`, and `CLIENTES` used to all share `PEDIDOS` but were split into their own
-   resources — different people are responsible for each in practice.
+   resources — different people are responsible for each in practice. `REGISTRO_LIMPIEZA` has no
+   backend data of its own (see `pages/registro-limpieza/index.vue` — it links to an external Google
+   Form and reads a published Sheet CSV directly from the browser): `puedeVer` gates the screen,
+   `puedeCrear` the "Nuevo registro" button; `puedeEditar`/`puedeEliminar` exist for consistency with
+   the grid but nothing reads them yet.
    `usePermiso('RECURSO')` returns a reactive object with `esAdmin` bypass baked in.
    Some screens fill their selectors from another resource's list, so they need that "Ver" too:
    Generar Etiqueta needs `PLANTILLAS` and `LOTES` (`puedeVer`); the lote form needs `PRODUCTOS` and

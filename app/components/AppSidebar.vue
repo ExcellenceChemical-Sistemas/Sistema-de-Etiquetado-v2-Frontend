@@ -52,6 +52,7 @@ const permisoUsuarios = usePermiso("USUARIOS");
 const permisoPedidos = usePermiso("PEDIDOS");
 const permisoCotizaciones = usePermiso("COTIZACIONES");
 const permisoClientes = usePermiso("CLIENTES");
+const permisoRegistroLimpieza = usePermiso("REGISTRO_LIMPIEZA");
 
 const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
 
@@ -142,7 +143,7 @@ const items = computed(() =>
       title: "Registro de limpieza",
       url: "/registro-limpieza",
       icon: SprayCan,
-      visible: true,
+      visible: permisoRegistroLimpieza.puedeVer,
     },
   ].filter((i) => i.visible),
 );

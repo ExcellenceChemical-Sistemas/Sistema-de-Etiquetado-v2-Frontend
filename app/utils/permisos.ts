@@ -9,7 +9,7 @@
 // PEDIDOS, COTIZACIONES y CLIENTES son recursos separados a propósito: los encargados son
 // personas distintas (una despacha pedidos, otra cotiza, y Clientes lo puede llevar alguien
 // más) — antes compartían PEDIDOS y no se podía otorgar acceso a uno sin los otros.
-export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS', 'COTIZACIONES', 'CLIENTES'] as const
+export const RECURSOS = ['LOTES', 'PRODUCTOS', 'FABRICANTES', 'PLANTILLAS', 'USUARIOS', 'ETIQUETAS', 'PEDIDOS', 'COTIZACIONES', 'CLIENTES', 'REGISTRO_LIMPIEZA'] as const
 export type Recurso = (typeof RECURSOS)[number]
 
 export const RECURSO_LABEL: Record<Recurso, string> = {
@@ -22,6 +22,10 @@ export const RECURSO_LABEL: Record<Recurso, string> = {
   PEDIDOS: 'Pedidos',
   COTIZACIONES: 'Cotizaciones',
   CLIENTES: 'Clientes',
+  // Sin controller propio en el backend (ver prisma/schema.prisma): puedeVer gatea la
+  // pantalla, puedeCrear el botón "Nuevo registro". Editar/Eliminar no se usan todavía
+  // (no hay acción que editar o eliminar un registro desde este sistema).
+  REGISTRO_LIMPIEZA: 'Registro de limpieza',
 }
 
 export const ACCIONES = [
