@@ -10,7 +10,7 @@ import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChar
 import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExportar.vue";
 import { FILL_AMBER, FILL_GREEN, type XlsxColumn } from "~/composables/useCsvExport";
 import { usePdfExport } from "~/composables/usePdfExport";
-import { COLOR_AMBAR, COLOR_VERDE, graficoColumnas } from "~/utils/graficosReporte";
+import { COLOR_AMBAR, COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoColumnas } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo, type SeccionReporte } from "~/utils/reporteIndicadores";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 
@@ -144,6 +144,48 @@ const peoresAviso = computed(() =>
 function formatNumero(n: number, decimales = 1) {
   return n.toLocaleString("es-PE", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
 }
+
+// --- Cuello de botella propio de Cotizaciones: dónde se va el tiempo dentro de sus 3 etapas
+// (requerimiento → enviada → aprobado → avisado), sin mezclar con las etapas de Almacén/Pedido
+// (eso ya lo cubre "Trazabilidad con el pedido" más abajo, a otro nivel de detalle). Cada etapa
+// depende de que la anterior ya haya pasado (no se puede avisar a almacén sin estar aprobada), así
+// que el promedio de cada una se calcula solo sobre los registros que de verdad llegaron a esa
+// etapa (ambas fechas presentes) — una cotización que quedó "enviada" sin aprobar entra en el
+// promedio de la etapa 1 pero no en el de la 2 ni la 3.
+interface EtapaCotizacion {
+  key: string;
+  label: string;
+  horas: number;
+  n: number;
+}
+
+function horasEntre(a: string | null, b: string | null): number | null {
+  if (!a || !b) return null;
+  return horasHabilesEntre(a, b);
+}
+
+function promedioEtapa(lista: Cotizacion[], fn: (c: Cotizacion) => number | null): { horas: number; n: number } {
+  const valores = lista.map(fn).filter((v): v is number => v !== null);
+  return { horas: valores.length ? valores.reduce((s, v) => s + v, 0) / valores.length : 0, n: valores.length };
+}
+
+const etapasCotizacion = computed<EtapaCotizacion[]>(() => {
+  const lista = cotizacionesFiltradas.value;
+  const respuesta = promedioEtapa(lista, (c) => horasEntre(c.requerimientoEn, c.cotizacionEnviadaEn));
+  const aprobacion = promedioEtapa(lista, (c) => horasEntre(c.cotizacionEnviadaEn, c.pedidoAprobadoEn));
+  const aviso = promedioEtapa(lista, (c) => horasEntre(c.pedidoAprobadoEn, c.avisoAlmacenEn));
+  return [
+    { key: "respuesta", label: "Requerimiento → Cotización enviada", horas: respuesta.horas, n: respuesta.n },
+    { key: "aprobacion", label: "Cotización enviada → Pedido aprobado", horas: aprobacion.horas, n: aprobacion.n },
+    { key: "aviso", label: "Pedido aprobado → Aviso a almacén", horas: aviso.horas, n: aviso.n },
+  ];
+});
+
+const etapaCotizacionMaxHoras = computed(() => Math.max(...etapasCotizacion.value.map((e) => e.horas), 0.01));
+
+const etapaCuelloCotizacion = computed(() =>
+  etapasCotizacion.value.reduce((max, e) => (e.horas > max.horas ? e : max), etapasCotizacion.value[0]!),
+);
 
 // Registros cuya fecha de alguna etapa cayó en un feriado/fin de semana o dentro de una ausencia
 // registrada de quien la cargó — ver Ausencias. No se excluyen de los promedios de arriba (eso
@@ -407,6 +449,29 @@ async function exportarReporte() {
           },
           seccionIndicador("Tiempo de respuesta de cotización", resumenCotizacion.value, UMBRAL_COTIZACION_HORAS, tendenciaCotizacion.value),
           seccionIndicadorCorte(resumenAviso.value, tendenciaAviso.value),
+          {
+            titulo: "Cuello de botella",
+            graficos: [
+              {
+                titulo: "Tiempo promedio por etapa",
+                nota: `Cuello de botella: ${etapaCuelloCotizacion.value.label} (${formatNumero(etapaCuelloCotizacion.value.horas)}h en promedio, sobre ${etapaCuelloCotizacion.value.n} registro(s)). Cada etapa depende de la anterior, así que el promedio de cada una solo cuenta los registros que de verdad llegaron a ella.`,
+                imagen: etapasCotizacion.value.some((e) => e.n > 0)
+                  ? graficoBarras(
+                      etapasCotizacion.value.map((e) => ({
+                        etiqueta: e.label,
+                        valor: e.horas,
+                        texto: `${formatNumero(e.horas)}h`,
+                        color: e.key === etapaCuelloCotizacion.value.key ? COLOR_ROJO : COLOR_BASE,
+                      })),
+                    )
+                  : null,
+                datos: {
+                  columnas: ["Etapa", "Horas promedio", "Registros"],
+                  filas: etapasCotizacion.value.map((e) => [e.label, Number(e.horas.toFixed(1)), e.n]),
+                },
+              },
+            ],
+          },
           {
             titulo: "Trazabilidad con el pedido (requerimiento → entrega real)",
             kpis: [
@@ -703,6 +768,45 @@ async function exportarReporte() {
                     </TableRow>
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </section>
+
+          <!-- Cuello de botella propio de Cotizaciones: sus 3 etapas, no las de Almacén/Pedido -->
+          <section class="space-y-3">
+            <h2 class="text-lg font-semibold">Cuello de botella</h2>
+            <p class="text-sm text-muted-foreground">
+              Dónde se va el tiempo dentro del proceso de Cotizaciones. Cada etapa depende de que la
+              anterior ya haya pasado (no se puede avisar a almacén sin que esté aprobada), así que el
+              promedio de cada una solo cuenta los registros que de verdad llegaron a esa etapa.
+            </p>
+            <Card>
+              <CardHeader class="pb-2">
+                <CardTitle class="text-sm font-medium text-muted-foreground">Tiempo promedio por etapa</CardTitle>
+              </CardHeader>
+              <CardContent class="space-y-3">
+                <div v-for="e in etapasCotizacion" :key="e.key" class="space-y-1">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-muted-foreground">
+                      {{ e.label }} <span class="text-muted-foreground/70">({{ e.n }})</span>
+                    </span>
+                    <span class="font-medium" :class="e.key === etapaCuelloCotizacion.key ? 'text-red-600' : ''">
+                      {{ formatNumero(e.horas) }}h
+                    </span>
+                  </div>
+                  <div class="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      :class="e.key === etapaCuelloCotizacion.key ? 'bg-red-500' : 'bg-primary'"
+                      :style="{ width: Math.max((e.horas / etapaCotizacionMaxHoras) * 100, 2) + '%' }"
+                    />
+                  </div>
+                </div>
+                <p v-if="cotizacionesFiltradas.length > 0" class="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+                  <AlertTriangle class="h-3.5 w-3.5 shrink-0 text-red-500" />
+                  Cuello de botella: <span class="font-medium text-foreground">{{ etapaCuelloCotizacion.label }}</span>
+                  ({{ formatNumero(etapaCuelloCotizacion.horas) }}h en promedio, sobre {{ etapaCuelloCotizacion.n }} registro(s))
+                </p>
               </CardContent>
             </Card>
           </section>
