@@ -1,9 +1,12 @@
+import type { MaybeRefOrGetter } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import type { Ausencia, CrearAusenciaInput } from '~/types/ausencia'
 
-export function useAusenciasQuery() {
+// `enabled` permite no disparar la consulta si el usuario no es admin (evita un 403 inútil).
+export function useAusenciasQuery(options: { enabled?: MaybeRefOrGetter<boolean> } = {}) {
   const api = useApi()
   return useQuery({
+    enabled: options.enabled,
     queryKey: ['ausencias'],
     queryFn: async () => {
       const { data } = await api.get<Ausencia[]>('/ausencias')

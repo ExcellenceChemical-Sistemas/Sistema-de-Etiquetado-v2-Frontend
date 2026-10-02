@@ -6,7 +6,6 @@ import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { toast } from "vue-sonner";
 
 const { esAdmin, cargar: cargarUsuarioActual } = useUsuarioActual();
-onMounted(cargarUsuarioActual);
 
 interface UsuarioBasico {
   id: number;
@@ -17,6 +16,7 @@ const usuarios = ref<UsuarioBasico[]>([]);
 const cargandoUsuarios = ref(false);
 
 async function cargarUsuarios() {
+  if (!esAdmin.value) return;
   cargandoUsuarios.value = true;
   try {
     const api = useApi();
@@ -28,9 +28,12 @@ async function cargarUsuarios() {
     cargandoUsuarios.value = false;
   }
 }
-onMounted(cargarUsuarios);
+onMounted(async () => {
+  await cargarUsuarioActual();
+  await cargarUsuarios();
+});
 
-const { data: ausencias, isPending, isError, refetch } = useAusenciasQuery();
+const { data: ausencias, isPending, isError, refetch } = useAusenciasQuery({ enabled: esAdmin });
 
 const usuarioId = ref<number | undefined>(undefined);
 const desde = ref("");

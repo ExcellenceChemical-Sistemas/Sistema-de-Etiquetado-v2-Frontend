@@ -55,4 +55,11 @@ describe('rutaPermitida', () => {
     expect(rutaPermitida('/usuarios', u, false)).toBe(true)
     expect(rutaPermitida('/lotes', u, false)).toBe(false)
   })
+
+  it('/ausencias no tiene Recurso propio: solo el admin general entra, ni el Admin de KPIs', () => {
+    expect(rutaPermitida('/ausencias', usuario(), false)).toBe(false)
+    expect(rutaPermitida('/ausencias', usuario({ esAdminKpis: true }), false)).toBe(false)
+    expect(rutaPermitida('/ausencias', usuario({ esAdmin: true }), true)).toBe(true)
+    expect(rutaPermitida('/ausencias/5', usuario(), false)).toBe(false)
+  })
 })

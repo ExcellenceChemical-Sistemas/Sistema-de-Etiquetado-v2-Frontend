@@ -22,6 +22,12 @@ const RUTA_PERMISO: [string, Recurso, Nivel][] = [
  */
 const RUTAS_ADMIN_KPIS = ['/usuarios']
 
+/**
+ * Rutas sin Recurso propio (no hay flags puedeVer/puedeCrear/... para esto):
+ * el gateo es simplemente "admin general sí, el resto no".
+ */
+const RUTAS_SOLO_ADMIN = ['/ausencias']
+
 function coincidePrefijo(prefijo: string, path: string) {
   return path === prefijo || path.startsWith(prefijo + '/')
 }
@@ -37,6 +43,10 @@ function permisoDeRuta(path: string) {
  * al usuario de una pantalla cuyo acceso le acaban de quitar.
  */
 export function rutaPermitida(path: string, usuario: Usuario | null, esAdmin: boolean) {
+  if (RUTAS_SOLO_ADMIN.some((prefijo) => coincidePrefijo(prefijo, path))) {
+    return esAdmin
+  }
+
   const req = permisoDeRuta(path)
   if (!req) return true // ruta libre (login, /, etc.)
   if (esAdmin) return true
