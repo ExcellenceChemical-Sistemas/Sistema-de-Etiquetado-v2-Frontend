@@ -70,7 +70,7 @@ onMounted(cargar);
 
 <template>
   <div class="p-6 space-y-6 max-w-3xl">
-    <div class="flex items-center justify-between border-b pb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
       <div class="flex items-center gap-3">
         <div class="rounded-md bg-primary/10 p-2.5 shrink-0">
           <Users class="h-5 w-5 text-primary" />
@@ -84,7 +84,7 @@ onMounted(cargar);
           <h1 class="text-2xl font-semibold mt-1">Usuarios y permisos</h1>
         </div>
       </div>
-      <div v-if="!soloGestionaKpisIso" class="flex items-center gap-2">
+      <div v-if="!soloGestionaKpisIso" class="flex flex-wrap items-center gap-2">
         <Button variant="outline" @click="historialOpen = true">
           <History class="h-4 w-4" />
           Historial

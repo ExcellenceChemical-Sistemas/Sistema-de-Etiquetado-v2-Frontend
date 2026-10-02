@@ -279,7 +279,7 @@ async function confirmarRegenerar() {
           Tiempo de entrega: recepción, preparación, salida y entrega de cada pedido.
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Button variant="outline" as-child>
           <NuxtLink to="/pedidos/indicadores">
             <ChartNoAxesCombined class="h-4 w-4 mr-2" />

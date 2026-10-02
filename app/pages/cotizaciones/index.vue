@@ -304,7 +304,7 @@ function textoAlertas(c: Cotizacion) {
           almacén. Insumos y cantidades quedan en KEYFACIL ERP, acá solo los tiempos.
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Button variant="outline" as-child>
           <NuxtLink to="/cotizaciones/indicadores">
             <ChartNoAxesCombined class="h-4 w-4 mr-2" />
