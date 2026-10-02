@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Download, Truck } from "@lucide/vue";
+import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Truck } from "@lucide/vue";
 import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
 import { corteLimiteAvisoAlmacen, cumplioCorteAvisoAlmacen } from "~/utils/corteAvisoAlmacen";
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
 import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChart.vue";
-import ProgressBar from "~/components/ui/ProgressBar.vue";
+import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExportar.vue";
 import { FILL_AMBER, FILL_GREEN, type XlsxColumn } from "~/composables/useCsvExport";
 import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_AMBAR, COLOR_VERDE, graficoColumnas } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo, type SeccionReporte } from "~/utils/reporteIndicadores";
-import { construirReportePdf } from "~/utils/reportePdf";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 
 // Mismos dos indicadores que hoy Katherine calcula a mano en el Excel del
@@ -389,7 +388,10 @@ const columnasAlertas: XlsxColumn<Cotizacion>[] = [
 
 const hayDatos = computed(() => cotizacionesFiltradas.value.length > 0);
 
-function exportarReporte() {
+async function exportarReporte() {
+  // jsPDF + jspdf-autotable pesan ~930KB minificados: se cargan recién al exportar, no en el
+  // chunk de la página, para no pagar ese peso en cada visita al dashboard.
+  const { construirReportePdf } = await import("~/utils/reportePdf");
   exportarPdf(
     () =>
       construirReportePdf({
@@ -455,43 +457,16 @@ function exportarReporte() {
           y aviso a almacén avisado en el corte diario de las 5pm (Joel junta las del día y avisa en un solo corte, no apenas aprueba cada una).
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <Select v-model="filtroMes">
-          <SelectTrigger class="w-40" aria-label="Filtrar por mes">
-            <SelectValue placeholder="Mes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="TODOS">Todos los meses</SelectItem>
-            <SelectItem v-for="(mes, i) in MESES" :key="i" :value="String(i)">{{ mes }}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select v-model="filtroAnio">
-          <SelectTrigger class="w-28" aria-label="Filtrar por año">
-            <SelectValue placeholder="Año" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="TODOS">Todos</SelectItem>
-            <SelectItem v-for="anio in aniosDisponibles" :key="anio" :value="String(anio)">
-              {{ anio }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          :disabled="isPending || isExporting || !hayDatos"
-          class="min-w-[168px] justify-center"
-          @click="exportarReporte"
-        >
-          <template v-if="isExporting">
-            <ProgressBar :value="progress" compact class="w-20" />
-            <span class="ml-2 text-xs tabular-nums text-muted-foreground">{{ Math.round(progress) }}%</span>
-          </template>
-          <template v-else>
-            <Download class="h-4 w-4 mr-2" />
-            Exportar PDF
-          </template>
-        </Button>
-      </div>
+      <FiltroPeriodoExportar
+        v-model:mes="filtroMes"
+        v-model:anio="filtroAnio"
+        :meses="MESES"
+        :anios-disponibles="aniosDisponibles"
+        :disabled="isPending || isExporting || !hayDatos"
+        :is-exporting="isExporting"
+        :progress="progress"
+        @exportar="exportarReporte"
+      />
     </div>
 
     <template v-if="isPending">

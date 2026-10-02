@@ -176,6 +176,18 @@ filename): generic `XlsxColumn<T>[]` with a `key` that may be a field name or an
 function, optional `colorFill` per cell, styled header/zebra rows, and a `requestAnimationFrame`
 progress animation surfaced through `components/ui/ProgressBar.vue`.
 
+**PDF export** (the three `pages/*/indicadores.vue` dashboards — `cotizaciones`, `pedidos`,
+`historial`) is `usePdfExport` (`composables/usePdfExport.ts`, same animated-progress pattern as
+the Excel export above) driving `construirReportePdf` (`utils/reportePdf.ts`, jsPDF +
+`jspdf-autotable`): a cover with KPIs/filters, one section per `SeccionReporte` (banner + KPI
+table + chart images + optional data table), then one landscape page per `HojaReporte` detail
+table, reusing the same `Reporte`/`SeccionReporte`/`HojaReporte` shapes each page already builds
+for the Excel export (`utils/reporteIndicadores.ts`) — only the renderer differs. **jsPDF +
+jspdf-autotable are ~930KB minified**, so every page imports `reportePdf.ts` with a dynamic
+`await import("~/utils/reportePdf")` inside the export handler, never as a static top-level
+import — that keeps the dashboard's own chunk light and only pulls jsPDF in when the user
+actually clicks "Exportar PDF". Keep new PDF-export call sites lazy the same way.
+
 ## UI conventions
 
 - shadcn-nuxt (new-york style, neutral base, CSS variables) generates into

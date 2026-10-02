@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ArrowLeft, Download, Clock, AlertTriangle, PackageCheck, Timer, FileClock } from "@lucide/vue";
+import { ArrowLeft, Clock, AlertTriangle, PackageCheck, Timer, FileClock } from "@lucide/vue";
 import { usePedidosQuery } from "~/composables/usePedidos";
 import { formatFechaHora } from "~/utils/fechaHora";
 import { FILL_GREEN, FILL_RED, type XlsxColumn } from "~/composables/useCsvExport";
 import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoDona } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporteIndicadores";
-import { construirReportePdf } from "~/utils/reportePdf";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
-import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { CATEGORIA_OBSERVACION_LABEL, type EstadoPedido, type Pedido } from "~/types/pedido";
+import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExportar.vue";
 
 // El indicador solo tiene sentido sobre pedidos ya entregados: es el único
 // estado con las 5 fechas completas para medir el tiempo real de entrega.
@@ -242,9 +241,12 @@ const columnasTrazabilidad: XlsxColumn<PedidoConTiempoTotal>[] = [
   { key: (p) => Number(p.horasTotal.toFixed(1)), label: "h Totales (requerimiento→entrega)", width: 20 },
 ];
 
-function exportarReporte() {
+async function exportarReporte() {
   const r = resumen.value;
   const hayEntregados = pedidosFiltrados.value.length > 0;
+  // jsPDF + jspdf-autotable pesan ~930KB minificados: se cargan recién al exportar, no en el
+  // chunk de la página, para no pagar ese peso en cada visita al dashboard.
+  const { construirReportePdf } = await import("~/utils/reportePdf");
   exportarPdf(
     () =>
       construirReportePdf({
@@ -347,43 +349,16 @@ function exportarReporte() {
         </p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <Select v-model="filtroMes">
-          <SelectTrigger class="w-40" aria-label="Filtrar por mes">
-            <SelectValue placeholder="Mes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="TODOS">Todos los meses</SelectItem>
-            <SelectItem v-for="(mes, i) in MESES" :key="i" :value="String(i)">{{ mes }}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select v-model="filtroAnio">
-          <SelectTrigger class="w-28" aria-label="Filtrar por año">
-            <SelectValue placeholder="Año" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="TODOS">Todos</SelectItem>
-            <SelectItem v-for="anio in aniosDisponibles" :key="anio" :value="String(anio)">
-              {{ anio }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          :disabled="isPending || isExporting || pedidosFiltrados.length === 0"
-          class="min-w-[168px] justify-center"
-          @click="exportarReporte"
-        >
-          <template v-if="isExporting">
-            <ProgressBar :value="progress" compact class="w-20" />
-            <span class="ml-2 text-xs tabular-nums text-muted-foreground">{{ Math.round(progress) }}%</span>
-          </template>
-          <template v-else>
-            <Download class="h-4 w-4 mr-2" />
-            Exportar PDF
-          </template>
-        </Button>
-      </div>
+      <FiltroPeriodoExportar
+        v-model:mes="filtroMes"
+        v-model:anio="filtroAnio"
+        :meses="MESES"
+        :anios-disponibles="aniosDisponibles"
+        :disabled="isPending || isExporting || pedidosFiltrados.length === 0"
+        :is-exporting="isExporting"
+        :progress="progress"
+        @exportar="exportarReporte"
+      />
     </div>
 
     <Card class="shrink-0">
