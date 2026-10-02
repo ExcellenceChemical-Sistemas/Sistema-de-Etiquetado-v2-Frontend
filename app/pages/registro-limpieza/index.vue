@@ -3,7 +3,8 @@ import { ExternalLink, SprayCan } from "lucide-vue-next";
 import { REGISTRO_LIMPIEZA } from "~/config/registroLimpieza";
 import { useRegistroLimpiezaQuery } from "~/composables/useRegistroLimpieza";
 
-const configurado = computed(() => !!REGISTRO_LIMPIEZA.formUrl && !!REGISTRO_LIMPIEZA.sheetCsvUrl);
+const hayForm = computed(() => !!REGISTRO_LIMPIEZA.formUrl);
+const hayHistorial = computed(() => !!REGISTRO_LIMPIEZA.sheetCsvUrl);
 
 const { data, isPending, isError, refetch } = useRegistroLimpiezaQuery();
 </script>
@@ -22,7 +23,7 @@ const { data, isPending, isError, refetch } = useRegistroLimpiezaQuery();
           <h1 class="text-2xl font-semibold mt-1">Registro de limpieza</h1>
         </div>
       </div>
-      <Button v-if="configurado" as-child>
+      <Button v-if="hayForm" as-child>
         <a :href="REGISTRO_LIMPIEZA.formUrl" target="_blank" rel="noopener noreferrer">
           <ExternalLink class="h-4 w-4" />
           Nuevo registro
@@ -30,9 +31,14 @@ const { data, isPending, isError, refetch } = useRegistroLimpiezaQuery();
       </Button>
     </div>
 
-    <div v-if="!configurado" class="rounded-lg border bg-card px-5 py-6 text-sm text-muted-foreground">
-      Todavía no está configurado el link del formulario ni el de la hoja de respuestas.
-      Completalos en <code class="text-xs">app/config/registroLimpieza.ts</code>.
+    <div v-if="!hayForm" class="rounded-lg border bg-card px-5 py-6 text-sm text-muted-foreground">
+      Todavía no está configurado el link del formulario.
+      Completalo en <code class="text-xs">app/config/registroLimpieza.ts</code>.
+    </div>
+
+    <div v-if="!hayHistorial" class="rounded-lg border bg-card px-5 py-6 text-sm text-muted-foreground">
+      El historial todavía no está disponible: falta el link de la hoja de respuestas publicada.
+      Completalo en <code class="text-xs">app/config/registroLimpieza.ts</code>.
     </div>
 
     <template v-else>

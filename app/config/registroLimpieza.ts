@@ -8,6 +8,6 @@
 //    Publicar en la web > elegir la hoja > formato CSV. Copiar el link que genera ahí
 //    (termina en algo como ".../pub?gid=0&single=true&output=csv").
 export const REGISTRO_LIMPIEZA = {
-  formUrl: '',
+  formUrl: 'https://forms.gle/NLgdvp94af2xDgj8A',
   sheetCsvUrl: '',
 } as const
