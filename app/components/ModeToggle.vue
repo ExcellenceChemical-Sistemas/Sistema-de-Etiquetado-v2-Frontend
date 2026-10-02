@@ -14,7 +14,7 @@ const mode = useColorMode({ emitAuto: true })
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="icon" class="relative">
+      <Button variant="ghost" size="icon" class="relative" title="Cambiar tema" aria-label="Cambiar tema">
         <Sun class="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
         <Moon class="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         <span class="sr-only">Cambiar tema</span>

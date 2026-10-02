@@ -438,7 +438,7 @@ async function confirmarRegenerar() {
 
                   <DropdownMenu v-if="permiso.puedeEditar || permiso.puedeEliminar">
                     <DropdownMenuTrigger as-child>
-                      <Button variant="ghost" size="icon" class="h-8 w-8">
+                      <Button variant="ghost" size="icon" class="h-8 w-8" title="Más acciones" aria-label="Más acciones">
                         <MoreVertical class="h-4 w-4" />
                         <span class="sr-only">Más acciones</span>
                       </Button>
