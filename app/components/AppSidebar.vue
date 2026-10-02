@@ -26,6 +26,7 @@ import {
   ClipboardList,
   ShieldAlert,
   Bell,
+  SprayCan,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
@@ -136,6 +137,12 @@ const items = computed(() =>
       url: "/ausencias",
       icon: ShieldAlert,
       visible: esAdmin.value,
+    },
+    {
+      title: "Registro de limpieza",
+      url: "/registro-limpieza",
+      icon: SprayCan,
+      visible: true,
     },
   ].filter((i) => i.visible),
 );
