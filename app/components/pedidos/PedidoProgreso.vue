@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CheckCircle2, Circle } from "@lucide/vue";
 import { formatFechaHora } from "~/utils/fechaHora";
+import { horaMostrable } from "~/utils/horaMostrable";
 import type { Pedido } from "~/types/pedido";
 
 defineProps<{ pedido: Pedido }>();
@@ -9,17 +10,23 @@ defineProps<{ pedido: Pedido }>();
 // tiene su propia columna (siempre está seteado, es el punto de partida).
 const ETAPAS = [
   { key: "inicioPreparacionEn", label: "Inicio de preparación" },
-  { key: "preparadoEn", label: "Preparado" },
+  // "Preparado" y "Entregado" se muestran tapados a las 5:30pm si pasaron más tarde — ver horaMostrable.
+  { key: "preparadoEn", label: "Preparado", tapar: true },
   { key: "salioEn", label: "Salió" },
-  { key: "entregadoEn", label: "Entregado" },
+  { key: "entregadoEn", label: "Entregado", tapar: true },
 ] as const;
+
+function horaEtapa(pedido: Pedido, etapa: (typeof ETAPAS)[number]): string | null {
+  const valor = pedido[etapa.key];
+  return "tapar" in etapa && etapa.tapar ? horaMostrable(valor) : valor;
+}
 </script>
 
 <template>
   <div class="flex items-center">
     <template v-for="(etapa, i) in ETAPAS" :key="etapa.key">
       <span
-        :title="`${etapa.label}: ${pedido[etapa.key] ? formatFechaHora(pedido[etapa.key]) : 'Pendiente'}`"
+        :title="`${etapa.label}: ${pedido[etapa.key] ? formatFechaHora(horaEtapa(pedido, etapa)) : 'Pendiente'}`"
       >
         <CheckCircle2
           v-if="pedido[etapa.key]"

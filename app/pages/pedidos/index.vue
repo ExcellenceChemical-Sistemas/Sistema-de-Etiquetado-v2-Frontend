@@ -5,6 +5,7 @@ import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import { usePedidosQuery, useDeletePedido, useRegenerarTokenPedido } from "~/composables/usePedidos";
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
+import { horaMostrable } from "~/utils/horaMostrable";
 import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { toast } from "vue-sonner";
@@ -119,9 +120,9 @@ const xlsxColumns: XlsxColumn<Pedido>[] = [
   { key: (p: Pedido) => ESTADO_PEDIDO_LABEL[p.estado], label: "Estado" },
   { key: (p: Pedido) => formatFechaHora(p.recibidoEn), label: "Recibido de almacén" },
   { key: (p: Pedido) => formatFechaHora(p.inicioPreparacionEn), label: "Inicio de preparación" },
-  { key: (p: Pedido) => formatFechaHora(p.preparadoEn), label: "Fin de preparación" },
+  { key: (p: Pedido) => formatFechaHora(horaMostrable(p.preparadoEn)), label: "Fin de preparación" },
   { key: (p: Pedido) => formatFechaHora(p.salioEn), label: "Salió de almacén" },
-  { key: (p: Pedido) => formatFechaHora(p.entregadoEn), label: "Entregado" },
+  { key: (p: Pedido) => formatFechaHora(horaMostrable(p.entregadoEn)), label: "Entregado" },
   {
     key: (p: Pedido) => (p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : ""),
     label: "Observación",
@@ -584,7 +585,7 @@ async function confirmarRegenerar() {
           </div>
           <div>
             <p class="text-muted-foreground">Fin de preparación</p>
-            <p class="font-medium">{{ formatFechaHora(detallePedido.preparadoEn) }}</p>
+            <p class="font-medium">{{ formatFechaHora(horaMostrable(detallePedido.preparadoEn)) }}</p>
           </div>
           <div>
             <p class="text-muted-foreground">Salió de almacén</p>
@@ -592,7 +593,7 @@ async function confirmarRegenerar() {
           </div>
           <div class="col-span-2">
             <p class="text-muted-foreground">Entregado</p>
-            <p class="font-medium">{{ formatFechaHora(detallePedido.entregadoEn) }}</p>
+            <p class="font-medium">{{ formatFechaHora(horaMostrable(detallePedido.entregadoEn)) }}</p>
           </div>
           <div class="col-span-2">
             <p class="text-muted-foreground">Observación</p>

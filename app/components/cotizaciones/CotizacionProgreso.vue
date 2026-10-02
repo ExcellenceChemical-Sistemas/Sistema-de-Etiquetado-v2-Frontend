@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CheckCircle2, Circle } from "@lucide/vue";
 import { formatFechaHora } from "~/utils/fechaHora";
+import { horaMostrable } from "~/utils/horaMostrable";
 import type { Cotizacion } from "~/types/cotizacion";
 
 defineProps<{ cotizacion: Cotizacion }>();
@@ -10,15 +11,21 @@ defineProps<{ cotizacion: Cotizacion }>();
 const ETAPAS = [
   { key: "cotizacionEnviadaEn", label: "Cotización enviada" },
   { key: "pedidoAprobadoEn", label: "Pedido aprobado" },
-  { key: "avisoAlmacenEn", label: "Avisado a almacén" },
+  // "Pedido Notificado" se muestra tapado a las 5:30pm si Joel avisó más tarde — ver horaMostrable.
+  { key: "avisoAlmacenEn", label: "Pedido Notificado", tapar: true },
 ] as const;
+
+function horaEtapa(cotizacion: Cotizacion, etapa: (typeof ETAPAS)[number]): string | null {
+  const valor = cotizacion[etapa.key];
+  return "tapar" in etapa && etapa.tapar ? horaMostrable(valor) : valor;
+}
 </script>
 
 <template>
   <div class="flex items-center">
     <template v-for="(etapa, i) in ETAPAS" :key="etapa.key">
       <span
-        :title="`${etapa.label}: ${cotizacion[etapa.key] ? formatFechaHora(cotizacion[etapa.key]) : 'Pendiente'}`"
+        :title="`${etapa.label}: ${cotizacion[etapa.key] ? formatFechaHora(horaEtapa(cotizacion, etapa)) : 'Pendiente'}`"
       >
         <CheckCircle2
           v-if="cotizacion[etapa.key]"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MoreVertical, Pencil, TriangleAlert, History, Truck, Undo2 } from "@lucide/vue";
+import { Download, Inbox, Search, Trash2, Eye, ChartNoAxesCombined, MessageSquare, MoreVertical, Pencil, TriangleAlert, History, Truck, Undo2 } from "@lucide/vue";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import {
   useCotizacionesQuery,
@@ -8,12 +8,14 @@ import {
 } from "~/composables/useCotizaciones";
 import { usePermiso } from "~/composables/usePermiso";
 import { formatFechaHora, formatFechaHoraCorta } from "~/utils/fechaHora";
+import { horaMostrable } from "~/utils/horaMostrable";
 import { useXlsxExport, type XlsxColumn } from "~/composables/useCsvExport";
 import ProgressBar from "~/components/ui/ProgressBar.vue";
 import { toast } from "vue-sonner";
 import {
   ALERTA_COTIZACION_LABEL,
   CAMPO_COTIZACION_LABEL,
+  CATEGORIA_OBSERVACION_LABEL,
   ESTADO_COTIZACION_LABEL,
   type Cotizacion,
   type EstadoCotizacion,
@@ -22,6 +24,7 @@ import CotizacionForm from "~/components/cotizaciones/CotizacionForm.vue";
 import CotizacionFechaDialog from "~/components/cotizaciones/CotizacionFechaDialog.vue";
 import CotizacionEnviarDialog from "~/components/cotizaciones/CotizacionEnviarDialog.vue";
 import CotizacionDeshacerDialog from "~/components/cotizaciones/CotizacionDeshacerDialog.vue";
+import CotizacionObservacionDialog from "~/components/cotizaciones/CotizacionObservacionDialog.vue";
 import CotizacionProgreso from "~/components/cotizaciones/CotizacionProgreso.vue";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 
@@ -120,8 +123,13 @@ const xlsxColumns: XlsxColumn<Cotizacion>[] = [
   { key: (c: Cotizacion) => formatFechaHora(c.requerimientoEn), label: "Requerimiento del cliente" },
   { key: (c: Cotizacion) => formatFechaHora(c.cotizacionEnviadaEn), label: "Cotización enviada" },
   { key: (c: Cotizacion) => formatFechaHora(c.pedidoAprobadoEn), label: "Pedido aprobado" },
-  { key: (c: Cotizacion) => formatFechaHora(c.avisoAlmacenEn), label: "Avisado a almacén" },
+  { key: (c: Cotizacion) => formatFechaHora(horaMostrable(c.avisoAlmacenEn)), label: "Pedido Notificado" },
   { key: (c: Cotizacion) => c.notas ?? "", label: "Notas" },
+  {
+    key: (c: Cotizacion) => (c.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[c.categoriaObservacion] : ""),
+    label: "Observación",
+  },
+  { key: (c: Cotizacion) => c.detalleObservacion ?? "", label: "Detalle observación" },
   { key: (c: Cotizacion) => textoAlertas(c), label: "Alertas de integridad" },
   { key: (c: Cotizacion) => c.creadoPor.nombre, label: "Creado por" },
 ];
@@ -140,7 +148,7 @@ const TABS: { value: EstadoCotizacion | "TODOS"; label: string }[] = [
   { value: "RECIBIDO", label: "Recibidas" },
   { value: "COTIZADO", label: "Cotizadas" },
   { value: "APROBADO", label: "Aprobadas" },
-  { value: "AVISADO_ALMACEN", label: "Avisadas a almacén" },
+  { value: "AVISADO_ALMACEN", label: "Pedido notificado" },
 ];
 
 const dialogOpen = ref(false);
@@ -156,7 +164,7 @@ const SIGUIENTE_CAMPO: Record<
 > = {
   RECIBIDO: { campo: "cotizacionEnviadaEn", label: "Marcar cotización enviada" },
   COTIZADO: { campo: "pedidoAprobadoEn", label: "Marcar pedido aprobado" },
-  APROBADO: { campo: "avisoAlmacenEn", label: "Marcar avisado a almacén" },
+  APROBADO: { campo: "avisoAlmacenEn", label: "Marcar pedido notificado" },
   AVISADO_ALMACEN: null,
 };
 
@@ -192,6 +200,14 @@ function abrirDeshacer(cotizacion: Cotizacion, campo: typeof deshacerDialogCampo
   deshacerDialogCotizacion.value = cotizacion;
   deshacerDialogCampo.value = campo;
   deshacerDialogOpen.value = true;
+}
+
+const observacionOpen = ref(false);
+const observacionCotizacion = ref<Cotizacion | null>(null);
+
+function abrirObservacion(cotizacion: Cotizacion) {
+  observacionCotizacion.value = cotizacion;
+  observacionOpen.value = true;
 }
 
 function marcarSiguiente(c: Cotizacion) {
@@ -375,18 +391,19 @@ function textoAlertas(c: Cotizacion) {
             <TableHead>Proforma</TableHead>
             <TableHead>Requerimiento</TableHead>
             <TableHead>Progreso</TableHead>
+            <TableHead class="w-12 text-center">Obs.</TableHead>
             <TableHead class="w-64 text-right">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <template v-if="isPending">
             <TableRow v-for="i in 4" :key="i">
-              <TableCell v-for="j in 5" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
+              <TableCell v-for="j in 6" :key="j"><Skeleton class="h-4 w-full" /></TableCell>
             </TableRow>
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="5" class="text-center py-8">
+              <TableCell colspan="6" class="text-center py-8">
                 <p class="text-sm text-destructive mb-2">No se pudieron cargar las cotizaciones</p>
                 <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
               </TableCell>
@@ -394,7 +411,7 @@ function textoAlertas(c: Cotizacion) {
           </template>
           <template v-else-if="cotizacionesFiltradas.length === 0">
             <TableRow>
-              <TableCell colspan="5" class="py-16 text-center text-muted-foreground">
+              <TableCell colspan="6" class="py-16 text-center text-muted-foreground">
                 <Inbox class="mx-auto mb-3 h-10 w-10 opacity-50" />
                 No hay cotizaciones en este filtro
               </TableCell>
@@ -418,6 +435,13 @@ function textoAlertas(c: Cotizacion) {
               </TableCell>
               <TableCell>
                 <CotizacionProgreso :cotizacion="c" />
+              </TableCell>
+              <TableCell class="text-center">
+                <MessageSquare
+                  v-if="c.categoriaObservacion"
+                  class="mx-auto h-4 w-4 text-amber-500"
+                  :title="CATEGORIA_OBSERVACION_LABEL[c.categoriaObservacion]"
+                />
               </TableCell>
               <TableCell class="text-right">
                 <div class="flex items-center justify-end gap-1">
@@ -460,10 +484,10 @@ function textoAlertas(c: Cotizacion) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           v-if="c.avisoAlmacenEn && esAdmin"
-                          @click="abrirFecha(c, 'avisoAlmacenEn', 'Corregir fecha de aviso a almacén')"
+                          @click="abrirFecha(c, 'avisoAlmacenEn', 'Corregir fecha de pedido notificado')"
                         >
                           <Pencil class="mr-2 h-3.5 w-3.5" />
-                          Corregir aviso a almacén
+                          Corregir pedido notificado
                         </DropdownMenuItem>
                         <DropdownMenuSeparator v-if="esAdmin && (c.cotizacionEnviadaEn || c.pedidoAprobadoEn || c.avisoAlmacenEn)" />
                         <DropdownMenuItem
@@ -472,7 +496,7 @@ function textoAlertas(c: Cotizacion) {
                           @click="abrirDeshacer(c, 'avisoAlmacenEn')"
                         >
                           <Undo2 class="mr-2 h-3.5 w-3.5" />
-                          Deshacer aviso a almacén
+                          Deshacer pedido notificado
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           v-if="c.pedidoAprobadoEn && esAdmin"
@@ -489,6 +513,11 @@ function textoAlertas(c: Cotizacion) {
                         >
                           <Undo2 class="mr-2 h-3.5 w-3.5" />
                           Deshacer cotización enviada
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem @click="abrirObservacion(c)">
+                          <MessageSquare class="mr-2 h-3.5 w-3.5" />
+                          {{ c.categoriaObservacion ? "Editar observación" : "Agregar observación" }}
                         </DropdownMenuItem>
                       </template>
                       <template v-if="permiso.puedeEliminar">
@@ -568,6 +597,8 @@ function textoAlertas(c: Cotizacion) {
       :campo="deshacerDialogCampo"
     />
 
+    <CotizacionObservacionDialog v-model:open="observacionOpen" :cotizacion="observacionCotizacion" />
+
     <Dialog v-model:open="detalleOpen">
       <DialogContent class="max-w-lg max-h-[85vh] overflow-y-auto scroll-tema">
         <DialogTitle>Detalle de la cotización</DialogTitle>
@@ -597,8 +628,18 @@ function textoAlertas(c: Cotizacion) {
             <p class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoAprobadoEn) }}</p>
           </div>
           <div>
-            <p class="text-muted-foreground">Avisado a almacén</p>
-            <p class="font-medium">{{ formatFechaHora(detalleCotizacion.avisoAlmacenEn) }}</p>
+            <p class="text-muted-foreground">Pedido Notificado</p>
+            <p class="font-medium">{{ formatFechaHora(horaMostrable(detalleCotizacion.avisoAlmacenEn)) }}</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-muted-foreground">Observación</p>
+            <p v-if="detalleCotizacion.categoriaObservacion" class="font-medium">
+              {{ CATEGORIA_OBSERVACION_LABEL[detalleCotizacion.categoriaObservacion] }}
+              <span v-if="detalleCotizacion.detalleObservacion" class="font-normal text-muted-foreground">
+                — {{ detalleCotizacion.detalleObservacion }}
+              </span>
+            </p>
+            <p v-else class="font-medium text-muted-foreground">Sin observación</p>
           </div>
           <div v-if="detalleCotizacion.pedidoRelacionado" class="col-span-2 space-y-2 rounded-md border border-border p-3">
             <p class="flex items-center justify-between gap-2 text-muted-foreground">
@@ -621,7 +662,7 @@ function textoAlertas(c: Cotizacion) {
               </li>
               <li class="flex justify-between gap-2">
                 <span>Preparado</span>
-                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.preparadoEn) }}</span>
+                <span class="font-medium">{{ formatFechaHora(horaMostrable(detalleCotizacion.pedidoRelacionado.preparadoEn)) }}</span>
               </li>
               <li class="flex justify-between gap-2">
                 <span>Salió</span>
@@ -629,7 +670,7 @@ function textoAlertas(c: Cotizacion) {
               </li>
               <li class="flex justify-between gap-2">
                 <span>Entregado</span>
-                <span class="font-medium">{{ formatFechaHora(detalleCotizacion.pedidoRelacionado.entregadoEn) }}</span>
+                <span class="font-medium">{{ formatFechaHora(horaMostrable(detalleCotizacion.pedidoRelacionado.entregadoEn)) }}</span>
               </li>
             </ul>
             <a

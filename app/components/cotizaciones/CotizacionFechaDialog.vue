@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { toast } from "vue-sonner";
 import { useUpdateCotizacion } from "~/composables/useCotizaciones";
 import { isoADatetimeLocal, datetimeLocalAIso } from "~/utils/fechaHora";
+import { validarOrdenFechaCotizacion } from "~/utils/ordenEtapas";
 import type { Cotizacion, ActualizarCotizacionInput } from "~/types/cotizacion";
 
 // cotizacionEnviadaEn/pedidoAprobadoEn/avisoAlmacenEn se fijan con la hora real del servidor la
@@ -48,11 +49,17 @@ const puedeGuardar = computed(() => {
 
 async function guardar() {
   if (!props.cotizacion || !puedeGuardar.value) return;
+  // Al marcar por primera vez el backend ignora el valor y usa su propia hora — igual se manda
+  // "ahora" acá solo para no dejar el campo vacío. Al corregir sí importa el valor elegido.
+  const nuevoIso = esCorreccion.value ? datetimeLocalAIso(valor.value) : new Date().toISOString();
+  const error = validarOrdenFechaCotizacion(props.cotizacion, props.campo, nuevoIso);
+  if (error) {
+    toast.error(error);
+    return;
+  }
   try {
     const input: ActualizarCotizacionInput = {
-      // Al marcar por primera vez el backend ignora el valor y usa su propia hora — igual se manda
-      // "ahora" acá solo para no dejar el campo vacío. Al corregir sí importa el valor elegido.
-      [props.campo]: esCorreccion.value ? datetimeLocalAIso(valor.value) : new Date().toISOString(),
+      [props.campo]: nuevoIso,
       ...(pideMotivo.value && { motivoCorreccion: motivo.value.trim() }),
     };
     await actualizar({ id: props.cotizacion.id, input });

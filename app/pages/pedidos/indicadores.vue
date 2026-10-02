@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { ArrowLeft, Clock, AlertTriangle, PackageCheck, Timer, FileClock } from "@lucide/vue";
 import { usePedidosQuery } from "~/composables/usePedidos";
 import { formatFechaHora } from "~/utils/fechaHora";
+import { horaMostrable } from "~/utils/horaMostrable";
 import { FILL_GREEN, FILL_RED, type XlsxColumn } from "~/composables/useCsvExport";
 import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoDona } from "~/utils/graficosReporte";
@@ -40,8 +41,13 @@ const pedidosConTiempo = computed<PedidoConTiempo[]>(() =>
   (pedidos.value ?? [])
     .filter((p): p is Pedido & { entregadoEn: string } => !!p.entregadoEn)
     .map((p) => {
-      const horas = horasHabilesEntre(p.recibidoEn, p.entregadoEn);
-      return { ...p, horas, dias: horas / 24 };
+      // "Preparado" y "Entregado" se tapan a las 5:30pm si pasaron más tarde (ver horaMostrable) —
+      // acá, no solo al mostrarlos, para que las horas calculadas de acá en adelante (promedios,
+      // cuello de botella, exports) nunca contradigan la hora que el indicador ya muestra tapada.
+      const entregadoEn = horaMostrable(p.entregadoEn);
+      const preparadoEn = horaMostrable(p.preparadoEn);
+      const horas = horasHabilesEntre(p.recibidoEn, entregadoEn);
+      return { ...p, entregadoEn, preparadoEn, horas, dias: horas / 24 };
     }),
 );
 

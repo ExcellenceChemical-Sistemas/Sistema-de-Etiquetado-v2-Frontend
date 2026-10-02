@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from "vue";
 import { toast } from "vue-sonner";
 import { useUpdateCotizacion } from "~/composables/useCotizaciones";
 import { isoADatetimeLocal, datetimeLocalAIso } from "~/utils/fechaHora";
+import { validarOrdenFechaCotizacion } from "~/utils/ordenEtapas";
 import type { Cotizacion, ActualizarCotizacionInput } from "~/types/cotizacion";
 
 // Fecha y n° de proforma se piden juntos: recién cuando Joel manda la cotización se conoce el
@@ -53,11 +54,17 @@ const puedeGuardar = computed(() => {
 
 async function guardar() {
   if (!props.cotizacion || !puedeGuardar.value) return;
+  // Al marcar por primera vez el valor se ignora en el backend (usa la hora real del
+  // servidor); solo importa al corregir.
+  const nuevoIso = esCorreccion.value ? datetimeLocalAIso(fecha.value) : new Date().toISOString();
+  const error = validarOrdenFechaCotizacion(props.cotizacion, "cotizacionEnviadaEn", nuevoIso);
+  if (error) {
+    toast.error(error);
+    return;
+  }
   try {
     const input: ActualizarCotizacionInput = {
-      // Al marcar por primera vez el valor se ignora en el backend (usa la hora real del
-      // servidor); solo importa al corregir.
-      cotizacionEnviadaEn: esCorreccion.value ? datetimeLocalAIso(fecha.value) : new Date().toISOString(),
+      cotizacionEnviadaEn: nuevoIso,
       numeroProforma: numeroProforma.value.trim(),
       ...(esCorreccion.value && { motivoCorreccion: motivo.value.trim() }),
     };

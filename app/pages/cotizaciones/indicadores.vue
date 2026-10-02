@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { ArrowLeft, Clock, PackageCheck, Timer, AlertTriangle, Truck } from "@lucide/vue";
 import { useCotizacionesQuery } from "~/composables/useCotizaciones";
 import { formatFechaHora } from "~/utils/fechaHora";
+import { horaMostrable } from "~/utils/horaMostrable";
 import { horasHabilesEntre } from "~/utils/horasHabiles";
 import { corteLimiteAvisoAlmacen, cumplioCorteAvisoAlmacen } from "~/utils/corteAvisoAlmacen";
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
@@ -19,9 +20,10 @@ import { urlSeguimiento } from "~/utils/seguimientoPedido";
 // cotización (meta 2h) y aviso a almacén tras la aprobación.
 //
 // El de aviso a almacén NO se mide en horas desde la aprobación: Joel no avisa apenas aprueba
-// cada cotización, junta todas las del día y avisa en un solo corte a las 5pm hora Perú (política
-// confirmada con el negocio, 2026-10-01). Medirlo en horas con una meta fija castigaba todo lo
-// aprobado antes de las 5pm aunque Joel estuviera trabajando exactamente como corresponde — ver
+// cada cotización, junta todas las del día y las despacha en un solo corte entre las 5pm y las
+// 5:30pm hora Perú (política confirmada con el negocio, 2026-10-01; el corte vigente cierra a
+// las 5:30pm, no a las 5pm en punto). Medirlo en horas con una meta fija castigaba todo lo
+// aprobado antes del corte aunque Joel estuviera trabajando exactamente como corresponde — ver
 // corteLimiteAvisoAlmacen()/cumplioCorteAvisoAlmacen() en utils/corteAvisoAlmacen.ts, mismo
 // criterio que corte-aviso-almacen.ts del backend (la alerta "sin avisar a almacén").
 const UMBRAL_COTIZACION_HORAS = 2;
@@ -70,7 +72,7 @@ const cotizadasConTiempo = computed<ConHoras[]>(() =>
     })),
 );
 
-// Bloque 2: aviso a almacén (aprobación -> aviso a almacén), medido contra el corte de las 5pm
+// Bloque 2: aviso a almacén (aprobación -> aviso a almacén), medido contra el corte de las 5:30pm
 // del día hábil en que se aprobó, no contra una cantidad fija de horas — ver nota arriba.
 interface ConCorte extends Cotizacion {
   corteLimite: Date;
@@ -152,6 +154,17 @@ function formatNumero(n: number, decimales = 1) {
 // que el promedio de cada una se calcula solo sobre los registros que de verdad llegaron a esa
 // etapa (ambas fechas presentes) — una cotización que quedó "enviada" sin aprobar entra en el
 // promedio de la etapa 1 pero no en el de la 2 ni la 3.
+//
+// La etapa "Aviso a almacén" NO se mide en horas crudas desde la aprobación (a diferencia de las
+// otras 2): Joel junta las aprobaciones del día y las despacha en un solo corte a las 5pm-5:30pm
+// (ver Bloque 2 y utils/corteAvisoAlmacen.ts), así que una cotización aprobada a las 9am y avisada
+// a las 5:15pm no "tardó 8h" por un problema — tardó lo que tarda el corte, que es el proceso
+// normal, igual que una cotización avisada el mismo día aunque llegara después de su corte (el
+// caso de "el cliente la necesita hoy", que Joel despacha antes, sin esperar al corte). Medirla en
+// horas crudas haría que esta etapa SIEMPRE apareciera como el cuello de botella, sin importar
+// qué tan bien esté trabajando Joel — acá se mide el atraso real sobre el corte que le tocaba a
+// cada una (0h si avisó a tiempo, incluidas las excepciones despachadas antes), mismo dato que ya
+// usa el Bloque 2 (horasHabilesDeAtraso).
 interface EtapaCotizacion {
   key: string;
   label: string;
@@ -173,11 +186,15 @@ const etapasCotizacion = computed<EtapaCotizacion[]>(() => {
   const lista = cotizacionesFiltradas.value;
   const respuesta = promedioEtapa(lista, (c) => horasEntre(c.requerimientoEn, c.cotizacionEnviadaEn));
   const aprobacion = promedioEtapa(lista, (c) => horasEntre(c.cotizacionEnviadaEn, c.pedidoAprobadoEn));
-  const aviso = promedioEtapa(lista, (c) => horasEntre(c.pedidoAprobadoEn, c.avisoAlmacenEn));
+  const valoresAviso = avisadasConCorte.value.map((c) => c.horasHabilesDeAtraso);
+  const aviso = {
+    horas: valoresAviso.length ? valoresAviso.reduce((s, v) => s + v, 0) / valoresAviso.length : 0,
+    n: valoresAviso.length,
+  };
   return [
     { key: "respuesta", label: "Requerimiento → Cotización enviada", horas: respuesta.horas, n: respuesta.n },
     { key: "aprobacion", label: "Cotización enviada → Pedido aprobado", horas: aprobacion.horas, n: aprobacion.n },
-    { key: "aviso", label: "Pedido aprobado → Aviso a almacén", horas: aviso.horas, n: aviso.n },
+    { key: "aviso", label: "Pedido Notificado (atraso sobre su corte 5pm-5:30pm)", horas: aviso.horas, n: aviso.n },
   ];
 });
 
@@ -256,7 +273,14 @@ const cotizacionesConEntrega = computed<ConTiempoTotal[]>(() =>
     .filter((c): c is Cotizacion & { pedidoRelacionado: NonNullable<Cotizacion["pedidoRelacionado"]> & { entregadoEn: string } } =>
       !!c.pedidoRelacionado?.entregadoEn,
     )
-    .map((c) => ({ ...c, horasTotal: horasHabilesEntre(c.requerimientoEn, c.pedidoRelacionado!.entregadoEn!) })),
+    .map((c) => {
+      // "Entregado" se tapa a las 5:30pm si pasó más tarde (ver horaMostrable) — acá, no solo al
+      // mostrarlo, para que las horas totales calculadas de acá en adelante nunca contradigan la
+      // hora que el indicador ya muestra tapada (mismo criterio que el indicador de Pedidos).
+      const entregadoEn = horaMostrable(c.pedidoRelacionado.entregadoEn);
+      const pedidoRelacionado = { ...c.pedidoRelacionado, entregadoEn };
+      return { ...c, pedidoRelacionado, horasTotal: horasHabilesEntre(c.requerimientoEn, entregadoEn) };
+    }),
 );
 
 // Cotizaciones ya aprobadas (el cliente dijo que sí) pero que todavía no tienen un Pedido
@@ -338,11 +362,11 @@ type ResumenCorte = ReturnType<typeof resumenCorteDe>;
 
 function seccionIndicadorCorte(resumen: ResumenCorte, tendencia: Tendencia): SeccionReporte {
   return {
-    titulo: "Aviso a almacén",
+    titulo: "Pedido Notificado",
     kpis: [
       ["Registros en el período", resumen.total],
-      ["Avisadas antes o en su corte de las 5pm", resumen.cumple],
-      ["Avisadas después de su corte", resumen.fuera],
+      ["Notificadas antes o en su corte de las 5:30pm", resumen.cumple],
+      ["Notificadas después de su corte", resumen.fuera],
       ["% que cumplió su corte (meta ≥80%)", `${formatNumero(resumen.pctCumple, 0)}%`],
       ["Cumple la meta", resumen.total ? (resumen.pctCumple >= 80 ? "Sí" : "No") : "—"],
       ["Atraso promedio de las que no cumplieron (horas hábiles)", Number(resumen.atrasoPromedio.toFixed(1))],
@@ -380,8 +404,8 @@ const columnasAvisoCorte: XlsxColumn<ConCorte>[] = [
   { key: (c) => c.cliente.nombre, label: "Cliente", width: 36 },
   { key: (c) => c.numeroProforma ?? "", label: "N° Proforma" },
   { key: (c) => formatFechaHora(c.pedidoAprobadoEn!), label: "Pedido aprobado", width: 22 },
-  { key: (c) => formatFechaHora(c.corteLimite.toISOString()), label: "Corte límite (5pm)", width: 22 },
-  { key: (c) => formatFechaHora(c.avisoAlmacenEn!), label: "Avisado a almacén", width: 22 },
+  { key: (c) => formatFechaHora(c.corteLimite.toISOString()), label: "Corte límite (5:30pm)", width: 22 },
+  { key: (c) => formatFechaHora(c.avisoAlmacenEn!), label: "Pedido Notificado", width: 22 },
   {
     key: (c) => (c.cumplioCorte ? "Cumplió su corte" : "Fuera de plazo"),
     label: "Resultado",
@@ -438,7 +462,7 @@ async function exportarReporte() {
     () =>
       construirReportePdf({
         titulo: "Indicador de tiempo de respuesta — Cotizaciones",
-        descripcion: `Cotización: horas hábiles (lun-vie 7:30-17:30, sin feriados), meta ≤${UMBRAL_COTIZACION_HORAS}h. Aviso a almacén: Joel avisa en un solo corte diario a las 5pm, así que se mide si se avisó antes o en el corte del día hábil en que se aprobó, no en horas. Meta en ambos: ≥80% de los casos.`,
+        descripcion: `Cotización: horas hábiles (lun-vie 7:30-17:30, sin feriados), meta ≤${UMBRAL_COTIZACION_HORAS}h. Pedido Notificado: Joel avisa en un solo corte diario entre las 5pm y las 5:30pm, así que se mide si se avisó antes o en el corte del día hábil en que se aprobó, no en horas. Meta en ambos: ≥80% de los casos.`,
         filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
         secciones: [
           {
@@ -454,7 +478,7 @@ async function exportarReporte() {
             graficos: [
               {
                 titulo: "Tiempo promedio por etapa",
-                nota: `Cuello de botella: ${etapaCuelloCotizacion.value.label} (${formatNumero(etapaCuelloCotizacion.value.horas)}h en promedio, sobre ${etapaCuelloCotizacion.value.n} registro(s)). Cada etapa depende de la anterior, así que el promedio de cada una solo cuenta los registros que de verdad llegaron a ella.`,
+                nota: `Cuello de botella: ${etapaCuelloCotizacion.value.label} (${formatNumero(etapaCuelloCotizacion.value.horas)}h en promedio, sobre ${etapaCuelloCotizacion.value.n} registro(s)). Cada etapa depende de la anterior, así que el promedio de cada una solo cuenta los registros que de verdad llegaron a ella. La etapa de pedido notificado mide el atraso sobre el corte de las 5pm-5:30pm, no horas desde la aprobación (0h si avisó a tiempo, incluidas las excepciones del mismo día).`,
                 imagen: etapasCotizacion.value.some((e) => e.n > 0)
                   ? graficoBarras(
                       etapasCotizacion.value.map((e) => ({
@@ -491,7 +515,7 @@ async function exportarReporte() {
             columnas: columnasTiempo(UMBRAL_COTIZACION_HORAS, "Requerimiento", "Cotización enviada", "requerimientoEn", "cotizacionEnviadaEn"),
           },
           {
-            nombre: "Aviso a almacén",
+            nombre: "Pedido Notificado",
             filas: [...avisadasConCorte.value].sort((a, b) => b.horasHabilesDeAtraso - a.horasHabilesDeAtraso),
             columnas: columnasAvisoCorte,
           },
@@ -519,7 +543,7 @@ async function exportarReporte() {
         <h1 class="text-2xl font-semibold">Indicador de tiempo de respuesta</h1>
         <p class="text-sm text-muted-foreground">
           Mismas dos métricas que hoy se llevan a mano: respuesta de cotización (meta ≤{{ UMBRAL_COTIZACION_HORAS }}h)
-          y aviso a almacén avisado en el corte diario de las 5pm (Joel junta las del día y avisa en un solo corte, no apenas aprueba cada una).
+          y pedido notificado en el corte diario de las 5pm-5:30pm (Joel junta las del día y avisa en un solo corte, no apenas aprueba cada una).
         </p>
       </div>
       <FiltroPeriodoExportar
@@ -674,17 +698,17 @@ async function exportarReporte() {
             </Card>
           </section>
 
-          <!-- Bloque 2: aviso a almacén, contra el corte diario de las 5pm -->
+          <!-- Bloque 2: aviso a almacén, contra el corte diario de las 5pm-5:30pm -->
           <section class="space-y-3">
-            <h2 class="text-lg font-semibold">Aviso a almacén</h2>
+            <h2 class="text-lg font-semibold">Pedido Notificado</h2>
             <p class="text-sm text-muted-foreground">
-              Joel avisa a almacén en un solo corte diario a las 5pm (no apenas aprueba cada cotización): se mide si
-              se avisó antes o en el corte del día hábil en que se aprobó, no en horas desde la aprobación.
+              Joel avisa a almacén en un solo corte diario entre las 5pm y las 5:30pm (no apenas aprueba cada
+              cotización): se mide si se avisó antes o en el corte del día hábil en que se aprobó, no en horas desde la aprobación.
             </p>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle class="text-sm font-medium text-muted-foreground">Avisadas en el período</CardTitle>
+                  <CardTitle class="text-sm font-medium text-muted-foreground">Notificadas en el período</CardTitle>
                   <PackageCheck class="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -752,8 +776,8 @@ async function exportarReporte() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Proforma</TableHead>
                       <TableHead>Pedido aprobado</TableHead>
-                      <TableHead>Corte límite (5pm)</TableHead>
-                      <TableHead>Avisado a almacén</TableHead>
+                      <TableHead>Corte límite (5:30pm)</TableHead>
+                      <TableHead>Pedido Notificado</TableHead>
                       <TableHead class="text-right">Horas de atraso</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -777,8 +801,12 @@ async function exportarReporte() {
             <h2 class="text-lg font-semibold">Cuello de botella</h2>
             <p class="text-sm text-muted-foreground">
               Dónde se va el tiempo dentro del proceso de Cotizaciones. Cada etapa depende de que la
-              anterior ya haya pasado (no se puede avisar a almacén sin que esté aprobada), así que el
-              promedio de cada una solo cuenta los registros que de verdad llegaron a esa etapa.
+              anterior ya haya pasado (no se puede notificar el pedido sin que esté aprobada), así que el
+              promedio de cada una solo cuenta los registros que de verdad llegaron a esa etapa. La
+              etapa de pedido notificado no mide horas desde la aprobación, sino el atraso sobre el
+              corte de las 5pm-5:30pm (0h si avisó a tiempo, incluidas las excepciones que se despachan
+              antes porque el cliente lo necesita el mismo día) — medirla en horas crudas la mostraría
+              siempre como el cuello de botella, aunque Joel esté trabajando como corresponde.
             </p>
             <Card>
               <CardHeader class="pb-2">

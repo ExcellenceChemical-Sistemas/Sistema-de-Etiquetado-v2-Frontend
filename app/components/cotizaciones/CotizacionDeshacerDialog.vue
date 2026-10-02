@@ -12,7 +12,7 @@ import type { Cotizacion } from "~/types/cotizacion";
 const ETIQUETAS: Record<"cotizacionEnviadaEn" | "pedidoAprobadoEn" | "avisoAlmacenEn", string> = {
   cotizacionEnviadaEn: "cotización enviada",
   pedidoAprobadoEn: "pedido aprobado",
-  avisoAlmacenEn: "aviso a almacén",
+  avisoAlmacenEn: "pedido notificado",
 };
 
 const props = defineProps<{

@@ -1,4 +1,10 @@
 import type { Cliente } from './cliente'
+import type { CategoriaObservacionPedido } from './pedido'
+
+// Reutiliza el mismo catálogo de excepciones de Pedido (ver CategoriaObservacionPedido) a
+// propósito: "Insumo sin stock"/"Cancelado"/etc. significan lo mismo en los dos módulos.
+export type { CategoriaObservacionPedido }
+export { CATEGORIAS_OBSERVACION_PEDIDO, CATEGORIA_OBSERVACION_LABEL } from './pedido'
 
 export type EstadoCotizacion = 'RECIBIDO' | 'COTIZADO' | 'APROBADO' | 'AVISADO_ALMACEN'
 
@@ -6,7 +12,7 @@ export const ESTADO_COTIZACION_LABEL: Record<EstadoCotizacion, string> = {
   RECIBIDO: 'Recibido',
   COTIZADO: 'Cotizado',
   APROBADO: 'Aprobado por el cliente',
-  AVISADO_ALMACEN: 'Avisado a almacén',
+  AVISADO_ALMACEN: 'Pedido notificado',
 }
 
 interface UsuarioResumen {
@@ -33,7 +39,7 @@ export const CAMPO_COTIZACION_LABEL: Record<'requerimientoEn' | 'numeroProforma'
   numeroProforma: 'N° Proforma',
   cotizacionEnviadaEn: 'Cotización enviada',
   pedidoAprobadoEn: 'Pedido aprobado',
-  avisoAlmacenEn: 'Aviso a almacén',
+  avisoAlmacenEn: 'Pedido notificado',
 }
 
 export interface HistorialCotizacionItem {
@@ -73,6 +79,8 @@ export interface Cotizacion {
   pedidoAprobadoEn: string | null
   avisoAlmacenEn: string | null
   recordatorioEnviadoEn: string | null
+  categoriaObservacion: CategoriaObservacionPedido | null
+  detalleObservacion: string | null
   creadoPorId: number
   creadoPor: UsuarioResumen
   ultimoEditadoPorId: number | null
@@ -104,6 +112,8 @@ export interface ActualizarCotizacionInput {
   pedidoAprobadoEn?: string
   avisoAlmacenEn?: string
   motivoCorreccion?: string
+  categoriaObservacion?: CategoriaObservacionPedido
+  detalleObservacion?: string
   // Deshace una etapa ya marcada (vuelve esa fecha, y las que dependen de ella, a null) — para un
   // clic accidental, ej. "Marcar pedido aprobado" en la cotización equivocada. Exclusivo de Admin,
   // con motivoCorreccion obligatorio. No se combina con las fechas de arriba en el mismo PATCH.

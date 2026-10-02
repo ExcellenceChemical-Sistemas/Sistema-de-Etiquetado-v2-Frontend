@@ -1,10 +1,14 @@
 import { esFeriadoPeru } from './feriadosPeru'
 
-// Joel no avisa a almacén apenas aprueba cada cotización: junta las del día y avisa en un solo
-// corte a las 5pm. Corre en el navegador (ya en hora de Perú, a diferencia del backend que corre
-// en un servidor de huso horario desconocido), así que acá alcanza con Date local — ver
-// corte-aviso-almacen.ts en el backend para el equivalente con aritmética UTC-5 explícita.
+// Joel no avisa a almacén apenas aprueba cada cotización: junta las del día y las despacha en un
+// solo corte, que en la práctica cierra entre las 5pm y las 5:30pm (no a las 5pm en punto — con
+// ese límite más estricto, una cotización avisada a las 5:15pm, dentro de su ventana normal de
+// trabajo, aparecía como "atrasada"). Corre en el navegador (ya en hora de Perú, a diferencia del
+// backend que corre en un servidor de huso horario desconocido), así que acá alcanza con Date
+// local — ver corte-aviso-almacen.ts en el backend para el equivalente con aritmética UTC-5
+// explícita (debe quedar con el mismo horario de corte que acá).
 const HORA_CORTE = 17 // 5pm
+const MINUTO_CORTE = 30 // el corte cierra a las 5:30pm, no a las 5pm en punto — ver nota arriba
 
 function esDiaHabil(fecha: Date): boolean {
   const dia = fecha.getDay() // 0 domingo ... 6 sábado
@@ -14,7 +18,7 @@ function esDiaHabil(fecha: Date): boolean {
 
 function corteDelDia(fecha: Date): Date {
   const d = new Date(fecha)
-  d.setHours(HORA_CORTE, 0, 0, 0)
+  d.setHours(HORA_CORTE, MINUTO_CORTE, 0, 0)
   return d
 }
 

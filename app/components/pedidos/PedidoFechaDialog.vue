@@ -3,6 +3,7 @@ import { ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import { useUpdatePedido } from "~/composables/usePedidos";
 import { isoADatetimeLocal, datetimeLocalAIso } from "~/utils/fechaHora";
+import { validarOrdenFechaPedido } from "~/utils/ordenEtapas";
 import type { Pedido, ActualizarPedidoInput } from "~/types/pedido";
 
 const props = defineProps<{
@@ -36,9 +37,15 @@ const { mutateAsync: actualizar, isPending } = useUpdatePedido();
 
 async function guardar() {
   if (!props.pedido || !valor.value) return;
+  const nuevoIso = datetimeLocalAIso(valor.value);
+  const error = validarOrdenFechaPedido(props.pedido, props.campo, nuevoIso);
+  if (error) {
+    toast.error(error);
+    return;
+  }
   try {
     const input: ActualizarPedidoInput = {
-      [props.campo]: datetimeLocalAIso(valor.value),
+      [props.campo]: nuevoIso,
     };
     await actualizar({ id: props.pedido.id, input });
     toast.success("Pedido actualizado");
