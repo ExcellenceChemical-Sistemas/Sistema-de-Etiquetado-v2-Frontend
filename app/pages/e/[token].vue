@@ -39,16 +39,20 @@ onMounted(async () => {
   }
 });
 
-const UNIDADES: Record<string, string> = {
-  KG: "kilogramo",
-  GR: "gramo",
-  ML: "mililitro",
-  L: "litro",
+const UNIDADES: Record<string, { singular: string; plural: string }> = {
+  KG: { singular: "kilogramo", plural: "kilogramos" },
+  GR: { singular: "gramo", plural: "gramos" },
+  ML: { singular: "mililitro", plural: "mililitros" },
+  L: { singular: "litro", plural: "litros" },
 };
 
 function conUnidad(valor: string | null, unidad: string) {
   if (!valor) return "—";
-  return `${valor} ${UNIDADES[unidad] ?? unidad}`;
+  const u = UNIDADES[unidad];
+  if (!u) return `${valor} ${unidad}`;
+  const cantidad = Number(valor.replace(",", "."));
+  const esPlural = !Number.isFinite(cantidad) || cantidad !== 1;
+  return `${valor} ${esPlural ? u.plural : u.singular}`;
 }
 
 const cantidadNeta = computed(() =>
