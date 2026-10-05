@@ -86,4 +86,8 @@ export interface ActualizarPedidoInput {
   entregadoEn?: string
   categoriaObservacion?: CategoriaObservacionPedido
   detalleObservacion?: string
+  // Deshace una etapa ya marcada (vuelve esa fecha, y las que dependen de ella, a null). Exclusivo
+  // de Admin, no se combina con las fechas de arriba en el mismo PATCH — ver PedidoDeshacerDialog.
+  revertirEtapa?: 'inicioPreparacionEn' | 'preparadoEn' | 'salioEn' | 'entregadoEn'
+  motivoCorreccion?: string
 }

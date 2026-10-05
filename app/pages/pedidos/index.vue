@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2, RefreshCw } from "@lucide/vue";
+import { Download, MessageSquare, Inbox, MoreVertical, Pencil, Trash2, Eye, Search, ChartNoAxesCombined, Link2, RefreshCw, Undo2 } from "@lucide/vue";
 import { urlSeguimiento } from "~/utils/seguimientoPedido";
 import { usePedidosQuery, useDeletePedido, useRegenerarTokenPedido } from "~/composables/usePedidos";
 import { usePermiso } from "~/composables/usePermiso";
@@ -17,10 +17,13 @@ import {
 } from "~/types/pedido";
 import PedidoForm from "~/components/pedidos/PedidoForm.vue";
 import PedidoFechaDialog from "~/components/pedidos/PedidoFechaDialog.vue";
+import PedidoDeshacerDialog from "~/components/pedidos/PedidoDeshacerDialog.vue";
 import PedidoObservacionDialog from "~/components/pedidos/PedidoObservacionDialog.vue";
 import PedidoProgreso from "~/components/pedidos/PedidoProgreso.vue";
+import { useUsuarioActual } from "~/composables/useUsuarioActual";
 
 const permiso = usePermiso("PEDIDOS");
+const { esAdmin } = useUsuarioActual();
 const PAGE_SIZE = 10;
 const page = ref(1);
 
@@ -176,6 +179,18 @@ function abrirFecha(pedido: Pedido, campo: typeof fechaDialogCampo.value, titulo
   fechaDialogCampo.value = campo;
   fechaDialogTitulo.value = titulo;
   fechaDialogOpen.value = true;
+}
+
+const deshacerDialogOpen = ref(false);
+const deshacerDialogPedido = ref<Pedido | null>(null);
+const deshacerDialogCampo = ref<"inicioPreparacionEn" | "preparadoEn" | "salioEn" | "entregadoEn">(
+  "salioEn",
+);
+
+function abrirDeshacer(pedido: Pedido, campo: typeof deshacerDialogCampo.value) {
+  deshacerDialogPedido.value = pedido;
+  deshacerDialogCampo.value = campo;
+  deshacerDialogOpen.value = true;
 }
 
 const observacionOpen = ref(false);
@@ -477,6 +492,39 @@ async function confirmarRegenerar() {
                           <Pencil class="mr-2 h-3.5 w-3.5" />
                           Corregir entrega
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator v-if="esAdmin && (p.inicioPreparacionEn || p.preparadoEn || p.salioEn || p.entregadoEn)" />
+                        <DropdownMenuItem
+                          v-if="p.entregadoEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(p, 'entregadoEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer entrega
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          v-if="p.salioEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(p, 'salioEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer salida
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          v-if="p.preparadoEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(p, 'preparadoEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer preparación
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          v-if="p.inicioPreparacionEn && esAdmin"
+                          class="text-destructive focus:text-destructive"
+                          @click="abrirDeshacer(p, 'inicioPreparacionEn')"
+                        >
+                          <Undo2 class="mr-2 h-3.5 w-3.5" />
+                          Deshacer inicio de preparación
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem @click="abrirObservacion(p)">
                           <MessageSquare class="mr-2 h-3.5 w-3.5" />
@@ -554,6 +602,12 @@ async function confirmarRegenerar() {
       :pedido="fechaDialogPedido"
       :campo="fechaDialogCampo"
       :titulo="fechaDialogTitulo"
+    />
+
+    <PedidoDeshacerDialog
+      v-model:open="deshacerDialogOpen"
+      :pedido="deshacerDialogPedido"
+      :campo="deshacerDialogCampo"
     />
 
     <PedidoObservacionDialog v-model:open="observacionOpen" :pedido="observacionPedido" />
