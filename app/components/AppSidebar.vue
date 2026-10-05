@@ -27,6 +27,7 @@ import {
   ShieldAlert,
   Bell,
   SprayCan,
+  LayoutTemplate,
 } from "lucide-vue-next";
 import { useUsuarioActual } from "~/composables/useUsuarioActual";
 import { usePermiso } from "~/composables/usePermiso";
@@ -53,6 +54,7 @@ const permisoPedidos = usePermiso("PEDIDOS");
 const permisoCotizaciones = usePermiso("COTIZACIONES");
 const permisoClientes = usePermiso("CLIENTES");
 const permisoRegistroLimpieza = usePermiso("REGISTRO_LIMPIEZA");
+const permisoPlantillas = usePermiso("PLANTILLAS");
 
 const { puedeVerAlgoKpisIso } = useAccesoKpisIso();
 
@@ -102,6 +104,12 @@ const items = computed(() =>
       url: "/historial",
       icon: History,
       visible: permisoEtiquetas.puedeVer,
+    },
+    {
+      title: "Plantillas",
+      url: "/plantillas",
+      icon: LayoutTemplate,
+      visible: permisoPlantillas.puedeVer,
     },
     {
       title: "KPIs / ISO",
