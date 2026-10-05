@@ -392,7 +392,7 @@ function textoAlertas(c: Cotizacion) {
             <TableHead>Requerimiento</TableHead>
             <TableHead>Progreso</TableHead>
             <TableHead class="w-12 text-center">Obs.</TableHead>
-            <TableHead class="w-64 text-right">Acción</TableHead>
+            <TableHead class="w-[19rem] text-right">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -452,11 +452,17 @@ function textoAlertas(c: Cotizacion) {
                     v-if="permiso.puedeEditar && SIGUIENTE_CAMPO[c.estado]"
                     size="sm"
                     variant="outline"
+                    class="min-w-[13rem] shrink-0 justify-center"
                     @click="marcarSiguiente(c)"
                   >
                     {{ SIGUIENTE_CAMPO[c.estado]!.label }}
                   </Button>
-                  <span v-else class="text-xs text-muted-foreground">{{ ESTADO_COTIZACION_LABEL[c.estado] }}</span>
+                  <span
+                    v-else
+                    class="inline-flex min-w-[13rem] shrink-0 items-center justify-end text-xs text-muted-foreground"
+                  >
+                    {{ ESTADO_COTIZACION_LABEL[c.estado] }}
+                  </span>
 
                   <DropdownMenu v-if="permiso.puedeEditar || permiso.puedeEliminar">
                     <DropdownMenuTrigger as-child>

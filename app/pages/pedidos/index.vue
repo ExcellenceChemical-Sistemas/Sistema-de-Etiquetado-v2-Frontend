@@ -382,7 +382,7 @@ async function confirmarRegenerar() {
             <TableHead>Recibido</TableHead>
             <TableHead>Progreso</TableHead>
             <TableHead class="w-10 text-center">Obs.</TableHead>
-            <TableHead class="w-56 text-right">Acción</TableHead>
+            <TableHead class="w-[23rem] text-right">Acción</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -445,11 +445,17 @@ async function confirmarRegenerar() {
                     v-if="permiso.puedeEditar && SIGUIENTE_CAMPO[p.estado]"
                     size="sm"
                     variant="outline"
+                    class="min-w-[15rem] shrink-0 justify-center"
                     @click="abrirFecha(p, SIGUIENTE_CAMPO[p.estado]!.campo, SIGUIENTE_CAMPO[p.estado]!.label)"
                   >
                     {{ SIGUIENTE_CAMPO[p.estado]!.label }}
                   </Button>
-                  <span v-else class="text-xs text-muted-foreground">{{ ESTADO_PEDIDO_LABEL[p.estado] }}</span>
+                  <span
+                    v-else
+                    class="inline-flex min-w-[15rem] shrink-0 items-center justify-end text-xs text-muted-foreground"
+                  >
+                    {{ ESTADO_PEDIDO_LABEL[p.estado] }}
+                  </span>
 
                   <DropdownMenu v-if="permiso.puedeEditar || permiso.puedeEliminar">
                     <DropdownMenuTrigger as-child>
