@@ -22,13 +22,23 @@ function finJornada(fecha: Date): Date {
   return d
 }
 
+// Los registros se guardan con segundos (hora real del servidor) pero las metas se expresan en
+// horas y minutos ("≤ 2h"). Sin truncar, un requerimiento de las 10:15 respondido a las 12:15:40
+// daba 2.011h, se mostraba como "2.0" y aun así contaba como fuera de plazo.
+function alMinuto(valor: Date | string): Date {
+  const d = new Date(valor)
+  d.setSeconds(0, 0)
+  return d
+}
+
 // Horas hábiles entre dos instantes: solo cuenta lunes a viernes, de 7:30 a
 // 17:30, sin feriados — así una respuesta que "tardó" de un viernes a la
 // tarde a un lunes a la mañana no aparece como 63h de demora en los
 // indicadores de Pedidos y Cotizaciones, que es cuando nadie podía responder.
+// La precisión es al minuto: los segundos se ignoran en ambos extremos.
 export function horasHabilesEntre(inicio: Date | string, fin: Date | string): number {
-  const desde = new Date(inicio)
-  const hasta = new Date(fin)
+  const desde = alMinuto(inicio)
+  const hasta = alMinuto(fin)
   if (hasta <= desde) return 0
 
   let horas = 0

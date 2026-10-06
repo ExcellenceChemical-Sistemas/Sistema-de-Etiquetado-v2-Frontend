@@ -41,4 +41,16 @@ describe('horasHabilesEntre', () => {
     const horas = horasHabilesEntre('2026-09-07T07:30:00', '2026-09-09T17:30:00')
     expect(horas).toBeCloseTo(30)
   })
+
+  it('ignora los segundos: 10:15:00 -> 12:15:40 son exactamente 2h, no 2.011h', () => {
+    expect(horasHabilesEntre('2026-09-02T10:15:00', '2026-09-02T12:15:40')).toBe(2)
+  })
+
+  it('ignora los segundos también en el inicio: 10:15:50 -> 12:15:10 da 2h', () => {
+    expect(horasHabilesEntre('2026-09-02T10:15:50', '2026-09-02T12:15:10')).toBe(2)
+  })
+
+  it('un minuto más sigue contando: 10:15:00 -> 12:16:00 pasa de 2h', () => {
+    expect(horasHabilesEntre('2026-09-02T10:15:00', '2026-09-02T12:16:00')).toBeGreaterThan(2)
+  })
 })
