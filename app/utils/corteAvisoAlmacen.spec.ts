@@ -62,4 +62,16 @@ describe('cumplioCorteAvisoAlmacen', () => {
     const avisada = new Date(2026, 9, 2, 9, 0, 0) // recién viernes a la mañana
     expect(cumplioCorteAvisoAlmacen(aprobada, avisada)).toBe(false)
   })
+
+  it('avisada dentro del minuto del corte (5:30:45pm): cumple, los segundos no cuentan', () => {
+    const aprobada = new Date(2026, 9, 1, 10, 0, 0)
+    const avisada = new Date(2026, 9, 1, 17, 30, 45)
+    expect(cumplioCorteAvisoAlmacen(aprobada, avisada)).toBe(true)
+  })
+
+  it('avisada un minuto después del corte (5:31pm): no cumple', () => {
+    const aprobada = new Date(2026, 9, 1, 10, 0, 0)
+    const avisada = new Date(2026, 9, 1, 17, 31, 0)
+    expect(cumplioCorteAvisoAlmacen(aprobada, avisada)).toBe(false)
+  })
 })

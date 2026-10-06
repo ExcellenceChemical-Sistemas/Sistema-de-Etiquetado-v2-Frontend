@@ -40,8 +40,12 @@ export function corteLimiteAvisoAlmacen(aprobadaEn: Date | string): Date {
   throw new Error('No se encontró un día hábil en los próximos 14 días para calcular el corte de aviso a almacén')
 }
 
-// true si se avisó a almacén antes o justo en su corte límite (no hace falta esperar al minuto
-// siguiente: avisar exactamente a las 5pm cuenta como cumplido).
+// true si se avisó a almacén antes o durante el minuto de su corte límite. Se ignoran los
+// segundos a propósito: la hora de aviso se guarda con segundos (hora real del servidor) pero
+// el corte se expresa en minutos ("5:30pm"), así que avisar a las 5:30:14 cuenta como cumplido.
+// Sin esto, todo aviso hecho durante el minuto 5:30 aparecía "fuera de plazo" con 0.0 h de atraso.
 export function cumplioCorteAvisoAlmacen(aprobadaEn: Date | string, avisadaEn: Date | string): boolean {
-  return new Date(avisadaEn) <= corteLimiteAvisoAlmacen(aprobadaEn)
+  const avisada = new Date(avisadaEn)
+  avisada.setSeconds(0, 0)
+  return avisada <= corteLimiteAvisoAlmacen(aprobadaEn)
 }
