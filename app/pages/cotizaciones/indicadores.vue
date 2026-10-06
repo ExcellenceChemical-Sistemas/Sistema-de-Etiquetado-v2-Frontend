@@ -788,8 +788,9 @@ async function exportarReporte() {
                       <TableCell>{{ formatFechaHora(c.pedidoAprobadoEn) }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.corteLimite.toISOString()) }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.avisoAlmacenEn) }}</TableCell>
-                      <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(c.horasHabilesDeAtraso) }}</TableCell>
-                    </TableRow>
+<TableCell class="text-right font-medium text-amber-600">
+  {{ c.horasHabilesDeAtraso > 0 && c.horasHabilesDeAtraso < 0.1 ? '< 0.1' : formatNumero(c.horasHabilesDeAtraso) }}
+</TableCell>                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
