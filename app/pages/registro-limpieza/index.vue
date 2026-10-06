@@ -34,7 +34,7 @@ const paginadas = computed(() => {
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col gap-4 p-4 lg:p-6">
+  <div class="flex h-full min-h-0 w-full min-w-0 flex-col gap-4 p-4 lg:p-6">
     <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b pb-4">
       <div class="flex items-center gap-3">
         <div class="rounded-md bg-primary/10 p-2.5 shrink-0">
@@ -72,14 +72,17 @@ const paginadas = computed(() => {
     </div>
 
     <template v-else>
-      <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
+      <ScrollArea
+        class="min-h-0 w-full min-w-0 flex-1 rounded-md border border-border [&_[data-slot=scroll-area-viewport]>div]:!block"
+      >
         <Table>
           <TableHeader class="sticky top-0 z-10 bg-background">
             <TableRow>
               <TableHead
                 v-for="(col, i) in encabezados"
                 :key="i"
-                class="whitespace-nowrap"
+                class="max-w-64 truncate whitespace-nowrap"
+                :title="col"
               >
                 {{ col }}
               </TableHead>
@@ -111,7 +114,12 @@ const paginadas = computed(() => {
             </template>
             <template v-else>
               <TableRow v-for="(fila, i) in paginadas" :key="i">
-                <TableCell v-for="(celda, j) in fila" :key="j" class="whitespace-nowrap">
+                <TableCell
+                  v-for="(celda, j) in fila"
+                  :key="j"
+                  class="max-w-64 truncate whitespace-nowrap"
+                  :title="celda"
+                >
                   {{ celda || "—" }}
                 </TableCell>
               </TableRow>
