@@ -9,5 +9,5 @@
 //    (termina en algo como ".../pub?gid=0&single=true&output=csv").
 export const REGISTRO_LIMPIEZA = {
   formUrl: 'https://forms.gle/NLgdvp94af2xDgj8A',
-  sheetCsvUrl: '',
+  sheetCsvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtoqkIXZZ5u8xfwN6c-7f9Rh1KIitOvI1vsS5lmbxxXZNoWntFSO9mo6M8p9ctKe9UhuQAxLLq_Irq/pub?gid=478509965&single=true&output=csv',
 } as const
