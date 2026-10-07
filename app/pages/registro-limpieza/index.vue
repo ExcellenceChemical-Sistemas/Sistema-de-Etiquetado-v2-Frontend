@@ -27,6 +27,13 @@ watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp;
 });
 
+// Si la celda trae uno o varios links (Google Forms separa con coma los archivos múltiples),
+// los devolvemos para pintarlos como enlaces clicables. Si no hay links, devuelve [].
+const URL_REGEX = /https?:\/\/[^\s,]+/g;
+function extraerLinks(celda: string): string[] {
+  return celda?.match(URL_REGEX) ?? [];
+}
+
 const paginadas = computed(() => {
   const start = (page.value - 1) * PAGE_SIZE;
   return filas.value.slice(start, start + PAGE_SIZE);
@@ -120,7 +127,23 @@ const paginadas = computed(() => {
                   class="max-w-64 truncate whitespace-nowrap"
                   :title="celda"
                 >
-                  {{ celda || "—" }}
+                  <template v-if="extraerLinks(celda).length">
+                    <span class="inline-flex items-center gap-3">
+                      <a
+                        v-for="(url, k) in extraerLinks(celda)"
+                        :key="k"
+                        :href="url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        :title="url"
+                        class="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                      >
+                        <ExternalLink class="h-3.5 w-3.5" />
+                        {{ extraerLinks(celda).length > 1 ? `Ver archivo ${k + 1}` : "Ver archivo" }}
+                      </a>
+                    </span>
+                  </template>
+                  <template v-else>{{ celda || "—" }}</template>
                 </TableCell>
               </TableRow>
             </template>
