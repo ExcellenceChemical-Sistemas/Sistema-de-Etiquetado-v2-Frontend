@@ -3,6 +3,7 @@ export type TipoNotificacion =
   | 'PEDIDO_SALIO_SIN_ENTREGAR'
   | 'COTIZACION_SIN_AVISO_ALMACEN'
   | 'COTIZACION_RESPUESTA_LENTA'
+  | 'PEDIDO_RECIBIDO_SIN_AVISO'
   | 'RESUMEN_DIARIO'
 
 export interface Notificacion {

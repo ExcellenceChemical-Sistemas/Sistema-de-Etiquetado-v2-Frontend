@@ -20,7 +20,11 @@ interface UsuarioResumen {
   nombre: string
 }
 
-export type TipoAlertaCotizacion = 'FERIADO_O_FIN_DE_SEMANA' | 'AUSENCIA_REGISTRADA' | 'CARGA_TARDIA'
+export type TipoAlertaCotizacion =
+  | 'FERIADO_O_FIN_DE_SEMANA'
+  | 'AUSENCIA_REGISTRADA'
+  | 'CARGA_TARDIA'
+  | 'FUERA_DE_SECUENCIA'
 
 export interface AlertaCotizacion {
   campo: 'requerimientoEn' | 'cotizacionEnviadaEn' | 'pedidoAprobadoEn' | 'avisoAlmacenEn'
@@ -32,6 +36,7 @@ export const ALERTA_COTIZACION_LABEL: Record<TipoAlertaCotizacion, string> = {
   FERIADO_O_FIN_DE_SEMANA: 'cae en fin de semana o feriado (la empresa no trabaja ese día)',
   AUSENCIA_REGISTRADA: 'cae dentro de una ausencia registrada de quien cargó el dato',
   CARGA_TARDIA: 'se cargó o corrigió en el sistema mucho después de la fecha que dice',
+  FUERA_DE_SECUENCIA: 'fuera de secuencia con el pedido de almacén (se registró tarde o falta registrarlo)',
 }
 
 export const CAMPO_COTIZACION_LABEL: Record<'requerimientoEn' | 'numeroProforma' | AlertaCotizacion['campo'], string> = {
