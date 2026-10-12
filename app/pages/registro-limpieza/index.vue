@@ -5,6 +5,12 @@ import { REGISTRO_LIMPIEZA } from "~/config/registroLimpieza";
 import { useRegistroLimpiezaQuery } from "~/composables/useRegistroLimpieza";
 import { usePermiso } from "~/composables/usePermiso";
 import Spinner from "~/components/ui/Spinner.vue";
+import ProgressBar from "~/components/ui/ProgressBar.vue";
+import {
+  calcularCumplimiento,
+  mesesDisponibles,
+  normalizarTexto,
+} from "~/utils/cumplimientoLimpieza";
 
 const PAGE_SIZE = 10;
 
@@ -19,6 +25,16 @@ const page = ref(1);
 
 const filas = computed(() => data.value?.filas ?? []);
 const encabezados = computed(() => data.value?.encabezados ?? []);
+
+// La "Marca temporal" la pone Google Forms al enviar; el dato que importa es FECHA, así que no se muestra.
+// Se oculta por nombre (no por posición) para que siga funcionando si el área de calidad reordena columnas.
+const COLUMNA_OCULTA = "marca temporal";
+const columnasVisibles = computed(() =>
+  encabezados.value
+    .map((h, i) => ({ h, i }))
+    .filter(({ h }) => normalizarTexto(h) !== COLUMNA_OCULTA),
+);
+const filasVisibles = (fila: string[]) => columnasVisibles.value.map(({ i }) => fila[i] ?? "");
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filas.value.length / PAGE_SIZE)));
 
@@ -37,6 +53,31 @@ function extraerLinks(celda: string): string[] {
 const paginadas = computed(() => {
   const start = (page.value - 1) * PAGE_SIZE;
   return filas.value.slice(start, start + PAGE_SIZE);
+});
+
+// Cumplimiento del mes: lunes a viernes sin feriados; día cumplido = registro "SÍ - Se limpiaron TODAS las áreas"
+// según la columna FECHA (ver utils/cumplimientoLimpieza.ts).
+const MESES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+function claveMes(fecha: Date): string {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function etiquetaMes(clave: string): string {
+  const [anio, mes] = clave.split("-");
+  return `${MESES[Number(mes) - 1]} ${anio}`;
+}
+
+const mesSeleccionado = ref(claveMes(new Date()));
+
+const meses = computed(() => mesesDisponibles(encabezados.value, filas.value));
+
+const cumplimiento = computed(() => {
+  const [anio, mes] = mesSeleccionado.value.split("-").map(Number);
+  return calcularCumplimiento(encabezados.value, filas.value, anio!, mes! - 1);
 });
 </script>
 
@@ -86,12 +127,12 @@ const paginadas = computed(() => {
           <TableHeader class="sticky top-0 z-10 bg-background">
             <TableRow>
               <TableHead
-                v-for="(col, i) in encabezados"
+                v-for="{ h, i } in columnasVisibles"
                 :key="i"
                 class="max-w-64 truncate whitespace-nowrap"
-                :title="col"
+                :title="h"
               >
-                {{ col }}
+                {{ h }}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -103,7 +144,7 @@ const paginadas = computed(() => {
             </template>
             <template v-else-if="isError">
               <TableRow>
-                <TableCell :colspan="Math.max(encabezados.length, 1)" class="text-center py-8">
+                <TableCell :colspan="Math.max(columnasVisibles.length, 1)" class="text-center py-8">
                   <p class="text-sm text-destructive mb-2">No se pudo cargar el historial</p>
                   <Button variant="outline" size="sm" @click="refetch()">Reintentar</Button>
                 </TableCell>
@@ -112,7 +153,7 @@ const paginadas = computed(() => {
             <template v-else-if="filas.length === 0">
               <TableRow>
                 <TableCell
-                  :colspan="Math.max(encabezados.length, 1)"
+                  :colspan="Math.max(columnasVisibles.length, 1)"
                   class="text-center text-muted-foreground py-8"
                 >
                   Todavía no hay registros
@@ -122,7 +163,7 @@ const paginadas = computed(() => {
             <template v-else>
               <TableRow v-for="(fila, i) in paginadas" :key="i">
                 <TableCell
-                  v-for="(celda, j) in fila"
+                  v-for="(celda, j) in filasVisibles(fila)"
                   :key="j"
                   class="max-w-64 truncate whitespace-nowrap"
                   :title="celda"
@@ -191,6 +232,30 @@ const paginadas = computed(() => {
             <PaginationNext />
           </PaginationContent>
         </Pagination>
+      </div>
+      <div
+        v-if="!isPending && !isError"
+        class="shrink-0 space-y-3 rounded-lg border bg-card p-4"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm font-medium">
+            Cumplimiento: {{ cumplimiento.cumplidos }} de {{ cumplimiento.total }} días
+            ({{ cumplimiento.porcentaje }}%)
+          </p>
+          <Select v-model="mesSeleccionado">
+            <SelectTrigger class="w-44" aria-label="Mes del cumplimiento">
+              <SelectValue placeholder="Mes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="m in meses" :key="m" :value="m">{{ etiquetaMes(m) }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <ProgressBar :value="cumplimiento.porcentaje" />
+        <p class="text-xs text-muted-foreground">
+          Días a cumplir: lunes a viernes, sin feriados. Se cuenta como cumplido el día con un
+          registro "SÍ - Se limpiaron TODAS las áreas" en la columna FECHA.
+        </p>
       </div>
     </template>
   </div>
