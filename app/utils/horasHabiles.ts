@@ -59,3 +59,30 @@ export function horasHabilesEntre(inicio: Date | string, fin: Date | string): nu
   }
   return horas
 }
+
+// Plazo de ENTREGA de pedidos: las 48h corren las 24h del día, pero los días no laborables
+// (sábado, domingo y feriados) se descuentan completos. Distinto de horasHabilesEntre, que solo
+// cuenta la jornada 7:30-17:30 y sirve para medir tiempos de respuesta del equipo.
+// Ej.: recibido martes 08:09, entregado lunes siguiente 10:32 → 146.4h corridas - 48h (sáb+dom) = 98.4h.
+export function horasCorridasLaborablesEntre(inicio: Date | string, fin: Date | string): number {
+  const desde = alMinuto(inicio)
+  const hasta = alMinuto(fin)
+  if (hasta <= desde) return 0
+
+  let ms = hasta.getTime() - desde.getTime()
+  const cursor = new Date(desde)
+  cursor.setHours(0, 0, 0, 0)
+
+  while (cursor <= hasta) {
+    if (!esDiaLaboral(cursor)) {
+      const diaInicio = new Date(cursor)
+      const diaFin = new Date(cursor)
+      diaFin.setDate(diaFin.getDate() + 1)
+      const solapeIni = desde > diaInicio ? desde : diaInicio
+      const solapeFin = hasta < diaFin ? hasta : diaFin
+      if (solapeFin > solapeIni) ms -= solapeFin.getTime() - solapeIni.getTime()
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return ms / 3_600_000
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { horasHabilesEntre } from './horasHabiles'
+import { horasHabilesEntre, horasCorridasLaborablesEntre } from './horasHabiles'
 
 describe('horasHabilesEntre', () => {
   it('fin anterior o igual a inicio da 0', () => {
@@ -52,5 +52,21 @@ describe('horasHabilesEntre', () => {
 
   it('un minuto más sigue contando: 10:15:00 -> 12:16:00 pasa de 2h', () => {
     expect(horasHabilesEntre('2026-09-02T10:15:00', '2026-09-02T12:16:00')).toBeGreaterThan(2)
+  })
+})
+describe('horasCorridasLaborablesEntre', () => {
+  it('martes a miércoles (días laborables): cuenta las 24h corridas', () => {
+    expect(horasCorridasLaborablesEntre('2026-09-08T08:00:00', '2026-09-09T08:00:00')).toBeCloseTo(24)
+  })
+  it('sábado y domingo se descuentan completos', () => {
+    // viernes 16:00 → lunes 09:00 = 65h corridas - 48h
+    expect(horasCorridasLaborablesEntre('2026-09-04T16:00:00', '2026-09-07T09:00:00')).toBeCloseTo(17)
+  })
+  it('caso real PF01-4971: 29/09 08:09 → 05/10 10:32', () => {
+    expect(horasCorridasLaborablesEntre('2026-09-29T08:09:00', '2026-10-05T10:32:00')).toBeCloseTo(98.38, 1)
+  })
+  it('un feriado entre semana también se descuenta', () => {
+    // 07/10 → 09/10 con 08/10 (Angamos) feriado: 48h corridas - 24h
+    expect(horasCorridasLaborablesEntre('2026-10-07T12:00:00', '2026-10-09T12:00:00')).toBeCloseTo(24)
   })
 })

@@ -8,7 +8,7 @@ import { FILL_GREEN, FILL_RED, type XlsxColumn } from "~/composables/useCsvExpor
 import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoDona } from "~/utils/graficosReporte";
 import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporteIndicadores";
-import { horasHabilesEntre } from "~/utils/horasHabiles";
+import { horasHabilesEntre, horasCorridasLaborablesEntre } from "~/utils/horasHabiles";
 import { CATEGORIA_OBSERVACION_LABEL, type EstadoPedido, type Pedido } from "~/types/pedido";
 import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExportar.vue";
 
@@ -17,8 +17,8 @@ import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExporta
 const estadoEntregado = ref<EstadoPedido | "TODOS">("ENTREGADO");
 const { data: pedidos, isPending, isError, refetch } = usePedidosQuery(estadoEntregado);
 
-// Umbral fijo igual al Excel actual (meta: ≥80% de pedidos entregados dentro
-// de 48h / 2 días hábiles).
+// Umbral fijo (meta: ≥80% de pedidos entregados dentro de 48h corridas,
+// sin contar sábados, domingos ni feriados).
 const UMBRAL_HORAS = 48;
 
 const filtroMes = ref("TODOS");
@@ -34,9 +34,8 @@ interface PedidoConTiempo extends Pedido {
   dias: number;
 }
 
-// Tiempo de entrega = Recepción → Entrega al cliente, en horas hábiles (lunes
-// a viernes, 7:30-17:30, sin feriados) — igual criterio que el Excel, que no
-// contaba noches ni fines de semana como demora real.
+// Tiempo de entrega = Recepción → Entrega al cliente, en horas corridas (24h por día)
+// descontando completos los sábados, domingos y feriados, que no son días de trabajo.
 const pedidosConTiempo = computed<PedidoConTiempo[]>(() =>
   (pedidos.value ?? [])
     .filter((p): p is Pedido & { entregadoEn: string } => !!p.entregadoEn)
@@ -46,7 +45,7 @@ const pedidosConTiempo = computed<PedidoConTiempo[]>(() =>
       // cuello de botella, exports) nunca contradigan la hora que el indicador ya muestra tapada.
       const entregadoEn = horaMostrable(p.entregadoEn);
       const preparadoEn = horaMostrable(p.preparadoEn);
-      const horas = horasHabilesEntre(p.recibidoEn, entregadoEn);
+      const horas = horasCorridasLaborablesEntre(p.recibidoEn, entregadoEn);
       return { ...p, entregadoEn, preparadoEn, horas, dias: horas / 24 };
     }),
 );
@@ -107,7 +106,7 @@ interface EtapaProm {
 
 function horasEntre(a: string | null, b: string | null): number | null {
   if (!a || !b) return null;
-  return horasHabilesEntre(a, b);
+  return horasCorridasLaborablesEntre(a, b);
 }
 
 function promedioEtapa(lista: PedidoConTiempo[], fn: (p: PedidoConTiempo) => number | null): number {
@@ -244,7 +243,7 @@ const columnasTrazabilidad: XlsxColumn<PedidoConTiempoTotal>[] = [
   { key: (p) => formatFechaHora(p.entregadoEn), label: "Entregado al cliente", width: 22 },
   { key: (p) => Number(p.horasCotizacion.toFixed(1)), label: "h Cotización (requerimiento→recepción)", width: 20 },
   { key: (p) => Number(p.horas.toFixed(1)), label: "h Almacén (recepción→entrega)", width: 18 },
-  { key: (p) => Number(p.horasTotal.toFixed(1)), label: "h Totales (requerimiento→entrega)", width: 20 },
+  { key: (p) => Number(p.horasTotal.toFixed(1)), label: "h Cotización + h Entrega (suma de ambas)", width: 20 },
 ];
 
 async function exportarReporte() {
@@ -257,7 +256,7 @@ async function exportarReporte() {
     () =>
       construirReportePdf({
         titulo: "Indicador de tiempo de entrega — Pedidos",
-        descripcion: `Recepción → entrega al cliente, en horas hábiles (lun-vie 7:30-17:30, sin feriados). Meta: ≥80% de pedidos entregados dentro de ${UMBRAL_HORAS}h.`,
+        descripcion: `Recepción → entrega al cliente, en horas corridas sin contar sábados, domingos ni feriados. Meta: ≥80% de pedidos entregados dentro de ${UMBRAL_HORAS}h.`,
         filtros: filtrosMesAnio(filtroMes.value, filtroAnio.value),
         secciones: [
           {
@@ -318,7 +317,7 @@ async function exportarReporte() {
               ["Pedidos con cotización vinculada", resumenTotal.value.total],
               ["Promedio en etapa Cotización (requerimiento→recepción)", Number(resumenTotal.value.promedioCotizacion.toFixed(1))],
               ["Promedio en etapa Almacén (recepción→entrega)", Number(resumenTotal.value.promedioAlmacen.toFixed(1))],
-              ["Promedio total (requerimiento→entrega)", Number(resumenTotal.value.promedioTotal.toFixed(1))],
+              ["Promedio Cotización + Entrega (suma de ambas etapas)", Number(resumenTotal.value.promedioTotal.toFixed(1))],
             ],
           },
         ],
@@ -543,8 +542,9 @@ async function exportarReporte() {
         </CardHeader>
         <CardContent class="space-y-3">
           <p class="text-xs text-muted-foreground">
-            {{ resumenTotal.total }} pedido(s) con cotización vinculada (mismo N° de proforma). Reparte el tiempo total
-            entre lo que tarda Cotizaciones en aprobar y lo que tarda Almacén en entregar.
+            {{ resumenTotal.total }} pedido(s) con cotización vinculada (mismo N° de proforma). Muestra por separado lo que
+            tarda Cotizaciones (horas de jornada, lun-vie 7:30-17:30) y lo que tarda la entrega (horas corridas, sin
+            sábados, domingos ni feriados). La suma es solo referencia: son dos medidas distintas.
           </p>
           <div class="grid gap-3 sm:grid-cols-3">
             <div class="rounded-md border border-border p-3">
@@ -556,7 +556,7 @@ async function exportarReporte() {
               <p class="text-xl font-semibold">{{ formatNumero(resumenTotal.promedioAlmacen) }}h</p>
             </div>
             <div class="rounded-md border border-primary/30 bg-primary/5 p-3">
-              <p class="text-xs text-muted-foreground">Total (requerimiento → entrega)</p>
+              <p class="text-xs text-muted-foreground">Cotización + Entrega (suma de ambas etapas)</p>
               <p class="text-xl font-semibold text-primary">{{ formatNumero(resumenTotal.promedioTotal) }}h</p>
             </div>
           </div>
@@ -571,7 +571,7 @@ async function exportarReporte() {
                   <TableHead>Entregado</TableHead>
                   <TableHead class="text-right">h Cotización</TableHead>
                   <TableHead class="text-right">h Almacén</TableHead>
-                  <TableHead class="text-right">h Total</TableHead>
+                  <TableHead class="text-right">Cotización + Entrega</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
