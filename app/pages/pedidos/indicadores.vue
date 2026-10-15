@@ -11,6 +11,7 @@ import { construirReporte, filtrosMesAnio, sufijoPeriodo } from "~/utils/reporte
 import { horasHabilesEntre, horasCorridasLaborablesEntre } from "~/utils/horasHabiles";
 import { CATEGORIA_OBSERVACION_LABEL, type EstadoPedido, type Pedido } from "~/types/pedido";
 import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExportar.vue";
+import TablaPaginada from "~/components/indicadores/TablaPaginada.vue";
 
 // El indicador solo tiene sentido sobre pedidos ya entregados: es el único
 // estado con las 5 fechas completas para medir el tiempo real de entrega.
@@ -562,8 +563,8 @@ async function exportarReporte() {
           </div>
 
           <div v-if="peoresTotal.length > 0" class="overflow-hidden rounded-md border border-border">
-            <Table>
-              <TableHeader>
+            <TablaPaginada :items="peoresTotal" etiqueta="pedido">
+              <template #header>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Proforma</TableHead>
@@ -573,9 +574,9 @@ async function exportarReporte() {
                   <TableHead class="text-right">h Almacén</TableHead>
                   <TableHead class="text-right">Cotización + Entrega</TableHead>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="p in peoresTotal" :key="p.id">
+              </template>
+              <template #row="{ item: p }">
+                <TableRow>
                   <TableCell class="max-w-40 truncate">{{ p.cliente.nombre }}</TableCell>
                   <TableCell>{{ p.numeroProforma }}</TableCell>
                   <TableCell>{{ formatFechaHora(p.cotizacionRelacionada.requerimientoEn) }}</TableCell>
@@ -584,8 +585,8 @@ async function exportarReporte() {
                   <TableCell class="text-right">{{ formatNumero(p.horas) }}</TableCell>
                   <TableCell class="text-right font-medium text-primary">{{ formatNumero(p.horasTotal) }}</TableCell>
                 </TableRow>
-              </TableBody>
-            </Table>
+              </template>
+            </TablaPaginada>
           </div>
         </CardContent>
       </Card>
@@ -599,9 +600,17 @@ async function exportarReporte() {
         </h2>
       </div>
 
-      <ScrollArea class="min-h-0 flex-1 rounded-md border border-border">
-        <Table>
-          <TableHeader class="sticky top-0 z-10 bg-background">
+      <div
+        v-if="cuellosDeBotella.length === 0"
+        class="shrink-0 rounded-md border border-border py-16 text-center text-sm text-muted-foreground"
+      >
+        <PackageCheck class="mx-auto mb-3 h-10 w-10 opacity-50" />
+        Ningún pedido superó el umbral en este filtro
+      </div>
+
+      <div v-else class="shrink-0 overflow-hidden rounded-md border border-border">
+        <TablaPaginada :items="cuellosDeBotella" etiqueta="pedido">
+          <template #header>
             <TableRow>
               <TableHead>Cliente</TableHead>
               <TableHead>Proforma</TableHead>
@@ -612,35 +621,25 @@ async function exportarReporte() {
               <TableHead class="text-right">Días</TableHead>
               <TableHead>Observación</TableHead>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            <template v-if="cuellosDeBotella.length === 0">
-              <TableRow>
-                <TableCell colspan="8" class="py-16 text-center text-muted-foreground">
-                  <PackageCheck class="mx-auto mb-3 h-10 w-10 opacity-50" />
-                  Ningún pedido superó el umbral en este filtro
-                </TableCell>
-              </TableRow>
-            </template>
-            <template v-else>
-              <TableRow v-for="p in cuellosDeBotella" :key="p.id">
-                <TableCell class="max-w-48 truncate font-medium" :title="p.cliente.nombre">
-                  {{ p.cliente.nombre }}
-                </TableCell>
-                <TableCell>{{ p.numeroProforma }}</TableCell>
-                <TableCell :title="formatFechaHora(p.recibidoEn)">{{ formatFechaHora(p.recibidoEn) }}</TableCell>
-                <TableCell :title="formatFechaHora(p.salioEn)">{{ formatFechaHora(p.salioEn) }}</TableCell>
-                <TableCell :title="formatFechaHora(p.entregadoEn)">{{ formatFechaHora(p.entregadoEn) }}</TableCell>
-                <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(p.horas) }}</TableCell>
-                <TableCell class="text-right">{{ formatNumero(p.dias, 2) }}</TableCell>
-                <TableCell class="max-w-40 truncate" :title="p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : ''">
-                  {{ p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : "—" }}
-                </TableCell>
-              </TableRow>
-            </template>
-          </TableBody>
-        </Table>
-      </ScrollArea>
+          </template>
+          <template #row="{ item: p }">
+            <TableRow>
+              <TableCell class="max-w-48 truncate font-medium" :title="p.cliente.nombre">
+                {{ p.cliente.nombre }}
+              </TableCell>
+              <TableCell>{{ p.numeroProforma }}</TableCell>
+              <TableCell :title="formatFechaHora(p.recibidoEn)">{{ formatFechaHora(p.recibidoEn) }}</TableCell>
+              <TableCell :title="formatFechaHora(p.salioEn)">{{ formatFechaHora(p.salioEn) }}</TableCell>
+              <TableCell :title="formatFechaHora(p.entregadoEn)">{{ formatFechaHora(p.entregadoEn) }}</TableCell>
+              <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(p.horas) }}</TableCell>
+              <TableCell class="text-right">{{ formatNumero(p.dias, 2) }}</TableCell>
+              <TableCell class="max-w-40 truncate" :title="p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : ''">
+                {{ p.categoriaObservacion ? CATEGORIA_OBSERVACION_LABEL[p.categoriaObservacion] : "—" }}
+              </TableCell>
+            </TableRow>
+          </template>
+        </TablaPaginada>
+      </div>
     </template>
   </div>
 </template>
