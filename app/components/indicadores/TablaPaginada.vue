@@ -36,22 +36,30 @@ const paginados = computed(() => {
   return props.items.slice(desde, desde + props.pageSize);
 });
 
+// Alto mínimo de la tabla (cabecera h-10 = 2.5rem + filas de ~2.3125rem): con varias páginas, la
+// última (con menos filas) no encoge y el paginador no "salta" al cambiar de página.
+const alturaMinima = computed(() =>
+  props.items.length > props.pageSize ? `${2.5 + props.pageSize * 2.3125}rem` : undefined,
+);
+
 const desde = computed(() => (props.items.length ? (page.value - 1) * props.pageSize + 1 : 0));
 const hasta = computed(() => Math.min(page.value * props.pageSize, props.items.length));
 </script>
 
 <template>
   <div>
-    <Table>
-      <TableHeader>
-        <slot name="header" />
-      </TableHeader>
-      <TableBody>
-        <template v-for="(item, i) in paginados" :key="(page - 1) * pageSize + i">
-          <slot name="row" :item="item" />
-        </template>
-      </TableBody>
-    </Table>
+    <div :style="{ minHeight: alturaMinima }">
+      <Table>
+        <TableHeader>
+          <slot name="header" />
+        </TableHeader>
+        <TableBody>
+          <template v-for="(item, i) in paginados" :key="(page - 1) * pageSize + i">
+            <slot name="row" :item="item" />
+          </template>
+        </TableBody>
+      </Table>
+    </div>
 
     <div
       v-if="items.length > pageSize"
