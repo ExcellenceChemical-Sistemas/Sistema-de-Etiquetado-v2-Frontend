@@ -27,6 +27,7 @@ const { data: lotes, isPending, isFetching, isError, refetch } = useLotes();
 const {
   search,
   vencimientoFilter,
+  coaFilter,
   page,
   fechaDesde,
   fechaHasta,
@@ -76,7 +77,7 @@ const xlsxColumns: XlsxColumn<Lote>[] = [
 ];
 
 function exportarXlsx() {
-  // Exporta la lista filtrada (búsqueda + filtro de vencimiento), no solo la página visible
+  // Exporta la lista filtrada (búsqueda + filtros de vencimiento y COA), no solo la página visible
   exportar(
     filtrados.value,
     xlsxColumns,
@@ -194,6 +195,7 @@ function abrirCoaEnPestana() {
     <LotesFiltroBar
       v-model:search="search"
       v-model:vencimiento-filter="vencimientoFilter"
+      v-model:coa-filter="coaFilter"
       v-model:fecha-desde="fechaDesde"
       v-model:fecha-hasta="fechaHasta"
       :result-count="filtrados.length"
@@ -249,6 +251,7 @@ function abrirCoaEnPestana() {
                 {{
                   search ||
                   vencimientoFilter !== "todos" ||
+                  coaFilter !== "todos" ||
                   fechaDesde ||
                   fechaHasta
                     ? "que coincidan con el filtro"

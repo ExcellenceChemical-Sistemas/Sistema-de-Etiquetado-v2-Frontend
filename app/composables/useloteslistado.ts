@@ -3,12 +3,14 @@ import type { Lote } from '~/types/lote'
 import { estadoVencimiento } from '~/utils/fechavencimiento'
 
 export type VencimientoFilter = 'todos' | 'vencidos' | 'porVencer' | 'vigente'
+export type CoaFilter = 'todos' | 'conCoa' | 'sinCoa'
 
 const PAGE_SIZE = 10
 
 export function useLotesListado(lotes: Ref<Lote[] | undefined>) {
   const search = ref('')
   const vencimientoFilter = ref<VencimientoFilter>('todos')
+  const coaFilter = ref<CoaFilter>('todos')
   // Rango de fechas de vencimiento (yyyy-mm-dd, formato nativo de <input type="date">)
   const fechaDesde = ref('')
   const fechaHasta = ref('')
@@ -35,6 +37,11 @@ export function useLotesListado(lotes: Ref<Lote[] | undefined>) {
         if (vencimientoFilter.value === 'porVencer' && estado !== 'porVencer') return false
         if (vencimientoFilter.value === 'vigente' && estado !== 'vigente') return false
       }
+      if (coaFilter.value !== 'todos') {
+        const tieneCoa = !!l.coaUrl
+        if (coaFilter.value === 'conCoa' && !tieneCoa) return false
+        if (coaFilter.value === 'sinCoa' && tieneCoa) return false
+      }
       if (desde || hasta) {
         if (!l.fechaVencimientoOrden) return false
         const fv = new Date(l.fechaVencimientoOrden)
@@ -46,7 +53,7 @@ export function useLotesListado(lotes: Ref<Lote[] | undefined>) {
     })
   })
 
-  watch([search, vencimientoFilter, fechaDesde, fechaHasta], () => {
+  watch([search, vencimientoFilter, coaFilter, fechaDesde, fechaHasta], () => {
     page.value = 1
   })
 
@@ -66,6 +73,7 @@ export function useLotesListado(lotes: Ref<Lote[] | undefined>) {
   return {
     search,
     vencimientoFilter,
+    coaFilter,
     fechaDesde,
     fechaHasta,
     page,

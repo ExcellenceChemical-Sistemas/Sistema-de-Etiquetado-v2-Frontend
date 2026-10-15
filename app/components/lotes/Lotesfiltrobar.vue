@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Search, X } from '@lucide/vue'
-import type { VencimientoFilter } from '~/composables/useloteslistado'
+import type { CoaFilter, VencimientoFilter } from '~/composables/useloteslistado'
 
 const search = defineModel<string>('search', { required: true })
 const vencimientoFilter = defineModel<VencimientoFilter>('vencimientoFilter', { required: true })
+const coaFilter = defineModel<CoaFilter>('coaFilter', { required: true })
 const fechaDesde = defineModel<string>('fechaDesde', { required: true })
 const fechaHasta = defineModel<string>('fechaHasta', { required: true })
 
@@ -37,6 +38,12 @@ defineProps<{
       <Button size="sm" :variant="vencimientoFilter === 'porVencer' ? 'default' : 'ghost'" @click="vencimientoFilter = 'porVencer'">Por vencer</Button>
       <Button size="sm" :variant="vencimientoFilter === 'vencidos' ? 'default' : 'ghost'" @click="vencimientoFilter = 'vencidos'">Vencidos</Button>
       <Button size="sm" :variant="vencimientoFilter === 'vigente' ? 'default' : 'ghost'" @click="vencimientoFilter = 'vigente'">Vigentes</Button>
+    </div>
+
+    <div class="flex items-center gap-1 rounded-md border border-border p-1" role="group" aria-label="Filtrar por COA">
+      <Button size="sm" :variant="coaFilter === 'todos' ? 'default' : 'ghost'" @click="coaFilter = 'todos'">Todos</Button>
+      <Button size="sm" :variant="coaFilter === 'conCoa' ? 'default' : 'ghost'" @click="coaFilter = 'conCoa'">Con COA</Button>
+      <Button size="sm" :variant="coaFilter === 'sinCoa' ? 'default' : 'ghost'" @click="coaFilter = 'sinCoa'">Sin COA</Button>
     </div>
 
   </div>
