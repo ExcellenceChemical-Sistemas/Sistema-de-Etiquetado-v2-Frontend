@@ -9,6 +9,7 @@ import { corteLimiteAvisoAlmacen, cumplioCorteAvisoAlmacen } from "~/utils/corte
 import { ALERTA_COTIZACION_LABEL, CAMPO_COTIZACION_LABEL, type Cotizacion, type EstadoCotizacion } from "~/types/cotizacion";
 import TendenciaMensualChart from "~/components/indicadores/TendenciaMensualChart.vue";
 import FiltroPeriodoExportar from "~/components/indicadores/FiltroPeriodoExportar.vue";
+import TablaPaginada from "~/components/indicadores/TablaPaginada.vue";
 import { FILL_AMBER, FILL_GREEN, type XlsxColumn } from "~/composables/useCsvExport";
 import { usePdfExport } from "~/composables/usePdfExport";
 import { COLOR_AMBAR, COLOR_BASE, COLOR_ROJO, COLOR_VERDE, graficoBarras, graficoColumnas } from "~/utils/graficosReporte";
@@ -582,16 +583,16 @@ async function exportarReporte() {
               </CardTitle>
             </CardHeader>
             <CardContent class="p-0">
-              <Table>
-                <TableHeader>
+              <TablaPaginada :items="cotizacionesConAlertas">
+                <template #header>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Proforma</TableHead>
                     <TableHead>Motivo</TableHead>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow v-for="c in cotizacionesConAlertas" :key="c.id">
+                </template>
+                <template #row="{ item: c }">
+                  <TableRow>
                     <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
                     <TableCell>{{ c.numeroProforma ?? "—" }}</TableCell>
                     <TableCell class="text-xs">
@@ -601,8 +602,8 @@ async function exportarReporte() {
                       </div>
                     </TableCell>
                   </TableRow>
-                </TableBody>
-              </Table>
+                </template>
+              </TablaPaginada>
             </CardContent>
           </Card>
 
@@ -674,8 +675,8 @@ async function exportarReporte() {
                 </CardTitle>
               </CardHeader>
               <CardContent class="p-0">
-                <Table>
-                  <TableHeader>
+                <TablaPaginada :items="peoresCotizacion">
+                  <template #header>
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Proforma</TableHead>
@@ -683,17 +684,17 @@ async function exportarReporte() {
                       <TableHead>Cotización enviada</TableHead>
                       <TableHead class="text-right">Horas</TableHead>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow v-for="c in peoresCotizacion" :key="c.id">
+                  </template>
+                  <template #row="{ item: c }">
+                    <TableRow>
                       <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
                       <TableCell>{{ c.numeroProforma }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.requerimientoEn) }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.cotizacionEnviadaEn) }}</TableCell>
                       <TableCell class="text-right font-medium text-amber-600">{{ formatNumero(c.horas) }}</TableCell>
                     </TableRow>
-                  </TableBody>
-                </Table>
+                  </template>
+                </TablaPaginada>
               </CardContent>
             </Card>
           </section>
@@ -770,8 +771,8 @@ async function exportarReporte() {
                 </CardTitle>
               </CardHeader>
               <CardContent class="p-0">
-                <Table>
-                  <TableHeader>
+                <TablaPaginada :items="peoresAviso">
+                  <template #header>
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Proforma</TableHead>
@@ -780,19 +781,20 @@ async function exportarReporte() {
                       <TableHead>Pedido Notificado</TableHead>
                       <TableHead class="text-right">Horas de atraso</TableHead>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow v-for="c in peoresAviso" :key="c.id">
+                  </template>
+                  <template #row="{ item: c }">
+                    <TableRow>
                       <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
                       <TableCell>{{ c.numeroProforma }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.pedidoAprobadoEn) }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.corteLimite.toISOString()) }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.avisoAlmacenEn) }}</TableCell>
-<TableCell class="text-right font-medium text-amber-600">
-  {{ c.horasHabilesDeAtraso > 0 && c.horasHabilesDeAtraso < 0.1 ? '< 0.1' : formatNumero(c.horasHabilesDeAtraso) }}
-</TableCell>                    </TableRow>
-                  </TableBody>
-                </Table>
+                      <TableCell class="text-right font-medium text-amber-600">
+                        {{ c.horasHabilesDeAtraso > 0 && c.horasHabilesDeAtraso < 0.1 ? '< 0.1' : formatNumero(c.horasHabilesDeAtraso) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                </TablaPaginada>
               </CardContent>
             </Card>
           </section>
@@ -890,8 +892,8 @@ async function exportarReporte() {
                 </CardTitle>
               </CardHeader>
               <CardContent class="p-0">
-                <Table>
-                  <TableHeader>
+                <TablaPaginada :items="peoresTrazabilidad">
+                  <template #header>
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Proforma</TableHead>
@@ -900,9 +902,9 @@ async function exportarReporte() {
                       <TableHead class="text-right">Horas totales</TableHead>
                       <TableHead>Seguimiento</TableHead>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow v-for="c in peoresTrazabilidad" :key="c.id">
+                  </template>
+                  <template #row="{ item: c }">
+                    <TableRow>
                       <TableCell class="max-w-40 truncate">{{ c.cliente.nombre }}</TableCell>
                       <TableCell>{{ c.numeroProforma }}</TableCell>
                       <TableCell>{{ formatFechaHora(c.requerimientoEn) }}</TableCell>
@@ -912,8 +914,8 @@ async function exportarReporte() {
                         <a :href="urlSeguimientoDe(c)" target="_blank" class="text-xs text-primary hover:underline">Ver enlace</a>
                       </TableCell>
                     </TableRow>
-                  </TableBody>
-                </Table>
+                  </template>
+                </TablaPaginada>
               </CardContent>
             </Card>
             <p v-else class="text-sm text-muted-foreground">
