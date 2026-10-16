@@ -377,13 +377,24 @@ function abrirCoaEnPestana() {
     </div>
 
     <Dialog v-model:open="dialogOpen">
-      <DialogContent>
-        <DialogTitle>{{ editando ? "Editar lote" : "Nuevo lote" }}</DialogTitle>
-        <LoteForm
-          :key="dialogOpen ? (editando?.id ?? 'nuevo') : 'cerrado'"
-          :lote="editando"
-          @success="onSuccess"
-        />
+      <DialogContent class="gap-0 p-0 sm:max-w-lg">
+        <DialogTitle class="px-6 pt-6 pb-4">
+          {{ editando ? "Editar lote" : "Nuevo lote" }}
+        </DialogTitle>
+        <!-- El alto máximo va en el viewport (si no, ScrollArea nunca scrollea) y el
+             div interno de Reka es display:table, que ensancha el contenido con textos
+             largos (ej. nombre de PDF): se fuerza a block para que funcione el truncate. -->
+        <ScrollArea
+          class="min-w-0 [&_[data-slot=scroll-area-viewport]]:max-h-[75vh] [&_[data-slot=scroll-area-viewport]>div]:block!"
+        >
+          <div class="px-6 pb-6">
+            <LoteForm
+              :key="dialogOpen ? (editando?.id ?? 'nuevo') : 'cerrado'"
+              :lote="editando"
+              @success="onSuccess"
+            />
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
 

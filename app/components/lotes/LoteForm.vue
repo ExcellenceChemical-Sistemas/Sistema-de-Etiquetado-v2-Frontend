@@ -177,7 +177,7 @@ const onSubmit = handleSubmit(async (values) => {
 </script>
 
 <template>
-  <form class="space-y-4" @submit="onSubmit">
+  <form class="min-w-0 space-y-4" @submit="onSubmit">
     <div class="space-y-2">
       <Label>Producto</Label>
       <ComboboxBuscador
@@ -283,15 +283,16 @@ const onSubmit = handleSubmit(async (values) => {
 
       <div
         v-if="coaActual && !coaFile"
-        class="flex items-center gap-2 rounded-md border border-border p-2 text-sm"
+        class="flex min-w-0 items-center gap-2 rounded-md border border-border p-2 text-sm"
       >
         <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span class="flex-1 truncate text-muted-foreground">COA cargado</span>
+        <span class="min-w-0 flex-1 truncate text-muted-foreground">COA cargado</span>
         <Button
           v-if="permiso.puedeEliminar"
           type="button"
           variant="ghost"
           size="sm"
+          class="shrink-0"
           :disabled="eliminandoCoa"
           @click="quitarCoa"
         >
@@ -316,14 +317,15 @@ const onSubmit = handleSubmit(async (values) => {
         />
       </div>
 
-      <div v-if="coaFile" class="space-y-1">
-        <div class="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+      <div v-if="coaFile" class="min-w-0 space-y-1">
+        <div class="flex min-w-0 items-center gap-2 rounded-md border border-border p-2 text-sm">
           <FileText class="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span class="flex-1 truncate">{{ coaFile.name }}</span>
+          <span class="min-w-0 flex-1 truncate" :title="coaFile.name">{{ coaFile.name }}</span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
+            class="shrink-0"
             title="Previsualizar"
             @click="previewOpen = true"
           >
@@ -333,6 +335,7 @@ const onSubmit = handleSubmit(async (values) => {
             type="button"
             variant="ghost"
             size="sm"
+            class="shrink-0"
             title="Cancelar selección"
             @click="cancelarCoaSeleccionado"
           >
