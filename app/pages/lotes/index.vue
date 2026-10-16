@@ -381,11 +381,11 @@ function abrirCoaEnPestana() {
         <DialogTitle class="px-6 pt-6 pb-4">
           {{ editando ? "Editar lote" : "Nuevo lote" }}
         </DialogTitle>
-        <!-- El alto máximo va en el viewport (si no, ScrollArea nunca scrollea) y el
-             div interno de Reka es display:table, que ensancha el contenido con textos
-             largos (ej. nombre de PDF): se fuerza a block para que funcione el truncate. -->
+        <!-- El alto máximo va en el viewport (si no, ScrollArea nunca scrollea). El div
+             interno de Reka trae min-width: fit-content inline, que lo ensancha con textos
+             largos (ej. nombre de PDF) y rompe el truncate: se anula con min-w-0!. -->
         <ScrollArea
-          class="min-w-0 [&_[data-slot=scroll-area-viewport]]:max-h-[75vh] [&_[data-slot=scroll-area-viewport]>div]:block!"
+          class="min-w-0 [&_[data-slot=scroll-area-viewport]]:max-h-[75vh] [&_[data-slot=scroll-area-viewport]>div]:min-w-0!"
         >
           <div class="px-6 pb-6">
             <LoteForm
