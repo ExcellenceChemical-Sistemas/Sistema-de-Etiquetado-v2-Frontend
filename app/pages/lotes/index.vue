@@ -65,6 +65,7 @@ const xlsxColumns: XlsxColumn<Lote>[] = [
     label: "Fecha de fabricación",
   },
   { key: "fechaVencimiento", label: "Vencimiento" },
+  { key: (l: Lote) => l.detalle ?? "", label: "Detalle" },
   {
     key: (l: Lote) => estadoLabel(l),
     label: "Estado",
@@ -210,6 +211,7 @@ function abrirCoaEnPestana() {
             <TableHead>Lote</TableHead>
             <TableHead>Fabricante</TableHead>
             <TableHead>Vencimiento</TableHead>
+            <TableHead>Detalle</TableHead>
             <TableHead class="w-16 text-center">COA</TableHead>
             <TableHead class="w-32 text-right">Acciones</TableHead>
           </TableRow>
@@ -221,6 +223,7 @@ function abrirCoaEnPestana() {
               <TableCell><Skeleton class="h-4 w-24" /></TableCell>
               <TableCell><Skeleton class="h-4 w-32" /></TableCell>
               <TableCell><Skeleton class="h-4 w-20" /></TableCell>
+              <TableCell><Skeleton class="h-4 w-32" /></TableCell>
               <TableCell class="text-center"
                 ><Skeleton class="h-4 w-6 mx-auto"
               /></TableCell>
@@ -231,7 +234,7 @@ function abrirCoaEnPestana() {
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="6" class="text-center py-8">
+              <TableCell colspan="7" class="text-center py-8">
                 <p class="text-sm text-destructive mb-2">
                   No se pudieron cargar los lotes
                 </p>
@@ -244,7 +247,7 @@ function abrirCoaEnPestana() {
           <template v-else-if="filtrados.length === 0">
             <TableRow>
               <TableCell
-                colspan="6"
+                colspan="7"
                 class="text-center text-muted-foreground py-8"
               >
                 No hay lotes
@@ -267,6 +270,12 @@ function abrirCoaEnPestana() {
               <TableCell class="max-w-48 truncate" :title="l.fabricante?.nombre">{{ l.fabricante?.nombre }}</TableCell>
               <TableCell>
                 <VencimientoBadge :fecha="l.fechaVencimiento" />
+              </TableCell>
+              <TableCell
+                class="max-w-48 truncate text-muted-foreground"
+                :title="l.detalle ?? undefined"
+              >
+                {{ l.detalle || "—" }}
               </TableCell>
               <TableCell class="text-center">
                 <button
@@ -432,6 +441,13 @@ function abrirCoaEnPestana() {
           <div v-if="detalleLote.fechaVencimientoOrden" class="col-span-2">
             <p class="text-muted-foreground">Vencimiento (orden interno)</p>
             <p class="font-medium">{{ formatFecha(detalleLote.fechaVencimientoOrden) }}</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-muted-foreground">Detalle</p>
+            <p v-if="detalleLote.detalle" class="whitespace-pre-wrap break-words font-medium">
+              {{ detalleLote.detalle }}
+            </p>
+            <p v-else class="font-medium text-muted-foreground">—</p>
           </div>
           <div class="col-span-2">
             <p class="text-muted-foreground">COA</p>

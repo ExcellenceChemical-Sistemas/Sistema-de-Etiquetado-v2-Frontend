@@ -27,7 +27,8 @@ export function useLotesListado(lotes: Ref<Lote[] | undefined>) {
         !q ||
         l.numeroLote.toLowerCase().includes(q) ||
         l.producto?.nombre.toLowerCase().includes(q) ||
-        l.fabricante?.nombre.toLowerCase().includes(q)
+        l.fabricante?.nombre.toLowerCase().includes(q) ||
+        l.detalle?.toLowerCase().includes(q)
 
       if (!matchTexto) return false
 

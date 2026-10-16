@@ -50,6 +50,7 @@ const { handleSubmit, defineField, errors, isSubmitting } =
       numeroLote: props.lote?.numeroLote ?? "",
       fechaFabricacion: props.lote?.fechaFabricacion ?? "",
       fechaVencimiento: props.lote?.fechaVencimiento ?? "",
+      detalle: props.lote?.detalle ?? "",
       productoId: props.lote?.productoId,
       fabricanteId: props.lote?.fabricanteId,
     },
@@ -60,6 +61,7 @@ const [fechaFabricacion, fechaFabricacionAttrs] =
   defineField("fechaFabricacion");
 const [fechaVencimiento, fechaVencimientoAttrs] =
   defineField("fechaVencimiento");
+const [detalle, detalleAttrs] = defineField("detalle");
 // El combobox emite number|undefined directo, ya no hace falta el puente
 // productoIdStr/fabricanteIdStr que convertía a string para el Select.
 const [productoId] = defineField("productoId", {
@@ -250,6 +252,29 @@ const onSubmit = handleSubmit(async (values) => {
       />
       <p v-if="errors.fechaVencimiento" class="text-sm text-destructive">
         {{ errors.fechaVencimiento }}
+      </p>
+    </div>
+
+    <div class="space-y-2">
+      <Label for="detalle">Detalle</Label>
+      <Textarea
+        id="detalle"
+        v-model="detalle"
+        v-bind="detalleAttrs"
+        rows="3"
+        maxlength="500"
+        placeholder="Ej: Lote para Farmacia Universal"
+      />
+      <div class="flex justify-between gap-2">
+        <p class="text-xs text-muted-foreground">
+          Opcional. Comentario interno, no aparece en la etiqueta ni en el QR.
+        </p>
+        <span class="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {{ (detalle ?? "").length }}/500
+        </span>
+      </div>
+      <p v-if="errors.detalle" class="text-sm text-destructive">
+        {{ errors.detalle }}
       </p>
     </div>
 

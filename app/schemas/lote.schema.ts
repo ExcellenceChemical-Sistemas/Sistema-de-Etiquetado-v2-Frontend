@@ -44,6 +44,10 @@ export const loteSchema = z
       .string({ required_error: 'La fecha de vencimiento es obligatoria' })
       .min(1, 'La fecha de vencimiento es obligatoria')
       .regex(FECHA_REGEX, 'Formato: MM/AAAA o DD/MM/AAAA'),
+    detalle: z
+      .string()
+      .max(500, 'El detalle no puede superar los 500 caracteres')
+      .optional(),
     productoId: z
       .number({
         required_error: 'Selecciona un producto',
