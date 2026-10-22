@@ -10,6 +10,7 @@ export interface GenerarEtiquetaPayload {
   unidadNeta: 'KG' | 'GR' | 'ML' | 'L'
   proforma: string
   proveedorId?: number
+  fechaIngreso?: string // dd/mm/aaaa, opcional
 }
 
 interface EstadoTrabajo {

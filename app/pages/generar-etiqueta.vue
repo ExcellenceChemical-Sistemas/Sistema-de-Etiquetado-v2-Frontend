@@ -96,6 +96,13 @@ const { data: proveedores, isLoading: cargandoProveedores } =
   useProveedoresQuery({ enabled: () => permisoProveedores.puedeVer });
 const proveedorId = ref<number | undefined>();
 const errorProveedor = ref("");
+const fechaIngreso = ref(""); // yyyy-mm-dd del <input type="date">
+
+// La etiqueta muestra dd/mm/aaaa, igual que las otras fechas.
+function fechaIngresoTexto() {
+  const [a, m, d] = fechaIngreso.value.split("-");
+  return a && m && d ? `${d}/${m}/${a}` : undefined;
+}
 
 const esCompleta = computed(
   () =>
@@ -117,6 +124,7 @@ watch(esCompleta, (v) => {
   if (!v) {
     proveedorId.value = undefined;
     errorProveedor.value = "";
+    fechaIngreso.value = "";
   }
 });
 
@@ -170,6 +178,7 @@ function armarPayload(values: GenerarEtiquetaFormValues) {
     unidadNeta: values.unidadNeta,
     proforma,
     proveedorId: esCompleta.value ? proveedorId.value : undefined,
+    fechaIngreso: esCompleta.value ? fechaIngresoTexto() : undefined,
   };
 }
 
@@ -223,6 +232,7 @@ async function imprimir(values: GenerarEtiquetaFormValues) {
 }
 
 function limpiarFormulario() {
+  fechaIngreso.value = "";
   proveedorId.value = undefined;
   errorProveedor.value = "";
   resetForm({
@@ -354,6 +364,17 @@ function limpiarFormulario() {
               </p>
               <p v-else-if="errorProveedor" class="text-sm text-destructive">
                 {{ errorProveedor }}
+              </p>
+            </div>
+            <div v-if="esCompleta" class="space-y-1.5">
+              <Label>Fecha de ingreso (opcional)</Label>
+              <input
+                v-model="fechaIngreso"
+                type="date"
+                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+              <p class="text-xs text-muted-foreground">
+                Si la dejas vacía, la etiqueta imprime una línea para escribirla a mano.
               </p>
             </div>
             <p v-if="sinCodigo" class="text-sm text-destructive">
