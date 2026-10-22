@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import {
   Printer,
@@ -13,6 +13,8 @@ import {
 } from "@lucide/vue";
 import { useLotes } from "~/composables/useLotes";
 import { usePlantillasActivas } from "~/composables/usePlantillas";
+import { useProveedoresQuery } from "~/composables/useProveedores";
+import { usePermiso } from "~/composables/usePermiso";
 import { useGenerarEtiqueta, useVistaPrevia } from "~/composables/useEtiquetas";
 import AlertasImpresion from "~/components/etiquetas/AlertasImpresion.vue";
 import type { Lote } from "~/types/lote";
@@ -87,6 +89,46 @@ function loteLabel(lote: Lote) {
   return `${lote.producto?.nombre ?? "Producto ?"} — ${lote.fabricante?.nombre ?? "Fabricante ?"} (Lote ${lote.numeroLote})`;
 }
 
+// --- Plantilla "completa con rombo": exige proveedor y código de producto ---
+const ARCHIVO_COMPLETA = "completa-rombo.hbs";
+const permisoProveedores = usePermiso("PROVEEDORES");
+const { data: proveedores, isLoading: cargandoProveedores } =
+  useProveedoresQuery({ enabled: () => permisoProveedores.puedeVer });
+const proveedorId = ref<number | undefined>();
+const errorProveedor = ref("");
+
+const esCompleta = computed(
+  () =>
+    plantillasActivas.value?.find((p) => p.id === plantillaId.value)
+      ?.archivo === ARCHIVO_COMPLETA,
+);
+const loteSeleccionado = computed(() =>
+  lotes.value?.find((l) => l.id === loteId.value),
+);
+const sinCodigo = computed(
+  () =>
+    esCompleta.value &&
+    !!loteSeleccionado.value &&
+    !loteSeleccionado.value.producto?.codigo?.trim(),
+);
+
+watch(esCompleta, (v) => {
+  proformaModo.value = v ? "blanco" : "numero";
+  if (!v) {
+    proveedorId.value = undefined;
+    errorProveedor.value = "";
+  }
+});
+
+function bloqueado() {
+  if (esCompleta.value && !proveedorId.value) {
+    errorProveedor.value = "Selecciona un proveedor";
+    return true;
+  }
+  errorProveedor.value = "";
+  return sinCodigo.value;
+}
+
 // Progreso de impresión cuando cantidad > 1 (ej. "Imprimiendo 2 de 5…").
 const copiaActual = ref(0);
 const totalCopias = ref(0);
@@ -95,6 +137,7 @@ const confirmOpen = ref(false);
 const valoresPendientes = ref<GenerarEtiquetaFormValues | null>(null);
 
 const onSubmit = handleSubmit(async (values) => {
+  if (bloqueado()) return;
   if (values.cantidad > 1) {
     valoresPendientes.value = values;
     confirmOpen.value = true;
@@ -112,7 +155,7 @@ async function confirmarImpresion() {
 
 function armarPayload(values: GenerarEtiquetaFormValues) {
   const proforma =
-    values.proformaModo === "blanco"
+    esCompleta.value || values.proformaModo === "blanco"
       ? " "
       : values.proformaNumero
         ? `PF01-${values.proformaNumero}`
@@ -126,6 +169,7 @@ function armarPayload(values: GenerarEtiquetaFormValues) {
     cantidadNeta: values.cantidadNeta || undefined,
     unidadNeta: values.unidadNeta,
     proforma,
+    proveedorId: esCompleta.value ? proveedorId.value : undefined,
   };
 }
 
@@ -134,6 +178,7 @@ const previaOpen = ref(false);
 const previaImagen = ref<string | null>(null);
 
 const verVistaPrevia = handleSubmit(async (values) => {
+  if (bloqueado()) return;
   previaImagen.value = null;
   try {
     previaImagen.value = await pedirVistaPrevia(armarPayload(values));
@@ -178,6 +223,8 @@ async function imprimir(values: GenerarEtiquetaFormValues) {
 }
 
 function limpiarFormulario() {
+  proveedorId.value = undefined;
+  errorProveedor.value = "";
   resetForm({
     values: {
       proformaModo: "numero",
@@ -288,6 +335,31 @@ function limpiarFormulario() {
                 No hay plantillas activas configuradas.
               </p>
             </div>
+
+            <div v-if="esCompleta" class="space-y-1.5">
+              <Label>Proveedor</Label>
+              <ComboboxBuscador
+                v-model="proveedorId"
+                :items="proveedores ?? []"
+                :loading="cargandoProveedores"
+                :get-label="(p: any) => p.nombre"
+                placeholder="Buscar proveedor…"
+                loading-placeholder="Cargando proveedores…"
+              />
+              <p
+                v-if="!permisoProveedores.puedeVer"
+                class="text-sm text-destructive"
+              >
+                No tienes permiso para ver proveedores (Proveedores &gt; Ver).
+              </p>
+              <p v-else-if="errorProveedor" class="text-sm text-destructive">
+                {{ errorProveedor }}
+              </p>
+            </div>
+            <p v-if="sinCodigo" class="text-sm text-destructive">
+              El producto de este lote no tiene código. Regístralo en
+              Productos para poder imprimir con esta plantilla.
+            </p>
           </div>
 
           <Separator />
@@ -383,7 +455,7 @@ function limpiarFormulario() {
 
             <div class="space-y-1.5">
               <Label for="proformaModo">Proforma</Label>
-              <Select v-model="proformaModo">
+              <Select v-model="proformaModo" :disabled="esCompleta">
                 <SelectTrigger id="proformaModo">
                   <SelectValue placeholder="Tipo de proforma" />
                 </SelectTrigger>
@@ -446,7 +518,7 @@ function limpiarFormulario() {
               size="lg"
               class="flex-1"
               :disabled="
-                generando || cargandoLotes || !plantillasActivas?.length
+                generando || cargandoLotes || !plantillasActivas?.length || sinCodigo
               "
             >
               <Printer class="mr-2 h-4 w-4" />
@@ -462,7 +534,7 @@ function limpiarFormulario() {
               type="button"
               variant="secondary"
               size="lg"
-              :disabled="generando || cargandoPrevia || cargandoLotes"
+              :disabled="generando || cargandoPrevia || cargandoLotes || sinCodigo"
               @click="verVistaPrevia"
             >
               <Eye class="mr-2 h-4 w-4" />

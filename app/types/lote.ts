@@ -6,7 +6,7 @@ export interface Lote {
   fechaVencimientoOrden: string | null;
   productoId: number;
   fabricanteId: number;
-  producto?: { id: number; nombre: string };
+  producto?: { id: number; nombre: string; codigo?: string | null };
   fabricante?: { id: number; nombre: string };
   coaUrl?: string | null;
   detalle?: string | null;

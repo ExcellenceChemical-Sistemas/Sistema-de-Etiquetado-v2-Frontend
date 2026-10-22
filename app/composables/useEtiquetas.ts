@@ -9,6 +9,7 @@ export interface GenerarEtiquetaPayload {
   cantidadNeta?: string
   unidadNeta: 'KG' | 'GR' | 'ML' | 'L'
   proforma: string
+  proveedorId?: number
 }
 
 interface EstadoTrabajo {
