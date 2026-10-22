@@ -90,8 +90,12 @@ function loteLabel(lote: Lote) {
 }
 
 // --- Plantilla "completa con rombo": exige proveedor y código de producto ---
-// Plantillas "completa": 10x6 y 10x8.5
-const ARCHIVOS_COMPLETA = ["completa-rombo.hbs", "completa-rombo-85.hbs"];
+// Plantillas "completa": 10x6, 10x8.5 y 20x10
+const ARCHIVOS_COMPLETA = [
+  "completa-rombo.hbs",
+  "completa-rombo-85.hbs",
+  "completa-rombo-20x10.hbs",
+];
 const permisoProveedores = usePermiso("PROVEEDORES");
 const { data: proveedores, isLoading: cargandoProveedores } =
   useProveedoresQuery({ enabled: () => permisoProveedores.puedeVer });
