@@ -90,7 +90,8 @@ function loteLabel(lote: Lote) {
 }
 
 // --- Plantilla "completa con rombo": exige proveedor y código de producto ---
-const ARCHIVO_COMPLETA = "completa-rombo.hbs";
+// Plantillas "completa": 10x6 y 10x8.5
+const ARCHIVOS_COMPLETA = ["completa-rombo.hbs", "completa-rombo-85.hbs"];
 const permisoProveedores = usePermiso("PROVEEDORES");
 const { data: proveedores, isLoading: cargandoProveedores } =
   useProveedoresQuery({ enabled: () => permisoProveedores.puedeVer });
@@ -106,8 +107,10 @@ function fechaIngresoTexto() {
 
 const esCompleta = computed(
   () =>
-    plantillasActivas.value?.find((p) => p.id === plantillaId.value)
-      ?.archivo === ARCHIVO_COMPLETA,
+    ARCHIVOS_COMPLETA.includes(
+      plantillasActivas.value?.find((p) => p.id === plantillaId.value)
+        ?.archivo ?? "",
+    ),
 );
 const loteSeleccionado = computed(() =>
   lotes.value?.find((l) => l.id === loteId.value),
