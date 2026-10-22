@@ -1,0 +1,11 @@
+import { z } from 'zod'
+
+export const proveedorSchema = z.object({
+  nombre: z
+    .string({ required_error: 'El nombre es obligatorio' })
+    .trim()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(120, 'El nombre es demasiado largo'),
+})
+
+export type ProveedorFormValues = z.infer<typeof proveedorSchema>

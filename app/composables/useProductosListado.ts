@@ -24,7 +24,7 @@ export function useProductosListado(productos: Ref<Producto[] | undefined>) {
   const filtrados = computed(() => {
     if (!productos.value) return []
     const q = search.value.trim().toLowerCase()
-    let lista = q ? productos.value.filter(p => p.nombreNormalizado.includes(q)) : productos.value
+    let lista = q ? productos.value.filter(p => p.nombreNormalizado.includes(q) || (p.codigo ?? '').toLowerCase().includes(q)) : productos.value
 
     if (nfpaFilter.value === 'sin') {
       lista = lista.filter(p => !tieneNfpa(p))

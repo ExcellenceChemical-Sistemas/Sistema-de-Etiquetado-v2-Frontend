@@ -61,6 +61,7 @@ function estadoRombo(p: Producto): string {
 }
 
 const xlsxColumns: XlsxColumn<Producto>[] = [
+  { key: (p: Producto) => p.codigo ?? "", label: "Código" },
   { key: "nombre", label: "Nombre" },
   { key: (p: Producto) => p.nfpaSalud ?? "", label: "NFPA Salud" },
   {
@@ -219,6 +220,7 @@ function abrirFichaEnPestana() {
       <Table>
         <TableHeader class="sticky top-0 z-10 bg-background">
           <TableRow>
+            <TableHead class="w-32">Código</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead>NFPA</TableHead>
             <TableHead class="w-28 text-center">GHS</TableHead>
@@ -229,6 +231,7 @@ function abrirFichaEnPestana() {
         <TableBody>
           <template v-if="isPending">
             <TableRow v-for="i in 4" :key="i">
+              <TableCell><Skeleton class="h-4 w-20" /></TableCell>
               <TableCell><Skeleton class="h-4 w-48" /></TableCell>
               <TableCell><Skeleton class="h-4 w-16" /></TableCell>
               <TableCell class="text-center"><Skeleton class="h-4 w-12 mx-auto" /></TableCell>
@@ -242,7 +245,7 @@ function abrirFichaEnPestana() {
           </template>
           <template v-else-if="isError">
             <TableRow>
-              <TableCell colspan="5" class="text-center py-8">
+              <TableCell colspan="6" class="text-center py-8">
                 <p class="text-sm text-destructive mb-2">
                   No se pudieron cargar los productos
                 </p>
@@ -255,7 +258,7 @@ function abrirFichaEnPestana() {
           <template v-else-if="filtrados.length === 0">
             <TableRow>
               <TableCell
-                colspan="5"
+                colspan="6"
                 class="text-center text-muted-foreground py-8"
               >
                 No hay productos
@@ -269,6 +272,7 @@ function abrirFichaEnPestana() {
           </template>
           <template v-else>
             <TableRow v-for="p in paginados" :key="p.id">
+              <TableCell class="font-mono text-xs text-muted-foreground">{{ p.codigo || "—" }}</TableCell>
               <TableCell class="max-w-64 truncate" :title="p.nombre">{{ p.nombre }}</TableCell>
               <TableCell>
                 <NfpaBadge
@@ -426,7 +430,11 @@ function abrirFichaEnPestana() {
           v-if="detalleProducto"
           class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm"
         >
-          <div class="col-span-2">
+          <div>
+            <p class="text-muted-foreground">Código</p>
+            <p class="font-medium">{{ detalleProducto.codigo || "—" }}</p>
+          </div>
+          <div>
             <p class="text-muted-foreground">Nombre</p>
             <p class="font-medium">{{ detalleProducto.nombre }}</p>
           </div>

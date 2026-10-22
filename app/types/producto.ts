@@ -2,6 +2,7 @@ export interface Producto {
   id: number
   nombre: string
   nombreNormalizado: string
+  codigo?: string | null
   createdAt: string
   updatedAt: string
   nfpaSalud?: number | null

@@ -19,6 +19,12 @@ export const productoSchema = z.object({
     .string({ required_error: 'El nombre es obligatorio' })
     .min(1, 'El nombre es obligatorio')
     .max(150),
+  // Código interno del producto; vacío = sin código.
+  codigo: z
+    .string()
+    .trim()
+    .max(50, 'El código es demasiado largo (máx. 50)')
+    .optional(),
   nfpaSalud: nfpaField,
   nfpaInflamabilidad: nfpaField,
   nfpaReactividad: nfpaField,

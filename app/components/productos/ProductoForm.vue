@@ -29,6 +29,7 @@ const { handleSubmit, defineField, errors, isSubmitting } = useForm<ProductoForm
   validationSchema: toTypedSchema(productoSchema),
   initialValues: {
     nombre: props.producto?.nombre ?? '',
+    codigo: props.producto?.codigo ?? '',
     nfpaSalud: props.producto?.nfpaSalud ?? undefined,
     nfpaInflamabilidad: props.producto?.nfpaInflamabilidad ?? undefined,
     nfpaReactividad: props.producto?.nfpaReactividad ?? undefined,
@@ -41,6 +42,7 @@ const { handleSubmit, defineField, errors, isSubmitting } = useForm<ProductoForm
 })
 
 const [nombre, nombreAttrs] = defineField('nombre')
+const [codigo, codigoAttrs] = defineField('codigo')
 const [nfpaSalud, nfpaSaludAttrs] = defineField('nfpaSalud')
 const [nfpaInflamabilidad, nfpaInflamabilidadAttrs] = defineField('nfpaInflamabilidad')
 const [nfpaReactividad, nfpaReactividadAttrs] = defineField('nfpaReactividad')
@@ -185,7 +187,7 @@ const onSubmit = handleSubmit(async (values) => {
       // densidad vacía se manda como null para poder borrarla al editar
       const actualizado = await actualizar({
         id: props.producto.id,
-        dto: { ...values, densidad: values.densidad ?? null, palabraAdvertencia: values.palabraAdvertencia ?? null } as any,
+        dto: { ...values, codigo: values.codigo?.trim() || null, densidad: values.densidad ?? null, palabraAdvertencia: values.palabraAdvertencia ?? null } as any,
       })
       productoId = actualizado.id
       toast.success('Producto actualizado')
@@ -222,7 +224,7 @@ const onSubmit = handleSubmit(async (values) => {
     emit('success')
   } catch (err: any) {
     if (err?.response?.status === 409) {
-      toast.error('Ya existe un producto con ese nombre')
+      toast.error(err?.response?.data?.message ?? 'Ya existe un producto con ese nombre')
     } else {
       toast.error('Ocurrió un error al guardar el producto')
     }
@@ -242,6 +244,20 @@ const onSubmit = handleSubmit(async (values) => {
         placeholder="Nombre del producto"
       />
       <p v-if="errors.nombre" class="text-sm text-destructive">{{ errors.nombre }}</p>
+    </div>
+
+    <div class="space-y-2">
+      <Label for="codigo">
+        Código
+        <span class="text-muted-foreground font-normal">(opcional)</span>
+      </Label>
+      <Input
+        id="codigo"
+        v-model="codigo"
+        v-bind="codigoAttrs"
+        placeholder="Ej. QU-0012"
+      />
+      <p v-if="errors.codigo" class="text-sm text-destructive">{{ errors.codigo }}</p>
     </div>
 
     <FichaProductoCampo

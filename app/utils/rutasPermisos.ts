@@ -4,6 +4,7 @@ type Nivel = 'puedeVer' | 'puedeCrear' | 'puedeEditar' | 'puedeEliminar'
 
 const RUTA_PERMISO: [string, Recurso, Nivel][] = [
   ['/fabricantes', 'FABRICANTES', 'puedeVer'],
+  ['/proveedores', 'PROVEEDORES', 'puedeVer'],
   ['/productos', 'PRODUCTOS', 'puedeVer'],
   ['/lotes', 'LOTES', 'puedeVer'],
   ['/generar-etiqueta', 'ETIQUETAS', 'puedeCrear'],
