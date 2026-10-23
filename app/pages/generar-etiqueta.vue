@@ -253,17 +253,17 @@ function limpiarFormulario() {
 
 <template>
   <div
-    class="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-3 px-1 py-1 sm:px-2"
+    class="flex min-h-full w-full flex-col gap-4 px-1 py-1 sm:px-2"
   >
     <div class="flex items-center gap-3">
       <div
-        class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"
+        class="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary"
       >
-        <Printer class="h-4 w-4" />
+        <Printer class="h-5 w-5" />
       </div>
       <div>
-        <h1 class="text-xl font-semibold leading-tight">Generar etiqueta</h1>
-        <p class="text-xs text-muted-foreground">
+        <h1 class="text-2xl font-semibold leading-tight">Generar etiqueta</h1>
+        <p class="text-sm text-muted-foreground">
           «Vista previa» no imprime. «Generar e imprimir» la manda directo a la Epson.
         </p>
       </div>
@@ -272,11 +272,11 @@ function limpiarFormulario() {
     <AlertasImpresion />
 
     <form @submit="onSubmit">
-      <Card class="gap-4 py-4">
-        <CardContent class="grid grid-cols-1 gap-x-4 gap-y-3 lg:grid-cols-6">
+      <Card class="flex-1 gap-6 py-6">
+        <CardContent class="grid flex-1 grid-cols-1 content-evenly gap-x-6 gap-y-6 lg:grid-cols-6">
           <!-- Lote -->
           <div class="space-y-1.5 lg:col-span-6">
-            <Label for="loteId">Lote</Label>
+            <Label class="text-base" for="loteId">Lote</Label>
             <ComboboxBuscador
               v-model="loteId"
               :items="lotes ?? []"
@@ -296,9 +296,9 @@ function limpiarFormulario() {
 
           <!-- Plantilla -->
           <div class="space-y-1.5 lg:col-span-3">
-            <Label for="plantillaId">Plantilla</Label>
+            <Label class="text-base" for="plantillaId">Plantilla</Label>
             <Select v-model="plantillaId">
-              <SelectTrigger id="plantillaId" class="w-full">
+              <SelectTrigger id="plantillaId" class="w-full text-base data-[size=default]:h-11">
                 <SelectValue placeholder="Selecciona una plantilla" />
               </SelectTrigger>
               <SelectContent>
@@ -331,10 +331,10 @@ function limpiarFormulario() {
 
           <!-- Proforma -->
           <div class="space-y-1.5 lg:col-span-3">
-            <Label for="proformaModo">Proforma</Label>
+            <Label class="text-base" for="proformaModo">Proforma</Label>
             <div class="flex items-center gap-2">
               <Select v-model="proformaModo" :disabled="esCompleta">
-                <SelectTrigger id="proformaModo" class="w-44 shrink-0">
+                <SelectTrigger id="proformaModo" class="w-56 shrink-0 text-base data-[size=default]:h-11">
                   <SelectValue placeholder="Tipo de proforma" />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,7 +344,7 @@ function limpiarFormulario() {
               </Select>
               <template v-if="proformaModo === 'numero'">
                 <span
-                  class="rounded-md border bg-muted px-2.5 py-2 text-sm text-muted-foreground"
+                  class="flex h-11 items-center rounded-md border bg-muted px-3 text-base text-muted-foreground"
                 >
                   PF01-
                 </span>
@@ -353,7 +353,7 @@ function limpiarFormulario() {
                   v-model="proformaNumero"
                   v-bind="proformaNumeroAttrs"
                   placeholder="Número"
-                  class="min-w-0 flex-1"
+                  class="h-11 min-w-0 flex-1 text-base"
                 />
               </template>
             </div>
@@ -367,7 +367,7 @@ function limpiarFormulario() {
 
           <!-- Proveedor y fecha (solo plantillas "completa") -->
           <div v-if="esCompleta" class="space-y-1.5 lg:col-span-3">
-            <Label>Proveedor</Label>
+            <Label class="text-base">Proveedor</Label>
             <ComboboxBuscador
               v-model="proveedorId"
               :items="proveedores ?? []"
@@ -387,11 +387,11 @@ function limpiarFormulario() {
             </p>
           </div>
           <div v-if="esCompleta" class="space-y-1.5 lg:col-span-3">
-            <Label>Fecha de ingreso (opcional)</Label>
+            <Label class="text-base">Fecha de ingreso (opcional)</Label>
             <input
               v-model="fechaIngreso"
               type="date"
-              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              class="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
             <p class="text-xs text-muted-foreground">
               Vacía = línea para escribirla a mano.
@@ -404,7 +404,7 @@ function limpiarFormulario() {
 
           <!-- Peso neto -->
           <div class="space-y-1.5 lg:col-span-2">
-            <Label for="cantidadNeta">Peso/cant. neta (opcional)</Label>
+            <Label class="text-base" for="cantidadNeta">Peso/cant. neta (opcional)</Label>
             <div class="flex gap-2">
               <Input
                 id="cantidadNeta"
@@ -412,10 +412,10 @@ function limpiarFormulario() {
                 v-bind="cantidadNetaAttrs"
                 placeholder="Ej. 1.000"
                 inputmode="decimal"
-                class="min-w-0 flex-1"
+                class="h-11 min-w-0 flex-1 text-base"
               />
               <Select v-model="unidadNeta" v-bind="unidadNetaAttrs">
-                <SelectTrigger id="unidadNeta" class="w-24 shrink-0">
+                <SelectTrigger id="unidadNeta" class="w-28 shrink-0 text-base data-[size=default]:h-11">
                   <SelectValue placeholder="Unidad" />
                 </SelectTrigger>
                 <SelectContent>
@@ -436,7 +436,7 @@ function limpiarFormulario() {
 
           <!-- Peso bruto -->
           <div class="space-y-1.5 lg:col-span-2">
-            <Label for="pesoBruto">Peso bruto</Label>
+            <Label class="text-base" for="pesoBruto">Peso bruto</Label>
             <div class="flex gap-2">
               <Input
                 id="pesoBruto"
@@ -444,10 +444,10 @@ function limpiarFormulario() {
                 v-bind="pesoBrutoAttrs"
                 placeholder="Ej. 1.140"
                 inputmode="decimal"
-                class="min-w-0 flex-1"
+                class="h-11 min-w-0 flex-1 text-base"
               />
               <Select v-model="unidadBruto" v-bind="unidadBrutoAttrs">
-                <SelectTrigger id="unidadBruto" class="w-24 shrink-0">
+                <SelectTrigger id="unidadBruto" class="w-28 shrink-0 text-base data-[size=default]:h-11">
                   <SelectValue placeholder="Unidad" />
                 </SelectTrigger>
                 <SelectContent>
@@ -466,7 +466,7 @@ function limpiarFormulario() {
 
           <!-- Copias -->
           <div class="space-y-1.5 lg:col-span-2">
-            <Label for="cantidad" class="flex items-center gap-1.5">
+            <Label for="cantidad" class="flex items-center gap-1.5 text-base">
               <CopyIcon class="h-3.5 w-3.5 text-muted-foreground" />
               Copias (1 etiqueta c/u)
             </Label>
@@ -477,7 +477,7 @@ function limpiarFormulario() {
               type="number"
               min="1"
               max="50"
-              class="w-24"
+              class="h-11 w-32 text-base"
             />
             <p v-if="errors.cantidad" class="text-xs text-destructive">
               {{ errors.cantidad }}
@@ -485,12 +485,12 @@ function limpiarFormulario() {
           </div>
         </CardContent>
 
-        <CardFooter class="flex-col items-stretch gap-2 border-t !pt-4">
+        <CardFooter class="flex-col items-stretch gap-2 border-t !pt-6">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button
               type="submit"
               size="lg"
-              class="flex-1"
+              class="h-12 flex-1 text-base"
               :disabled="
                 generando || cargandoLotes || !plantillasActivas?.length || sinCodigo
               "
@@ -508,6 +508,7 @@ function limpiarFormulario() {
               type="button"
               variant="secondary"
               size="lg"
+              class="h-12 text-base"
               :disabled="generando || cargandoPrevia || cargandoLotes || sinCodigo"
               @click="verVistaPrevia"
             >
@@ -518,6 +519,7 @@ function limpiarFormulario() {
               type="button"
               variant="outline"
               size="lg"
+              class="h-12 text-base"
               :disabled="generando"
               @click="limpiarFormulario"
             >
