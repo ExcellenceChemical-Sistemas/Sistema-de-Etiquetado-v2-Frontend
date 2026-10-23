@@ -5,9 +5,6 @@ import { computed, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import {
   Printer,
-  Package,
-  Scale,
-  Receipt,
   Copy as CopyIcon,
   Eye,
 } from "@lucide/vue";
@@ -256,19 +253,18 @@ function limpiarFormulario() {
 
 <template>
   <div
-    class="mx-auto flex min-h-full w-full max-w-3xl flex-col gap-6 px-1 py-2 sm:px-2 sm:py-3"
+    class="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-3 px-1 py-1 sm:px-2"
   >
     <div class="flex items-center gap-3">
       <div
-        class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"
+        class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"
       >
-        <Printer class="h-5 w-5" />
+        <Printer class="h-4 w-4" />
       </div>
       <div>
-        <h1 class="text-2xl font-semibold leading-tight">Generar etiqueta</h1>
-        <p class="text-sm text-muted-foreground">
-          Revisa cómo quedará con «Vista previa» (no imprime). «Generar e imprimir» la
-          manda directo a la Epson.
+        <h1 class="text-xl font-semibold leading-tight">Generar etiqueta</h1>
+        <p class="text-xs text-muted-foreground">
+          «Vista previa» no imprime. «Generar e imprimir» la manda directo a la Epson.
         </p>
       </div>
     </div>
@@ -276,215 +272,69 @@ function limpiarFormulario() {
     <AlertasImpresion />
 
     <form @submit="onSubmit">
-      <Card>
-        <CardContent class="space-y-5 pt-5 sm:space-y-6 sm:pt-6">
-          <!-- Sección: qué se imprime -->
-          <div class="space-y-4">
-            <div
-              class="flex items-center gap-2 text-sm font-medium text-foreground"
-            >
-              <Package class="h-4 w-4 text-muted-foreground" />
-              Lote y plantilla
-            </div>
-
-            <div class="space-y-1.5">
-              <Label for="loteId">Lote</Label>
-              <ComboboxBuscador
-                v-model="loteId"
-                :items="lotes ?? []"
-                :loading="cargandoLotes"
-                :get-label="loteLabel"
-                placeholder="Buscar por producto, fabricante o número de lote…"
-                loading-placeholder="Cargando lotes…"
-              />
-              <p v-if="errorLotes" class="text-sm text-destructive">
-                No tenés permiso para ver los lotes. Pedile a un administrador
-                que te asigne el permiso "Lotes &gt; Ver".
-              </p>
-              <p v-else-if="errors.loteId" class="text-sm text-destructive">
-                {{ errors.loteId }}
-              </p>
-            </div>
-
-            <div class="space-y-1.5">
-              <Label for="plantillaId">Plantilla</Label>
-              <Select v-model="plantillaId">
-                <SelectTrigger id="plantillaId">
-                  <SelectValue placeholder="Selecciona una plantilla" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="plantilla in plantillasActivas ?? []"
-                    :key="plantilla.id"
-                    :value="plantilla.id"
-                  >
-                    {{ plantilla.nombre }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <p v-if="errors.plantillaId" class="text-sm text-destructive">
-                {{ errors.plantillaId }}
-              </p>
-              <p
-                v-if="cargandoPlantillas"
-                class="text-sm text-muted-foreground"
-              >
-                Cargando plantillas…
-              </p>
-              <!-- El 403 de GET /plantillas (falta el permiso Plantillas > Ver) y la
-                   lista vacía dan el mismo síntoma acá (plantillasActivas sin datos),
-                   pero la causa y el arreglo son distintos: uno es de permisos, el
-                   otro de datos. Sin distinguirlos, un admin con ETIQUETAS.puedeCrear
-                   pero sin PLANTILLAS.puedeVer ve "no hay plantillas configuradas" y
-                   se pone a buscar plantillas en vez de revisar sus propios permisos. -->
-              <p
-                v-else-if="errorPlantillas"
-                class="text-sm text-destructive"
-              >
-                No tenés permiso para ver las plantillas de etiqueta. Pedile a
-                un administrador que te asigne el permiso "Plantillas &gt;
-                Ver".
-              </p>
-              <p
-                v-else-if="!plantillasActivas?.length"
-                class="text-sm text-destructive"
-              >
-                No hay plantillas activas configuradas.
-              </p>
-            </div>
-
-            <div v-if="esCompleta" class="space-y-1.5">
-              <Label>Proveedor</Label>
-              <ComboboxBuscador
-                v-model="proveedorId"
-                :items="proveedores ?? []"
-                :loading="cargandoProveedores"
-                :get-label="(p: any) => p.nombre"
-                placeholder="Buscar proveedor…"
-                loading-placeholder="Cargando proveedores…"
-              />
-              <p
-                v-if="!permisoProveedores.puedeVer"
-                class="text-sm text-destructive"
-              >
-                No tienes permiso para ver proveedores (Proveedores &gt; Ver).
-              </p>
-              <p v-else-if="errorProveedor" class="text-sm text-destructive">
-                {{ errorProveedor }}
-              </p>
-            </div>
-            <div v-if="esCompleta" class="space-y-1.5">
-              <Label>Fecha de ingreso (opcional)</Label>
-              <input
-                v-model="fechaIngreso"
-                type="date"
-                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              />
-              <p class="text-xs text-muted-foreground">
-                Si la dejas vacía, la etiqueta imprime una línea para escribirla a mano.
-              </p>
-            </div>
-            <p v-if="sinCodigo" class="text-sm text-destructive">
-              El producto de este lote no tiene código. Regístralo en
-              Productos para poder imprimir con esta plantilla.
+      <Card class="gap-4 py-4">
+        <CardContent class="grid grid-cols-1 gap-x-4 gap-y-3 lg:grid-cols-6">
+          <!-- Lote -->
+          <div class="space-y-1.5 lg:col-span-6">
+            <Label for="loteId">Lote</Label>
+            <ComboboxBuscador
+              v-model="loteId"
+              :items="lotes ?? []"
+              :loading="cargandoLotes"
+              :get-label="loteLabel"
+              placeholder="Buscar por producto, fabricante o número de lote…"
+              loading-placeholder="Cargando lotes…"
+            />
+            <p v-if="errorLotes" class="text-xs text-destructive">
+              No tenés permiso para ver los lotes. Pedile a un administrador que te
+              asigne el permiso "Lotes &gt; Ver".
+            </p>
+            <p v-else-if="errors.loteId" class="text-xs text-destructive">
+              {{ errors.loteId }}
             </p>
           </div>
 
-          <Separator />
-
-          <!-- Sección: pesos -->
-          <div class="space-y-4">
-            <div
-              class="flex items-center gap-2 text-sm font-medium text-foreground"
+          <!-- Plantilla -->
+          <div class="space-y-1.5 lg:col-span-3">
+            <Label for="plantillaId">Plantilla</Label>
+            <Select v-model="plantillaId">
+              <SelectTrigger id="plantillaId" class="w-full">
+                <SelectValue placeholder="Selecciona una plantilla" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="plantilla in plantillasActivas ?? []"
+                  :key="plantilla.id"
+                  :value="plantilla.id"
+                >
+                  {{ plantilla.nombre }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p v-if="errors.plantillaId" class="text-xs text-destructive">
+              {{ errors.plantillaId }}
+            </p>
+            <p v-if="cargandoPlantillas" class="text-xs text-muted-foreground">
+              Cargando plantillas…
+            </p>
+            <p v-else-if="errorPlantillas" class="text-xs text-destructive">
+              No tenés permiso para ver las plantillas de etiqueta. Pedile a un
+              administrador que te asigne el permiso "Plantillas &gt; Ver".
+            </p>
+            <p
+              v-else-if="!plantillasActivas?.length"
+              class="text-xs text-destructive"
             >
-              <Scale class="h-4 w-4 text-muted-foreground" />
-              Pesos
-            </div>
-
-            <div
-              class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
-            >
-              <div class="space-y-1.5">
-                <Label for="cantidadNeta">Peso/cant. neta (opcional)</Label>
-                <Input
-                  id="cantidadNeta"
-                  v-model="cantidadNeta"
-                  v-bind="cantidadNetaAttrs"
-                  placeholder="Ej. 1.000"
-                  inputmode="decimal"
-                />
-                <p v-if="errors.cantidadNeta" class="text-sm text-destructive">
-                  {{ errors.cantidadNeta }}
-                </p>
-              </div>
-              <div class="space-y-1.5">
-                <Label for="unidadNeta">Unidad</Label>
-                <Select v-model="unidadNeta" v-bind="unidadNetaAttrs">
-                  <SelectTrigger id="unidadNeta">
-                    <SelectValue placeholder="Unidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="KG">KG</SelectItem>
-                    <SelectItem value="GR">GR</SelectItem>
-                    <SelectItem value="ML">ML</SelectItem>
-                    <SelectItem value="L">L</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p v-if="errors.unidadNeta" class="text-sm text-destructive">
-                  {{ errors.unidadNeta }}
-                </p>
-              </div>
-            </div>
-
-            <div
-              class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
-            >
-              <div class="space-y-1.5">
-                <Label for="pesoBruto">Peso bruto</Label>
-                <Input
-                  id="pesoBruto"
-                  v-model="pesoBruto"
-                  v-bind="pesoBrutoAttrs"
-                  placeholder="Ej. 1.140"
-                  inputmode="decimal"
-                />
-                <p v-if="errors.pesoBruto" class="text-sm text-destructive">
-                  {{ errors.pesoBruto }}
-                </p>
-              </div>
-              <div class="space-y-1.5">
-                <Label for="unidadBruto">Unidad</Label>
-                <Select v-model="unidadBruto" v-bind="unidadBrutoAttrs">
-                  <SelectTrigger id="unidadBruto">
-                    <SelectValue placeholder="Unidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="KG">KG</SelectItem>
-                    <SelectItem value="GR">GR</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p v-if="errors.unidadBruto" class="text-sm text-destructive">
-                  {{ errors.unidadBruto }}
-                </p>
-              </div>
-            </div>
+              No hay plantillas activas configuradas.
+            </p>
           </div>
 
-          <Separator />
-
-          <!-- Sección: proforma y copias -->
-          <div class="space-y-4">
-            <div
-              class="flex items-center gap-2 text-sm font-medium text-foreground"
-            >
-              <Receipt class="h-4 w-4 text-muted-foreground" />
-              Proforma y copias
-            </div>
-
-            <div class="space-y-1.5">
-              <Label for="proformaModo">Proforma</Label>
+          <!-- Proforma -->
+          <div class="space-y-1.5 lg:col-span-3">
+            <Label for="proformaModo">Proforma</Label>
+            <div class="flex items-center gap-2">
               <Select v-model="proformaModo" :disabled="esCompleta">
-                <SelectTrigger id="proformaModo">
+                <SelectTrigger id="proformaModo" class="w-44 shrink-0">
                   <SelectValue placeholder="Tipo de proforma" />
                 </SelectTrigger>
                 <SelectContent>
@@ -492,14 +342,7 @@ function limpiarFormulario() {
                   <SelectItem value="blanco">En blanco (muestra)</SelectItem>
                 </SelectContent>
               </Select>
-              <p v-if="errors.proformaModo" class="text-sm text-destructive">
-                {{ errors.proformaModo }}
-              </p>
-
-              <div
-                v-if="proformaModo === 'numero'"
-                class="flex items-center gap-2 pt-1"
-              >
+              <template v-if="proformaModo === 'numero'">
                 <span
                   class="rounded-md border bg-muted px-2.5 py-2 text-sm text-muted-foreground"
                 >
@@ -509,37 +352,140 @@ function limpiarFormulario() {
                   id="proformaNumero"
                   v-model="proformaNumero"
                   v-bind="proformaNumeroAttrs"
-                  placeholder="Número de proforma"
-                  class="flex-1"
+                  placeholder="Número"
+                  class="min-w-0 flex-1"
                 />
-              </div>
-              <p v-if="errors.proformaNumero" class="text-sm text-destructive">
-                {{ errors.proformaNumero }}
-              </p>
+              </template>
             </div>
+            <p v-if="errors.proformaModo" class="text-xs text-destructive">
+              {{ errors.proformaModo }}
+            </p>
+            <p v-if="errors.proformaNumero" class="text-xs text-destructive">
+              {{ errors.proformaNumero }}
+            </p>
+          </div>
 
-            <div class="space-y-1.5">
-              <Label for="cantidad" class="flex items-center gap-1.5">
-                <CopyIcon class="h-3.5 w-3.5 text-muted-foreground" />
-                Cantidad de copias (una etiqueta por copia)
-              </Label>
+          <!-- Proveedor y fecha (solo plantillas "completa") -->
+          <div v-if="esCompleta" class="space-y-1.5 lg:col-span-3">
+            <Label>Proveedor</Label>
+            <ComboboxBuscador
+              v-model="proveedorId"
+              :items="proveedores ?? []"
+              :loading="cargandoProveedores"
+              :get-label="(p: any) => p.nombre"
+              placeholder="Buscar proveedor…"
+              loading-placeholder="Cargando proveedores…"
+            />
+            <p
+              v-if="!permisoProveedores.puedeVer"
+              class="text-xs text-destructive"
+            >
+              No tienes permiso para ver proveedores (Proveedores &gt; Ver).
+            </p>
+            <p v-else-if="errorProveedor" class="text-xs text-destructive">
+              {{ errorProveedor }}
+            </p>
+          </div>
+          <div v-if="esCompleta" class="space-y-1.5 lg:col-span-3">
+            <Label>Fecha de ingreso (opcional)</Label>
+            <input
+              v-model="fechaIngreso"
+              type="date"
+              class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+            <p class="text-xs text-muted-foreground">
+              Vacía = línea para escribirla a mano.
+            </p>
+          </div>
+          <p v-if="sinCodigo" class="text-xs text-destructive lg:col-span-6">
+            El producto de este lote no tiene código. Regístralo en Productos para
+            poder imprimir con esta plantilla.
+          </p>
+
+          <!-- Peso neto -->
+          <div class="space-y-1.5 lg:col-span-2">
+            <Label for="cantidadNeta">Peso/cant. neta (opcional)</Label>
+            <div class="flex gap-2">
               <Input
-                id="cantidad"
-                v-model.number="cantidad"
-                v-bind="cantidadAttrs"
-                type="number"
-                min="1"
-                max="50"
-                class="w-24"
+                id="cantidadNeta"
+                v-model="cantidadNeta"
+                v-bind="cantidadNetaAttrs"
+                placeholder="Ej. 1.000"
+                inputmode="decimal"
+                class="min-w-0 flex-1"
               />
-              <p v-if="errors.cantidad" class="text-sm text-destructive">
-                {{ errors.cantidad }}
-              </p>
+              <Select v-model="unidadNeta" v-bind="unidadNetaAttrs">
+                <SelectTrigger id="unidadNeta" class="w-24 shrink-0">
+                  <SelectValue placeholder="Unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="KG">KG</SelectItem>
+                  <SelectItem value="GR">GR</SelectItem>
+                  <SelectItem value="ML">ML</SelectItem>
+                  <SelectItem value="L">L</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            <p v-if="errors.cantidadNeta" class="text-xs text-destructive">
+              {{ errors.cantidadNeta }}
+            </p>
+            <p v-if="errors.unidadNeta" class="text-xs text-destructive">
+              {{ errors.unidadNeta }}
+            </p>
+          </div>
+
+          <!-- Peso bruto -->
+          <div class="space-y-1.5 lg:col-span-2">
+            <Label for="pesoBruto">Peso bruto</Label>
+            <div class="flex gap-2">
+              <Input
+                id="pesoBruto"
+                v-model="pesoBruto"
+                v-bind="pesoBrutoAttrs"
+                placeholder="Ej. 1.140"
+                inputmode="decimal"
+                class="min-w-0 flex-1"
+              />
+              <Select v-model="unidadBruto" v-bind="unidadBrutoAttrs">
+                <SelectTrigger id="unidadBruto" class="w-24 shrink-0">
+                  <SelectValue placeholder="Unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="KG">KG</SelectItem>
+                  <SelectItem value="GR">GR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p v-if="errors.pesoBruto" class="text-xs text-destructive">
+              {{ errors.pesoBruto }}
+            </p>
+            <p v-if="errors.unidadBruto" class="text-xs text-destructive">
+              {{ errors.unidadBruto }}
+            </p>
+          </div>
+
+          <!-- Copias -->
+          <div class="space-y-1.5 lg:col-span-2">
+            <Label for="cantidad" class="flex items-center gap-1.5">
+              <CopyIcon class="h-3.5 w-3.5 text-muted-foreground" />
+              Copias (1 etiqueta c/u)
+            </Label>
+            <Input
+              id="cantidad"
+              v-model.number="cantidad"
+              v-bind="cantidadAttrs"
+              type="number"
+              min="1"
+              max="50"
+              class="w-24"
+            />
+            <p v-if="errors.cantidad" class="text-xs text-destructive">
+              {{ errors.cantidad }}
+            </p>
           </div>
         </CardContent>
 
-        <CardFooter class="flex-col items-stretch gap-4 border-t pt-6">
+        <CardFooter class="flex-col items-stretch gap-2 border-t !pt-4">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button
               type="submit"
@@ -579,8 +525,7 @@ function limpiarFormulario() {
             </Button>
           </div>
           <p v-if="generando" class="text-xs text-muted-foreground">
-            Esto puede tardar unos segundos, la impresión ocurre antes de
-            confirmar.
+            Esto puede tardar unos segundos, la impresión ocurre antes de confirmar.
           </p>
         </CardFooter>
       </Card>
