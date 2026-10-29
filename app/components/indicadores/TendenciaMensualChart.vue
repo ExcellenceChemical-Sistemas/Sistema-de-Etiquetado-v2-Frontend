@@ -1,38 +1,43 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { VisAxis, VisLine, VisStackedBar, VisXYContainer } from "@unovis/vue";
+import type { ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, ChartCrosshair, ChartTooltip } from "@/components/ui/chart";
 
 // Barra por mes con el % de cumplimiento de la meta. Color = estado (cumple/no cumple), no
-// identidad de serie, por eso lleva leyenda en vez de depender solo del color. Una sola serie,
-// un solo eje (0-100%), etiquetas directas en cada barra — ver skill de dataviz.
+// identidad de serie, por eso lleva leyenda en vez de depender solo del color.
+type Punto = { mes: string; pct: number; total: number; dentro: number };
+
 const props = defineProps<{
-  datos: { mes: string; pct: number; total: number; dentro: number }[];
+  datos: Punto[];
   meta: number;
 }>();
 
-const BAR_WIDTH = 28;
-const GAP = 18;
-const PLOT_HEIGHT = 130;
-const PADDING_TOP = 20;
-const PADDING_X = 6;
-const AXIS_HEIGHT = 20;
+const COLOR_CUMPLE = "#22c55e"; // green-500
+const COLOR_NO_CUMPLE = "#f59e0b"; // amber-500
+const COLOR_META = "#9ca3af"; // gray-400
 
-// Ancho mínimo para que 1-2 meses de datos no salgan como una barra gigante y angosta al
-// escalar el SVG a lo ancho del contenedor (ver bulletproof responsive SVG pattern abajo).
-const width = computed(() =>
-  Math.max(220, props.datos.length * (BAR_WIDTH + GAP) - GAP + PADDING_X * 2),
-);
-const height = PLOT_HEIGHT + PADDING_TOP + AXIS_HEIGHT;
+const chartConfig = {
+  pct: { label: "Cumplimiento", color: COLOR_CUMPLE },
+} satisfies ChartConfig;
 
-function barX(i: number) {
-  return PADDING_X + i * (BAR_WIDTH + GAP);
-}
-function barY(pct: number) {
-  return PADDING_TOP + PLOT_HEIGHT - (Math.min(pct, 100) / 100) * PLOT_HEIGHT;
-}
-function barH(pct: number) {
-  return Math.max((Math.min(pct, 100) / 100) * PLOT_HEIGHT, 1);
-}
-const metaY = computed(() => PADDING_TOP + PLOT_HEIGHT - (Math.min(props.meta, 100) / 100) * PLOT_HEIGHT);
+const x = (_d: Punto, i: number) => i;
+const y = [(d: Punto) => Math.min(d.pct, 100)];
+const yMeta = () => Math.min(props.meta, 100);
+const colorBarra = (d: Punto) => (d.pct >= props.meta ? COLOR_CUMPLE : COLOR_NO_CUMPLE);
+
+const tickMes = (i: number) => props.datos[i]?.mes ?? "";
+const tickPct = (v: number) => `${v}%`;
+
+// Unovis pasa a la plantilla el dato bajo el cursor; devuelve HTML.
+const tooltip = (d: Punto) => `
+  <div class="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
+    <div class="font-medium">${d.mes}</div>
+    <div class="text-muted-foreground">${Math.round(d.pct)}% (${d.dentro} de ${d.total})</div>
+  </div>
+`;
+
+const altura = computed(() => "h-52");
 </script>
 
 <template>
@@ -40,54 +45,49 @@ const metaY = computed(() => PADDING_TOP + PLOT_HEIGHT - (Math.min(props.meta, 1
     Elegí un año para ver la tendencia mensual
   </div>
   <div v-else class="space-y-2">
-    <svg
-      :viewBox="`0 0 ${width} ${height}`"
-      :width="width"
-      :height="height"
-      style="max-width: 100%; height: auto; display: block"
+    <ChartContainer
+      :config="chartConfig"
+      :class="['w-full', altura]"
       role="img"
       :aria-label="`Cumplimiento mensual, meta ${meta} por ciento`"
     >
-      <line
-        :x1="0" :x2="width" :y1="metaY" :y2="metaY"
-        stroke="currentColor" class="text-muted-foreground/50" stroke-width="1" stroke-dasharray="4 3"
-      />
-      <text :x="width" :y="metaY - 4" text-anchor="end" class="fill-muted-foreground" font-size="9">
-        Meta {{ meta }}%
-      </text>
-      <g v-for="(d, i) in datos" :key="d.mes">
-        <rect
-          :x="barX(i)"
-          :y="barY(d.pct)"
-          :width="BAR_WIDTH"
-          :height="barH(d.pct)"
-          rx="4"
-          :class="d.pct >= meta ? 'fill-green-500' : 'fill-amber-500'"
-        >
-          <title>{{ d.mes }}: {{ Math.round(d.pct) }}% ({{ d.dentro }} de {{ d.total }})</title>
-        </rect>
-        <text
-          :x="barX(i) + BAR_WIDTH / 2"
-          :y="barY(d.pct) - 6"
-          text-anchor="middle"
-          class="fill-foreground"
-          font-size="10"
-          font-weight="600"
-        >
-          {{ Math.round(d.pct) }}%
-        </text>
-        <text
-          :x="barX(i) + BAR_WIDTH / 2"
-          :y="PADDING_TOP + PLOT_HEIGHT + 16"
-          text-anchor="middle"
-          class="fill-muted-foreground"
-          font-size="10"
-        >
-          {{ d.mes }}
-        </text>
-      </g>
-    </svg>
-    <div class="flex items-center gap-4 text-xs text-muted-foreground">
+      <VisXYContainer :data="datos" :y-domain="[0, 100]" :margin="{ top: 10, right: 8 }">
+        <VisStackedBar
+          :x="x"
+          :y="y"
+          :color="colorBarra"
+          :rounded-corners="4"
+          :bar-padding="0.35"
+          :bar-max-width="40"
+        />
+        <VisLine
+          :x="x"
+          :y="yMeta"
+          :color="COLOR_META"
+          :line-width="1"
+          :line-dash-array="[4, 3]"
+        />
+        <VisAxis
+          type="x"
+          :tick-format="tickMes"
+          :num-ticks="datos.length"
+          :tick-line="false"
+          :domain-line="false"
+          :grid-line="false"
+        />
+        <VisAxis
+          type="y"
+          :tick-format="tickPct"
+          :num-ticks="5"
+          :tick-line="false"
+          :domain-line="false"
+        />
+        <ChartTooltip />
+        <ChartCrosshair :template="tooltip" :color="colorBarra" />
+      </VisXYContainer>
+    </ChartContainer>
+
+    <div class="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
       <span class="flex items-center gap-1.5">
         <span class="h-2.5 w-2.5 rounded-sm bg-green-500" />
         Cumple meta (≥{{ meta }}%)
@@ -95,6 +95,10 @@ const metaY = computed(() => PADDING_TOP + PLOT_HEIGHT - (Math.min(props.meta, 1
       <span class="flex items-center gap-1.5">
         <span class="h-2.5 w-2.5 rounded-sm bg-amber-500" />
         No cumple
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="inline-block h-0 w-4 border-t border-dashed border-muted-foreground/60" />
+        Meta {{ meta }}%
       </span>
     </div>
   </div>
