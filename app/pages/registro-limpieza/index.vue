@@ -50,9 +50,13 @@ function extraerLinks(celda: string): string[] {
   return celda?.match(URL_REGEX) ?? [];
 }
 
+// La hoja de Google Forms agrega las respuestas al final, así que se invierte el orden solo para
+// mostrar: el registro más reciente aparece primero. `filas` queda intacto (lo usa el cumplimiento).
+const filasRecientesPrimero = computed(() => [...filas.value].reverse());
+
 const paginadas = computed(() => {
   const start = (page.value - 1) * PAGE_SIZE;
-  return filas.value.slice(start, start + PAGE_SIZE);
+  return filasRecientesPrimero.value.slice(start, start + PAGE_SIZE);
 });
 
 // Cumplimiento del mes: lunes a viernes sin feriados; día cumplido = registro "SÍ - Se limpiaron TODAS las áreas"
